@@ -1,0 +1,1 @@
+- hotfix(release): verify signing identity before automatic publication

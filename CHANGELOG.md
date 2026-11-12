@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1.2 — 2026-11-12
+
+- hotfix(release): verify signing identity before automatic publication
+
 ## 1.0.1.1 — 2026-11-12
 
 - hotfix(release): accept formatted F-Droid version entries

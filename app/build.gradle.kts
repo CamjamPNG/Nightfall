@@ -13,8 +13,8 @@ android {
         applicationId = "io.github.camjampng.nightfall"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.0.1.1"
+        versionCode = 4
+        versionName = "1.0.1.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     androidResources { noCompress += "pcm" }
