@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1.1 — 2026-11-12
+
+- hotfix(release): accept formatted F-Droid version entries
+
 ## 1.0.1 — 2026-11-12
 
 - build(release): add signed APK options and four-level release automation
