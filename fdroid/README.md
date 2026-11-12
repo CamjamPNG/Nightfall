@@ -25,6 +25,8 @@ For `fdroidserver` checks, copy the recipe into a full `fdroiddata` fork and run
 fdroid readmeta
 fdroid rewritemeta io.github.camjampng.nightfall
 fdroid lint io.github.camjampng.nightfall
+fdroid scanner -e io.github.camjampng.nightfall
+fdroid build --server io.github.camjampng.nightfall:1
 ```
 
 Copy `metadata/io.github.camjampng.nightfall.yml` into a fork of `fdroiddata`.
@@ -58,10 +60,10 @@ F-Droid's source preparation handles wrapper files normally.
   JSON from the development app and import into the release app. Do not remove
   the development app before exporting mixes you want to retain.
 
-## Remaining gates before an inclusion request
+## Submission status and remaining work
 
-1. A public source commit and matching release tag must be reachable, not just
-   an empty repository or an APK download.
+1. Source is public. The recipe targets the matching `v1.0` release tag;
+   verify it with `git ls-remote --tags https://github.com/CamjamPNG/Nightfall.git`.
 2. Review the development-age/user-adoption policy: the app is new. F-Droid's
    current policy requests three months of active development unless a listed
    exception applies, such as proven users. No exception or age is claimed.
@@ -70,6 +72,13 @@ F-Droid's source preparation handles wrapper files normally.
    instrumentation tests. See `docs/TESTING.md`.
 4. F-Droid maintainers must independently assess the source, licenses,
    dependencies, build recipe and applicable Anti-Features.
+
+The source and APK scanner checks passed locally with fdroidserver 2.4.5.
+Two local unsigned release builds were byte-identical; this does not establish
+reproduction on F-Droid's infrastructure. GitLab credentials are not connected
+in this workspace, so no inclusion request or merge request has been posted.
+The prepared request text is in [SUBMISSION.md](SUBMISSION.md). Hardware
+verification remains a product-quality task, separate from policy eligibility.
 
 ## Official references
 

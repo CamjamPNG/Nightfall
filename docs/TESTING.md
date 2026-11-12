@@ -18,13 +18,19 @@
   foreground-media/wake-lock patterns.
 - F-Droid metadata parses, is formatted by fdroidserver, and passes metadata
   lint with the current upstream category definitions.
+- F-Droid's source scanner reports no errors or warnings; it only removes
+  standard Gradle wrapper files. Its APK scanner exits successfully on the
+  unsigned release. These automated results do not replace maintainer review.
+- Two local release builds, one from a separate source export without Git
+  metadata, produce byte-identical unsigned APKs. Release VCS metadata is
+  disabled. This is not an independent F-Droid build or signing verification.
 - Gradle's official wrapper/distribution checksums are checked, and resolved
   dependencies have SHA-256 verification metadata. The release dependency
   inventory has no GMS, Firebase, billing, ad or tracking SDK from the checked
   denylist. F-Droid's independent review remains necessary.
 
 Machine-readable results: `docs/verification/release-checks.json`,
-`dependency-audit.json`, and `release-dependencies.txt`.
+`dependency-audit.json`, `reproducibility.json`, and `release-dependencies.txt`.
 
 ## Android emulator observations
 

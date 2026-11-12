@@ -67,7 +67,7 @@ The running application does not need a network connection. Audio assets are com
 
 Application code: MIT. Original procedural music and DSP are part of the application source. Bundled recordings retain their individual public-domain / Creative Commons licenses. Attribution, source links, edits, license URLs and output hashes are in `AUDIO_LICENSES.md` and `docs/audio-credits.json`, and are viewable inside Settings. Dependency notices are in `THIRD_PARTY_NOTICES.md`.
 
-`artifacts/nine-layer-dream.wav` is a 24-second output of the actual mixer, not a separately produced soundtrack. `artifacts/dsp-metrics.txt` records its desktop JVM render measurements; those values are not Pixel 7 battery or CPU measurements.
+Running the core acceptance test generates `artifacts/nine-layer-dream.wav`, a 24-second output of the actual mixer, and `artifacts/dsp-metrics.txt` with desktop JVM render measurements. Generated artifacts are excluded from Git. These values are not Pixel 7 battery or CPU measurements.
 
 ## License and commercial courtesy
 

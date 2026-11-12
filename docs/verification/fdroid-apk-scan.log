@@ -1,0 +1,3 @@
+2026-11-12 08:07:44,621 INFO: Using /workspace/tooling/android/build-tools/35.0.0/apksigner 
+2026-11-12 08:07:44,622 INFO: Scanning APK with dexdump for known non-free classes.
+2026-11-12 08:07:59,571 INFO: Scanning APK for extra signing blocks.

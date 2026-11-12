@@ -1,0 +1,13 @@
+{
+  "result": "byte-identical",
+  "sha256": "534e97e8406e31667ba775eac7d2822d751d5d9a22fa296f6ad6da5ad45661fc",
+  "bytes": 91167045,
+  "builds": [
+    "Git working tree at 180c92d",
+    "separate source export without .git or local.properties; same code and Gradle metadata"
+  ],
+  "toolchain": "Gradle 8.11.1, AGP 8.9.2, Corretto OpenJDK 21.0.13, Android SDK 35 / Build Tools 35.0.0",
+  "dependencyVerification": "strict",
+  "scope": "Two local release builds with the same toolchain; not an independent F-Droid build or production-signature reproduction.",
+  "change": "Disable AGP release VCS metadata to avoid archive/check-out differences."
+}
