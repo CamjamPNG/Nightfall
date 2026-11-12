@@ -10,7 +10,8 @@ Do not submit as eligible without evidence or a maintainer-approved exception.
 **Nightfall — offline sleep sound mixer**
 
 - Source: https://github.com/CamjamPNG/Nightfall
-- Release tag: `v1.0`, version `1.0`, code `1`
+- Release: current version/code in `app/build.gradle.kts`, corresponding
+  annotated `vVERSION` tag and matching recipe build block.
 - Application ID: `io.github.camjampng.nightfall`
 - Category: Ambient Sound
 - Original code license: MIT
@@ -37,8 +38,10 @@ Android instrumentation failed with startup ANR on the constrained software
 emulator; physical Pixel 7, Bluetooth and overnight tests remain pending.
 Details are in `docs/TESTING.md` and `docs/verification/`.
 
-Standard F-Droid-managed APK signing is proposed. The development APK is debug
-signed and is not a production signing reference. No Binaries field is set.
+Standard F-Droid-managed APK signing is proposed as a separate channel from the
+production-key-signed GitHub APKs. No Binaries field is set. The public GitHub
+certificate is in `docs/`; independent upstream-signature reproduction has not
+been established. The old development APK's debug key is not a release identity.
 
 ## Posting steps when eligible
 

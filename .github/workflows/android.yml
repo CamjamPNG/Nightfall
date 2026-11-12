@@ -23,7 +23,9 @@ jobs:
       - name: Install Android SDK packages
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"'
       - name: Test, build unsigned release and lint
-        run: ./gradlew --no-daemon :core:test :app:assembleRelease :app:lintRelease
+        run: |
+          python3 -m unittest discover -s tools/tests -v
+          ./gradlew --no-daemon :core:test :app:assembleRelease :app:lintRelease
       - name: Validate store metadata and bundled audio
         run: python3 tools/check_release.py --apk app/build/outputs/apk/release/app-release-unsigned.apk
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -1,0 +1,118 @@
+# SPDX-License-Identifier: MIT
+name: Publish Android release
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version level (auto follows commit messages)
+        type: choice
+        default: auto
+        options: [auto, hotfix, patch, minor, major]
+permissions:
+  contents: write
+concurrency:
+  group: nightfall-publish-main
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Check persistent signing credentials
+        env:
+          KEYSTORE_BASE64: ${{ secrets.NIGHTFALL_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.NIGHTFALL_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo '::error::Add NIGHTFALL_KEYSTORE_BASE64 and NIGHTFALL_KEYSTORE_PASSWORD in repository Actions secrets. See docs/RELEASING.md. A temporary signing key will never be generated.'
+            exit 1
+          fi
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/nightfall-release.p12"
+      - name: Prepare version, store metadata and release notes
+        id: version
+        env:
+          BUMP: ${{ inputs.bump || 'auto' }}
+        run: |
+          python3 tools/release_version.py --kind "$BUMP" --write --github-output "$GITHUB_OUTPUT"
+      - name: Check whether this version is already published
+        id: publish
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          PREPARED: ${{ steps.version.outputs.prepared }}
+        run: |
+          DRAFT=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null || true)
+          if [ "$PREPARED" = false ] && [ "$DRAFT" = false ]; then
+            echo 'needed=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'needed=true' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        if: steps.publish.outputs.needed == 'true'
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        if: steps.publish.outputs.needed == 'true'
+        with:
+          gradle-version: '8.11.1'
+      - name: Test and build
+        if: steps.publish.outputs.needed == 'true'
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
+          python3 -m unittest discover -s tools/tests -v
+          ./gradlew --no-daemon :core:test :app:assembleRelease :app:lintRelease
+          python3 tools/check_release.py --apk app/build/outputs/apk/release/app-release-unsigned.apk
+      - name: Package, sign and verify APK options
+        if: steps.publish.outputs.needed == 'true'
+        env:
+          NIGHTFALL_KEYSTORE_PASSWORD: ${{ secrets.NIGHTFALL_KEYSTORE_PASSWORD }}
+          VERSION: ${{ steps.version.outputs.version }}
+          CODE: ${{ steps.version.outputs.code }}
+        run: |
+          export NIGHTFALL_KEYSTORE_PATH="$RUNNER_TEMP/nightfall-release.p12"
+          python3 tools/package_release.py --apk app/build/outputs/apk/release/app-release-unsigned.apk --out artifacts/publish --version "$VERSION" --code "$CODE"
+      - name: Push verified source version and tag atomically
+        if: steps.publish.outputs.needed == 'true' && steps.version.outputs.prepared == 'true'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/build.gradle.kts fdroid/metadata/io.github.camjampng.nightfall.yml fastlane/metadata/android/en-US/changelogs CHANGELOG.md
+          git commit -m "chore(release): $TAG [skip ci]"
+          git tag -a "$TAG" -m "Nightfall $TAG"
+          git push --atomic origin HEAD:refs/heads/main "refs/tags/$TAG"
+      - name: Publish installable APKs
+        if: steps.publish.outputs.needed == 'true'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          DRAFT=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null || true)
+          if [ "$DRAFT" = false ]; then
+            echo 'Release already exists; published files will not be overwritten.'
+          else
+            if [ "$DRAFT" != true ]; then
+              gh release create "$TAG" --verify-tag --draft --title "Nightfall ${TAG#v}" --notes-file artifacts/release-notes.md
+            fi
+            gh release upload "$TAG" --clobber artifacts/publish/*.apk artifacts/publish/SHA256SUMS.txt artifacts/publish/release-manifest.json artifacts/publish/nightfall-release-certificate.pem
+            gh release view "$TAG" --json assets > artifacts/uploaded-assets.json
+            python3 - <<'PY'
+          import json, pathlib
+          expected = {p.name: p.stat().st_size for p in pathlib.Path('artifacts/publish').iterdir()}
+          actual = {a['name']: a['size'] for a in json.loads(pathlib.Path('artifacts/uploaded-assets.json').read_text())['assets']}
+          assert actual == expected, 'Release assets incomplete; draft will not be published'
+          PY
+            gh release edit "$TAG" --draft=false --latest
+          fi
+      - name: Remove temporary signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/nightfall-release.p12"

@@ -14,3 +14,6 @@ artifacts/
 *.keystore
 key.properties
 fdroid/local/
+__pycache__/
+*.p12
+credentials.json

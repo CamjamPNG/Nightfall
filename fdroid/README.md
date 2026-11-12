@@ -5,7 +5,8 @@ not submit the app or assert that F-Droid has accepted it.
 
 Source: https://github.com/CamjamPNG/Nightfall
 Application ID: `io.github.camjampng.nightfall`
-Release: `1.0` / version code `1` / source tag `v1.0`
+Release versions/codes: see `app/build.gradle.kts` and this directory's recipe;
+each build targets its matching annotated `vVERSION` tag.
 License: MIT for original code; separately licensed recordings and dependencies.
 
 ## Build and validate
@@ -51,10 +52,12 @@ F-Droid's source preparation handles wrapper files normally.
   bundled. AndroidX's native libraries arrive through its free Maven artifacts.
 - The app has no internet, microphone, ad-ID, location or Bluetooth-scanning
   permission. It uses Android's selected media route.
-- Source builds produce an unsigned release APK. The earlier user-test APK was
-  debug signed; it is not a production signing reference. `Binaries` and
-  `AllowedAPKSigningKeys` are deliberately absent until a production signing
-  strategy and independently reproduced upstream APK exist.
+- Source builds produce an unsigned release APK. GitHub releases use a
+  persistent production key; its public certificate is in `docs/`. The earlier
+  user-test APK was debug signed. `Binaries` and `AllowedAPKSigningKeys` remain
+  absent: default F-Droid-managed signing is proposed as a separate channel.
+  Switching to upstream-signature reproduction requires independent agreement
+  and validation; local unsigned reproducibility alone is insufficient.
 - The release ID uses the maintainer's GitHub namespace. The earlier development
   APK used `dev.nightfall`; it can stay installed separately. Export mixes as
   JSON from the development app and import into the release app. Do not remove
@@ -62,7 +65,7 @@ F-Droid's source preparation handles wrapper files normally.
 
 ## Submission status and remaining work
 
-1. Source is public. The recipe targets the matching `v1.0` release tag;
+1. Source is public. Each recipe build targets its matching release tag;
    verify it with `git ls-remote --tags https://github.com/CamjamPNG/Nightfall.git`.
 2. Review the development-age/user-adoption policy: the app is new. F-Droid's
    current policy requests three months of active development unless a listed

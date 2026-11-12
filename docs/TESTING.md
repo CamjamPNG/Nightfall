@@ -2,6 +2,11 @@
 
 ## Executed checks
 
+- 9 release-tool tests cover all four version levels, ordering and resets,
+  classification of mixed changes, synchronized Android/store/F-Droid metadata,
+  rejection of duplicate versions and preservation of code/audio in ABI options.
+  Signed APK variants are additionally checked with Android's apksigner, aapt,
+  zipalign and source-tag audio hashes before publication.
 - 18 deterministic JVM/core tests pass, with no failures or skips. They cover
   nine simultaneous non-silent sources, 512 allocated layers, unrelated-source
   phase continuity, independent gain/master/mute/solo, limiting, colored-noise

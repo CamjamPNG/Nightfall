@@ -4,6 +4,11 @@ A free, native Android sleep sound mixer. Kotlin, Jetpack Compose / Material 3, 
 
 ## Install and use
 
+Download signed APK options from [GitHub Releases](https://github.com/CamjamPNG/Nightfall/releases).
+Choose **arm64-v8a for Pixel 7**, or Universal if unsure. All options include the
+same complete offline sound library. See [release and version rules](docs/RELEASING.md)
+for automatic publishing, signing setup and update-channel details.
+
 Build the installable debug APK with `./gradlew :app:assembleDebug`, or use a separately provided development APK. Generated APKs are not committed to source. The public release application ID is `io.github.camjampng.nightfall`. Install on a Pixel 7 or another Android 8+ device:
 
 ```sh
