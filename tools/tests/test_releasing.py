@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 import importlib.util
 import pathlib
+import subprocess
+import sys
 import tempfile
 import unittest
 import zipfile
@@ -49,6 +51,10 @@ class VersionPolicyTest(unittest.TestCase):
         self.assertEqual(version.classify(["fix(major): repair background playback"]), "minor")
         self.assertEqual(version.classify(["hotfix(audio): urgent crackle fix"]), "hotfix")
         self.assertEqual(version.classify(["fix: minor layout bug"]), "patch")
+
+    def test_real_release_metadata_preflight(self):
+        result = subprocess.run([sys.executable, str(TOOLS / 'check_release.py')], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_android_and_store_versions_stay_in_sync(self):
         with tempfile.TemporaryDirectory() as tmp:
