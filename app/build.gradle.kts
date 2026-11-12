@@ -19,6 +19,8 @@ android {
     }
     androidResources { noCompress += "pcm" }
     buildFeatures { compose = true }
+    // Keep release bytes independent of Git checkout/export state.
+    buildTypes { release { vcsInfo { include = false } } }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
