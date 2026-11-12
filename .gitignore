@@ -1,0 +1,16 @@
+.gradle/
+**/build/
+local.properties
+.idea/
+*.iml
+
+.audio-cache/
+
+.kotlin/
+artifacts/
+*.apk
+*.aab
+*.jks
+*.keystore
+key.properties
+fdroid/local/

@@ -1,0 +1,38 @@
+Categories:
+  - Ambient Sound
+License: MIT
+AuthorName: Camden VandenBosch
+SourceCode: https://github.com/CamjamPNG/Nightfall
+IssueTracker: https://github.com/CamjamPNG/Nightfall/issues
+Changelog: https://github.com/CamjamPNG/Nightfall/blob/HEAD/fastlane/metadata/android/en-US/changelogs/1.txt
+
+AutoName: Nightfall
+
+MaintainerNotes: |
+  Original code is MIT. The commercial-courtesy request is voluntary and
+  adds no license restriction. Bundled non-executable recordings retain
+  their CC BY, CC BY-SA or CC0 terms; see AUDIO_LICENSES.md and sidecars.
+
+  New application: development-age or proven-user policy eligibility has
+  not been demonstrated. No inclusion exception or hardware certification
+  is claimed. See fdroid/README.md and docs/TESTING.md before submission.
+
+  The old development APK used dev.nightfall. This initial public package
+  uses the developer's GitHub namespace and is built unsigned for F-Droid.
+  No upstream production signing reference has been configured.
+
+RepoType: git
+Repo: https://github.com/CamjamPNG/Nightfall.git
+
+Builds:
+  - versionName: '1.0'
+    versionCode: 1
+    commit: v1.0
+    subdir: app
+    gradle:
+      - yes
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags ^v[0-9].*
+CurrentVersion: '1.0'
+CurrentVersionCode: 1

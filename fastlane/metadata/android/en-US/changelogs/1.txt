@@ -1,0 +1,1 @@
+First source release: an offline sleep mixer with independent sound layers, noise and weather synthesis, original generative music, local presets, a composition studio, background media controls, sleep timers and smooth fades. Bundled field recordings have three-minute minimum loop cycles. No advertising, accounts, tracking or runtime internet access.

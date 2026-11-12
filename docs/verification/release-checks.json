@@ -1,0 +1,28 @@
+{
+  "dateUTC": "2026-11-12T07:53:43.253201+00:00",
+  "applicationId": "io.github.camjampng.nightfall",
+  "versionName": "1.0",
+  "versionCode": 1,
+  "coreTests": {
+    "dev.nightfall.core.MixerTest": {
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "dev.nightfall.core.AudioAcceptanceTest": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "coreTestsTotal": 18,
+  "releaseLintErrors": [],
+  "releaseUnsignedSha256": "e902112274f427afa58e6f3ca0d74e806df81bbf6358df692167441393431602",
+  "releaseUnsignedBytes": 91167130,
+  "fdroidMetadataLint": "pass, fdroidserver 2.4.5 with current upstream category definitions",
+  "androidInstrumentation": "attempted; startup ANR; no pass claimed",
+  "physicalPixel7BluetoothOvernight": "not tested",
+  "publicSigningKey": "not provisioned; default F-Droid signing proposed"
+}

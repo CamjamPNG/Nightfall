@@ -1,0 +1,860 @@
+[
+  {
+    "id": "forest-birds",
+    "sources": [
+      {
+        "title": "File:Birds in mixed forest.wav",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/8/8e/Birds_in_mixed_forest.wav",
+        "page": "https://commons.wikimedia.org/wiki/File:Birds_in_mixed_forest.wav",
+        "size": 66038444,
+        "license": "CC BY-SA 3.0 nl",
+        "artist": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:De_Auditieve_Dienst&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"User:De Auditieve Dienst (page does not exist)\">De Auditieve Dienst</a>",
+        "metadata": {
+          "DateTime": {
+            "value": "2014-07-31 12:07:06",
+            "source": "mediawiki-metadata",
+            "hidden": ""
+          },
+          "ObjectName": {
+            "value": "Birds in mixed forest",
+            "source": "mediawiki-metadata"
+          },
+          "CommonsMetadataExtension": {
+            "value": 1.2,
+            "source": "extension",
+            "hidden": ""
+          },
+          "Categories": {
+            "value": "Sallandse Heuvelrug|Singing birds|Self-published work|Uploaded via Campaign:wle-nl|Netherlands photographs taken on 2014-05-25|Files with coordinates missing SDC location of creation (52\u00b0 N, 6\u00b0 E)|Images from Wiki Loves Earth 2014 in the Netherlands - humans",
+            "source": "commons-categories",
+            "hidden": ""
+          },
+          "Assessments": {
+            "value": "",
+            "source": "commons-categories",
+            "hidden": ""
+          },
+          "GPSLatitude": {
+            "value": "52.360442",
+            "source": "commons-desc-page"
+          },
+          "GPSLongitude": {
+            "value": "6.429471",
+            "source": "commons-desc-page"
+          },
+          "GPSMapDatum": {
+            "value": "WGS-84",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "ImageDescription": {
+            "value": "This is a photo or sound file made in <b><a href=\"https://en.wikipedia.org/wiki/Sallandse_Heuvelrug_National_Park\" class=\"extiw\" title=\"en:Sallandse Heuvelrug National Park\">Sallandse Heuvelrug National Park</a></b> in the Netherlands, with the main subject of the file in the category: <b>humans in nature</b>",
+            "source": "commons-desc-page"
+          },
+          "DateTimeOriginal": {
+            "value": "2014-05-25",
+            "source": "commons-desc-page"
+          },
+          "Credit": {
+            "value": "<span class=\"int-own-work\" lang=\"en\">Own work</span>",
+            "source": "commons-desc-page"
+          },
+          "Artist": {
+            "value": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:De_Auditieve_Dienst&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"User:De Auditieve Dienst (page does not exist)\">De Auditieve Dienst</a>",
+            "source": "commons-desc-page"
+          },
+          "LicenseShortName": {
+            "value": "CC BY-SA 3.0 nl",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "UsageTerms": {
+            "value": "Creative Commons Attribution-Share Alike 3.0 nl",
+            "source": "commons-desc-page"
+          },
+          "AttributionRequired": {
+            "value": "true",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "LicenseUrl": {
+            "value": "https://creativecommons.org/licenses/by-sa/3.0/nl/deed.en",
+            "source": "commons-desc-page"
+          },
+          "Copyrighted": {
+            "value": "True",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "Restrictions": {
+            "value": "",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "License": {
+            "value": "cc-by-sa-3.0-nl",
+            "source": "commons-templates",
+            "hidden": ""
+          }
+        },
+        "cacheName": "long-forest-birds.wav",
+        "seconds": 241
+      }
+    ],
+    "cycleSeconds": 228.3,
+    "sha256": "c383f4e1abdae4c2e5bc44b845d9ebcfd6c84e2fb1be66040b567524c1de77b3"
+  },
+  {
+    "id": "crickets",
+    "sources": [
+      {
+        "title": "File:Cricket.ogg",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/9/95/Cricket.ogg",
+        "page": "https://commons.wikimedia.org/wiki/File:Cricket.ogg",
+        "size": 12865541,
+        "license": "CC BY-SA 3.0",
+        "artist": "The original uploader was <a href=\"https://en.wikipedia.org/wiki/User:Hassocks5489\" class=\"extiw\" title=\"wikipedia:User:Hassocks5489\">Hassocks5489</a> at <a href=\"https://en.wikipedia.org/wiki/\" class=\"extiw\" title=\"wikipedia:\">English Wikipedia</a>.",
+        "description": "<i>See below</i>",
+        "metadata": {
+          "DateTime": {
+            "value": "2009-05-22 11:03:46",
+            "source": "mediawiki-metadata",
+            "hidden": ""
+          },
+          "ObjectName": {
+            "value": "Cricket",
+            "source": "mediawiki-metadata"
+          },
+          "CommonsMetadataExtension": {
+            "value": 1.2,
+            "source": "extension",
+            "hidden": ""
+          },
+          "Categories": {
+            "value": "License migration completed|GFDL-disclaimers|Spoken English Wikipedia|Audio files of cricket|Audio versions of Wikipedia articles from 2007",
+            "source": "commons-categories",
+            "hidden": ""
+          },
+          "Assessments": {
+            "value": "",
+            "source": "commons-categories",
+            "hidden": ""
+          },
+          "ImageDescription": {
+            "value": "<i>See below</i>",
+            "source": "commons-desc-page"
+          },
+          "DateTimeOriginal": {
+            "value": "8 October 2007 (original upload date)",
+            "source": "commons-desc-page"
+          },
+          "Credit": {
+            "value": "<a href=\"https://en.wikipedia.org/wiki/User:Hassocks5489\" class=\"extiw\" title=\"en:User:Hassocks5489\">Hassocks5489</a> made this recording based on Wikipedia (<i>see below</i>)",
+            "source": "commons-desc-page"
+          },
+          "Artist": {
+            "value": "The original uploader was <a href=\"https://en.wikipedia.org/wiki/User:Hassocks5489\" class=\"extiw\" title=\"wikipedia:User:Hassocks5489\">Hassocks5489</a> at <a href=\"https://en.wikipedia.org/wiki/\" class=\"extiw\" title=\"wikipedia:\">English Wikipedia</a>.",
+            "source": "commons-desc-page"
+          },
+          "AuthorCount": {
+            "value": 2,
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "LicenseShortName": {
+            "value": "CC BY-SA 3.0",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "UsageTerms": {
+            "value": "Creative Commons Attribution-Share Alike 3.0",
+            "source": "commons-desc-page"
+          },
+          "AttributionRequired": {
+            "value": "true",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "LicenseUrl": {
+            "value": "http://creativecommons.org/licenses/by-sa/3.0/",
+            "source": "commons-desc-page"
+          },
+          "Copyrighted": {
+            "value": "True",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "Restrictions": {
+            "value": "",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "License": {
+            "value": "cc-by-sa-3.0",
+            "source": "commons-templates",
+            "hidden": ""
+          }
+        },
+        "cacheName": "long-crickets.ogg",
+        "seconds": 241
+      }
+    ],
+    "cycleSeconds": 240.0,
+    "sha256": "10301933f086921f8a8a89ba729523d4b14262c783584d17c02a2d6288fd2346"
+  },
+  {
+    "id": "frogs",
+    "sources": [
+      {
+        "title": "File:Pseudacris-crucifer-003.ogg",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/7/70/Pseudacris-crucifer-003.ogg",
+        "page": "https://commons.wikimedia.org/wiki/File:Pseudacris-crucifer-003.ogg",
+        "size": 2170476,
+        "license": "CC BY-SA 3.0",
+        "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Mdf\" title=\"User:Mdf\">Mdf</a>",
+        "metadata": {
+          "DateTime": {
+            "value": "2006-04-17 21:03:47",
+            "source": "mediawiki-metadata",
+            "hidden": ""
+          },
+          "ObjectName": {
+            "value": "Pseudacris-crucifer-003",
+            "source": "mediawiki-metadata"
+          },
+          "CommonsMetadataExtension": {
+            "value": 1.2,
+            "source": "extension",
+            "hidden": ""
+          },
+          "Categories": {
+            "value": "GFDL|Presqu'ile Provincial Park|License migration completed|Media of the day|Audio files of Canada|Audio files of 2006|Audio files of Pseudacris crucifer|Audio files of Lithobates sylvaticus",
+            "source": "commons-categories",
+            "hidden": ""
+          },
+          "Assessments": {
+            "value": "",
+            "source": "commons-categories",
+            "hidden": ""
+          },
+          "ImageDescription": {
+            "value": "A pond of <a href=\"//commons.wikimedia.org/wiki/Pseudacris_crucifer\" title=\"Pseudacris crucifer\">Spring Peepers</a> and <a href=\"//commons.wikimedia.org/wiki/Rana_sylvatica\" class=\"mw-redirect\" title=\"Rana sylvatica\">Wood Frogs</a> -- <a href=\"https://en.wikipedia.org/wiki/en:Presqu%27ile_Provincial_Park\" class=\"extiw\" title=\"w:en:Presqu'ile Provincial Park\">Presqu'ile Provincial Park</a>, Ontario, Canada. Field recording of a few hundred individuals in a pond 50 m \u00d7 30 m near Owen Point. The recording was made about an hour after sunset on 2006 April 16. The peepers produce the high \"peeps\" and the wood frogs emit the low, chattering,tones in the background. For their size, spring peepers are extremely loud; this fact can be fully appreciated by turning the playback up.",
+            "source": "commons-desc-page"
+          },
+          "DateTimeOriginal": {
+            "value": "2006-04-16",
+            "source": "commons-desc-page"
+          },
+          "Credit": {
+            "value": "<span class=\"int-own-work\" lang=\"en\">Own work</span>",
+            "source": "commons-desc-page"
+          },
+          "Artist": {
+            "value": "<a href=\"//commons.wikimedia.org/wiki/User:Mdf\" title=\"User:Mdf\">Mdf</a>",
+            "source": "commons-desc-page"
+          },
+          "LicenseShortName": {
+            "value": "CC BY-SA 3.0",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "UsageTerms": {
+            "value": "Creative Commons Attribution-Share Alike 3.0",
+            "source": "commons-desc-page"
+          },
+          "AttributionRequired": {
+            "value": "true",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "LicenseUrl": {
+            "value": "http://creativecommons.org/licenses/by-sa/3.0/",
+            "source": "commons-desc-page"
+          },
+          "Copyrighted": {
+            "value": "True",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "Restrictions": {
+            "value": "",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "License": {
+            "value": "cc-by-sa-3.0",
+            "source": "commons-templates",
+            "hidden": ""
+          }
+        },
+        "cacheName": "long-frogs.ogg",
+        "seconds": 241
+      },
+      {
+        "title": "File:Frogs croak calling chorus at night.ogg",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/5/51/Frogs_croak_calling_chorus_at_night.ogg",
+        "page": "https://commons.wikimedia.org/wiki/File:Frogs_croak_calling_chorus_at_night.ogg",
+        "size": 788738,
+        "license": "CC BY-SA 4.0",
+        "artist": "<a href=\"//commons.wikimedia.org/wiki/User:JogiAsad\" title=\"User:JogiAsad\">JogiAsad</a>",
+        "description": "The Sound of Frogs advertising chorus Calling at Night",
+        "metadata": {
+          "DateTime": {
+            "value": "2025-08-12 20:03:18",
+            "source": "mediawiki-metadata",
+            "hidden": ""
+          },
+          "ObjectName": {
+            "value": "Frogs croak calling chorus at night",
+            "source": "mediawiki-metadata"
+          },
+          "CommonsMetadataExtension": {
+            "value": 1.2,
+            "source": "extension",
+            "hidden": ""
+          },
+          "Categories": {
+            "value": "Frogs|Audio files of animal sounds|Self-published work|Uploads by JogiAsad",
+            "source": "commons-categories",
+            "hidden": ""
+          },
+          "Assessments": {
+            "value": "",
+            "source": "commons-categories",
+            "hidden": ""
+          },
+          "ImageDescription": {
+            "value": "The Sound of Frogs advertising chorus Calling at Night",
+            "source": "commons-desc-page"
+          },
+          "DateTimeOriginal": {
+            "value": "2025-08-13",
+            "source": "commons-desc-page"
+          },
+          "Credit": {
+            "value": "<span class=\"int-own-work\" lang=\"en\">Own work</span>",
+            "source": "commons-desc-page"
+          },
+          "Artist": {
+            "value": "<a href=\"//commons.wikimedia.org/wiki/User:JogiAsad\" title=\"User:JogiAsad\">JogiAsad</a>",
+            "source": "commons-desc-page"
+          },
+          "LicenseShortName": {
+            "value": "CC BY-SA 4.0",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "UsageTerms": {
+            "value": "Creative Commons Attribution-Share Alike 4.0",
+            "source": "commons-desc-page"
+          },
+          "AttributionRequired": {
+            "value": "true",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "LicenseUrl": {
+            "value": "https://creativecommons.org/licenses/by-sa/4.0",
+            "source": "commons-desc-page"
+          },
+          "Copyrighted": {
+            "value": "True",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "Restrictions": {
+            "value": "",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "License": {
+            "value": "cc-by-sa-4.0",
+            "source": "commons-templates",
+            "hidden": ""
+          }
+        },
+        "cacheName": "extra-frogs.ogg",
+        "seconds": 241
+      }
+    ],
+    "cycleSeconds": 237.72466666666668,
+    "sha256": "4e9af741b38258e4b1b1531f459b65382a27dc6e617177f9cd668442903072d1"
+  },
+  {
+    "id": "nighttime-forest",
+    "sources": [
+      {
+        "title": "File:Tawny owl calling at night in Tuntorp, Brastad, Sweden.ogg",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/e/ef/Tawny_owl_calling_at_night_in_Tuntorp%2C_Brastad%2C_Sweden.ogg",
+        "page": "https://commons.wikimedia.org/wiki/File:Tawny_owl_calling_at_night_in_Tuntorp,_Brastad,_Sweden.ogg",
+        "size": 21603448,
+        "license": "CC BY 4.0",
+        "artist": "<a href=\"//commons.wikimedia.org/wiki/User:W.carter\" title=\"User:W.carter\">W.carter</a>",
+        "description": "A tawny owl (<i>Strix aluco</i>) calling at night in Tuntorp, Brastad, Lysekil Municipality, Sweden. It flew around and called the forest next to my house from about 23:00 to 02:00. It would pause when it changed location. The recording is from two locations; there is a 1 sek pause at 3:44 to mark the relocation pause. Recording was made with the internal microphones of a camera, Sony Cyber-shot DSC-RX100, cut in <a href=\"https://en.wikipedia.org/wiki/Shotcut\" class=\"extiw\" title=\"w:Shotcut\">Shotcut</a> and background noise reduced in <a href=\"https://en.wikipedia.org/wiki/Audacity_(audio_editor)\" class=\"extiw\" title=\"w:Audacity (audio editor)\">Audacity</a>.",
+        "metadata": {
+          "DateTime": {
+            "value": "2026-05-14 12:51:03",
+            "source": "mediawiki-metadata",
+            "hidden": ""
+          },
+          "ObjectName": {
+            "value": "Tawny owl calling at night in Tuntorp, Brastad, Sweden",
+            "source": "mediawiki-metadata"
+          },
+          "CommonsMetadataExtension": {
+            "value": 1.2,
+            "source": "extension",
+            "hidden": ""
+          },
+          "Categories": {
+            "value": "Self-published work|Sounds of birds recorded in Sweden|Audio files of Strix aluco|Files with coordinates missing SDC location of creation|Night in Brastad|Audio by W.carter|Animals in Tuntorp, Brastad",
+            "source": "commons-categories",
+            "hidden": ""
+          },
+          "Assessments": {
+            "value": "",
+            "source": "commons-categories",
+            "hidden": ""
+          },
+          "GPSLatitude": {
+            "value": "58.385261",
+            "source": "commons-desc-page"
+          },
+          "GPSLongitude": {
+            "value": "11.474762",
+            "source": "commons-desc-page"
+          },
+          "GPSMapDatum": {
+            "value": "WGS-84",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "ImageDescription": {
+            "value": "A tawny owl (<i>Strix aluco</i>) calling at night in Tuntorp, Brastad, Lysekil Municipality, Sweden. It flew around and called the forest next to my house from about 23:00 to 02:00. It would pause when it changed location. The recording is from two locations; there is a 1 sek pause at 3:44 to mark the relocation pause. Recording was made with the internal microphones of a camera, Sony Cyber-shot DSC-RX100, cut in <a href=\"https://en.wikipedia.org/wiki/Shotcut\" class=\"extiw\" title=\"w:Shotcut\">Shotcut</a> and background noise reduced in <a href=\"https://en.wikipedia.org/wiki/Audacity_(audio_editor)\" class=\"extiw\" title=\"w:Audacity (audio editor)\">Audacity</a>.",
+            "source": "commons-desc-page"
+          },
+          "DateTimeOriginal": {
+            "value": "2026-05-04 00:47",
+            "source": "commons-desc-page"
+          },
+          "Credit": {
+            "value": "<span class=\"int-own-work\" lang=\"en\">Own work</span>",
+            "source": "commons-desc-page"
+          },
+          "Artist": {
+            "value": "<a href=\"//commons.wikimedia.org/wiki/User:W.carter\" title=\"User:W.carter\">W.carter</a>",
+            "source": "commons-desc-page"
+          },
+          "LicenseShortName": {
+            "value": "CC BY 4.0",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "UsageTerms": {
+            "value": "Creative Commons Attribution 4.0",
+            "source": "commons-desc-page"
+          },
+          "AttributionRequired": {
+            "value": "true",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "LicenseUrl": {
+            "value": "https://creativecommons.org/licenses/by/4.0",
+            "source": "commons-desc-page"
+          },
+          "Copyrighted": {
+            "value": "True",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "Restrictions": {
+            "value": "",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "License": {
+            "value": "cc-by-4.0",
+            "source": "commons-templates",
+            "hidden": ""
+          }
+        },
+        "cacheName": "nighttime-forest.ogg",
+        "seconds": 241
+      }
+    ],
+    "cycleSeconds": 240.0,
+    "sha256": "e82021d7be5bd3ffd5156f01943c1777ebda6793d22ef1034e0176636004b208"
+  },
+  {
+    "id": "quiet-library",
+    "sources": [
+      {
+        "title": "File:20121112 TU Delft Library, quiet study room - general ambience - SoundCloud - el mar.ogg",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/f/fb/20121112_TU_Delft_Library%2C_quiet_study_room_-_general_ambience_-_SoundCloud_-_el_mar.ogg",
+        "page": "https://commons.wikimedia.org/wiki/File:20121112_TU_Delft_Library,_quiet_study_room_-_general_ambience_-_SoundCloud_-_el_mar.ogg",
+        "size": 15278610,
+        "license": "CC BY 3.0",
+        "artist": "el_mar",
+        "description": "<p>A quiet study room in the library at Dutch university TU Delft. Noise of the ventilation system. Computer keyboards and mouses in the background. Some students cough. Recorded with a Zoom H2 (front mikes).\nLocation pics:\n<a rel=\"nofollow\" class=\"external free\" href=\"http://flic.kr/p/dwugZF\">http://flic.kr/p/dwugZF</a>\n</p>\n<a rel=\"nofollow\" class=\"external free\" href=\"http://flic.kr/p/dwzLHo\">http://flic.kr/p/dwzLHo</a>",
+        "metadata": {
+          "DateTime": {
+            "value": "2013-04-16 18:23:18",
+            "source": "mediawiki-metadata",
+            "hidden": ""
+          },
+          "ObjectName": {
+            "value": "20121112 TU Delft Library, quiet study room - general ambience - SoundCloud - el mar",
+            "source": "mediawiki-metadata"
+          },
+          "CommonsMetadataExtension": {
+            "value": 1.2,
+            "source": "extension",
+            "hidden": ""
+          },
+          "Categories": {
+            "value": "Sounds from Geluid van Nederland|Sounds from Geluid van Nederland to be checked",
+            "source": "commons-categories",
+            "hidden": ""
+          },
+          "Assessments": {
+            "value": "",
+            "source": "commons-categories",
+            "hidden": ""
+          },
+          "ImageDescription": {
+            "value": "<p>A quiet study room in the library at Dutch university TU Delft. Noise of the ventilation system. Computer keyboards and mouses in the background. Some students cough. Recorded with a Zoom H2 (front mikes).\nLocation pics:\n<a rel=\"nofollow\" class=\"external free\" href=\"http://flic.kr/p/dwugZF\">http://flic.kr/p/dwugZF</a>\n</p>\n<a rel=\"nofollow\" class=\"external free\" href=\"http://flic.kr/p/dwzLHo\">http://flic.kr/p/dwzLHo</a>",
+            "source": "commons-desc-page"
+          },
+          "DateTimeOriginal": {
+            "value": "2012-11-12",
+            "source": "commons-desc-page"
+          },
+          "Credit": {
+            "value": "Soundcloud: <a rel=\"nofollow\" class=\"external text\" data-mw-original-href=\"http://soundcloud.com/el_mar\" href=\"https://soundcloud.com/el_mar\">27749512</a>",
+            "source": "commons-desc-page"
+          },
+          "Artist": {
+            "value": "el_mar",
+            "source": "commons-desc-page"
+          },
+          "Permission": {
+            "value": "<div class=\"responsive-license-cc layouttemplate licensetpl\" dir=\"ltr\" lang=\"en\"><div class=\"rlicense-icons\"><span class=\"skin-invert\" typeof=\"mw:File\"><span title=\"w:en:Creative Commons\"><img alt=\"w:en:Creative Commons\" src=\"https://thumb.wikimedia.org/wikipedia/commons/thumb/7/79/CC_some_rights_reserved.svg/120px-CC_some_rights_reserved.svg.png?utm_source=commons.wikimedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail\" decoding=\"async\" loading=\"lazy\" width=\"90\" height=\"36\" class=\"mw-file-element\" srcset=\"https://thumb.wikimedia.org/wikipedia/commons/thumb/7/79/CC_some_rights_reserved.svg/250px-CC_some_rights_reserved.svg.png?utm_source=commons.wikimedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail 2x\" data-file-width=\"744\" data-file-height=\"300\"></span></span><br>\n<span class=\"skin-invert\" typeof=\"mw:File\"><span title=\"attribution\"><img alt=\"attribution\" src=\"https://thumb.wikimedia.org/wikipedia/commons/thumb/1/11/Cc-by_new_white.svg/40px-Cc-by_new_white.svg.png?utm_source=commons.wikimedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail\" decoding=\"async\" loading=\"lazy\" width=\"24\" height=\"24\" class=\"mw-file-element\" srcset=\"https://thumb.wikimedia.org/wikipedia/commons/thumb/1/11/Cc-by_new_white.svg/60px-Cc-by_new_white.svg.png?utm_source=commons.wikimedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail 2x\" data-file-width=\"64\" data-file-height=\"64\"></span></span></div><div class=\"rlicense-text\"><div class=\"rlicense-declaration\">This file is licensed under the <a href=\"https://en.wikipedia.org/wiki/en:Creative_Commons\" class=\"extiw\" title=\"w:en:Creative Commons\">Creative Commons</a> <a href=\"//creativecommons.org/licenses/by/3.0/deed.en\" class=\"extiw\" title=\"creativecommons:by/3.0/deed.en\">Attribution 3.0 Unported</a> license.</div><div class=\"rlicense-desc\" style=\"text-align:start;\" dir=\"ltr\" lang=\"en\">\n<dl><dd>You are free:\n<ul><li><b>to share</b> \u2013 to copy, distribute and transmit the work</li>\n<li><b>to remix</b> \u2013 to adapt the work</li></ul></dd>\n<dd>Under the following conditions:\n<ul><li><b>attribution</b> \u2013 You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.</li></ul></dd></dl>\n</div><span class=\"licensetpl_link\" style=\"display:none;\">https://creativecommons.org/licenses/by/3.0</span><span class=\"licensetpl_short\" style=\"display:none;\">CC BY 3.0 </span><span class=\"licensetpl_long\" style=\"display:none;\">Creative Commons Attribution 3.0 </span><span class=\"licensetpl_link_req\" style=\"display:none;\">true</span><span class=\"licensetpl_attr_req\" style=\"display:none;\">true</span></div></div>",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "LicenseShortName": {
+            "value": "CC BY 3.0",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "UsageTerms": {
+            "value": "Creative Commons Attribution 3.0",
+            "source": "commons-desc-page"
+          },
+          "AttributionRequired": {
+            "value": "true",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "LicenseUrl": {
+            "value": "https://creativecommons.org/licenses/by/3.0",
+            "source": "commons-desc-page"
+          },
+          "Copyrighted": {
+            "value": "True",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "Restrictions": {
+            "value": "",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "License": {
+            "value": "cc-by-3.0",
+            "source": "commons-templates",
+            "hidden": ""
+          }
+        },
+        "cacheName": "quiet-library.ogg",
+        "seconds": 241
+      }
+    ],
+    "cycleSeconds": 240.0,
+    "sha256": "2bb5e803b7ba26ab35f4dedf659f9f135c9506d6312aa9fc13985745bfd2cc50"
+  },
+  {
+    "id": "distant-city-rain",
+    "sources": [
+      {
+        "title": "File:Distant storm in the city (5).flac",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/3/30/Distant_storm_in_the_city_%285%29.flac",
+        "page": "https://commons.wikimedia.org/wiki/File:Distant_storm_in_the_city_(5).flac",
+        "size": 20820109,
+        "license": "CC BY 3.0",
+        "artist": "Matucha",
+        "description": "Distant lighting storm recorded with pair of Neumann KM76 through Manley Dual Mono Mic Pre and Lavry Blue AD.",
+        "metadata": {
+          "DateTime": {
+            "value": "2018-03-02 23:00:49",
+            "source": "mediawiki-metadata",
+            "hidden": ""
+          },
+          "ObjectName": {
+            "value": "Distant storm in the city (5)",
+            "source": "mediawiki-metadata"
+          },
+          "CommonsMetadataExtension": {
+            "value": 1.2,
+            "source": "extension",
+            "hidden": ""
+          },
+          "Categories": {
+            "value": "Soundscape|Sounds of rain|Media used on Nasqueron Rain",
+            "source": "commons-categories",
+            "hidden": ""
+          },
+          "Assessments": {
+            "value": "",
+            "source": "commons-categories",
+            "hidden": ""
+          },
+          "ImageDescription": {
+            "value": "Distant lighting storm recorded with pair of Neumann KM76 through Manley Dual Mono Mic Pre and Lavry Blue AD.",
+            "source": "commons-desc-page"
+          },
+          "DateTimeOriginal": {
+            "value": "2011-02-23",
+            "source": "commons-desc-page"
+          },
+          "Credit": {
+            "value": "<a rel=\"nofollow\" class=\"external free\" href=\"https://freesound.org/people/matucha/sounds/115250/\">https://freesound.org/people/matucha/sounds/115250/</a>",
+            "source": "commons-desc-page"
+          },
+          "Artist": {
+            "value": "Matucha",
+            "source": "commons-desc-page"
+          },
+          "LicenseShortName": {
+            "value": "CC BY 3.0",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "UsageTerms": {
+            "value": "Creative Commons Attribution 3.0",
+            "source": "commons-desc-page"
+          },
+          "AttributionRequired": {
+            "value": "true",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "LicenseUrl": {
+            "value": "https://creativecommons.org/licenses/by/3.0",
+            "source": "commons-desc-page"
+          },
+          "Copyrighted": {
+            "value": "True",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "Restrictions": {
+            "value": "",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "License": {
+            "value": "cc-by-3.0",
+            "source": "commons-templates",
+            "hidden": ""
+          }
+        },
+        "cacheName": "distant-city-rain.flac",
+        "seconds": 121
+      },
+      {
+        "title": "File:Storm in Quebec on August 10, 2023.flac",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/4/4b/Storm_in_Quebec_on_August_10%2C_2023.flac",
+        "page": "https://commons.wikimedia.org/wiki/File:Storm_in_Quebec_on_August_10,_2023.flac",
+        "license": "CC0",
+        "artist": "<bdi><a href=\"https://www.wikidata.org/wiki/Q115464159\" class=\"extiw\" title=\"d:Q115464159\"><span title=\"developer analyst and photographer from Venezuela\">Wilfredor</span></a></bdi>",
+        "metadata": {
+          "DateTime": {
+            "value": "2025-01-23 21:29:54",
+            "source": "mediawiki-metadata",
+            "hidden": ""
+          },
+          "ObjectName": {
+            "value": "Storm in Quebec on August 10, 2023",
+            "source": "mediawiki-metadata"
+          },
+          "CommonsMetadataExtension": {
+            "value": 1.2,
+            "source": "extension",
+            "hidden": ""
+          },
+          "Categories": {
+            "value": "CC-Zero|Self-published work|Sounds by Wilfredor|Storms in Quebec|Audio files made using a Zoom H6|Rain in Quebec City",
+            "source": "commons-categories",
+            "hidden": ""
+          },
+          "Assessments": {
+            "value": "",
+            "source": "commons-categories",
+            "hidden": ""
+          },
+          "ImageDescription": {
+            "value": "Storm in Quebec on August 10, 2023",
+            "source": "commons-desc-page"
+          },
+          "DateTimeOriginal": {
+            "value": "2023-08-10",
+            "source": "commons-desc-page"
+          },
+          "Credit": {
+            "value": "<span class=\"int-own-work\" lang=\"en\">Own work</span>",
+            "source": "commons-desc-page"
+          },
+          "Artist": {
+            "value": "<bdi><a href=\"https://www.wikidata.org/wiki/Q115464159\" class=\"extiw\" title=\"d:Q115464159\"><span title=\"developer analyst and photographer from Venezuela\">Wilfredor</span></a></bdi>",
+            "source": "commons-desc-page"
+          },
+          "LicenseShortName": {
+            "value": "CC0",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "UsageTerms": {
+            "value": "Creative Commons Zero, Public Domain Dedication",
+            "source": "commons-desc-page"
+          },
+          "AttributionRequired": {
+            "value": "false",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "LicenseUrl": {
+            "value": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+            "source": "commons-desc-page"
+          },
+          "Copyrighted": {
+            "value": "True",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "Restrictions": {
+            "value": "",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "License": {
+            "value": "cc0",
+            "source": "commons-templates",
+            "hidden": ""
+          }
+        },
+        "cacheName": "long-city.flac",
+        "seconds": 121
+      }
+    ],
+    "cycleSeconds": 240.0,
+    "sha256": "49d9cf3e978d35f4e8315ce4c534444debe798fde66a0ec3afb208b5d947c3af"
+  },
+  {
+    "id": "soft-coffee-shop-ambience",
+    "sources": [
+      {
+        "title": "File:Rustige sfeer in een caf\u00e9 - SoundCloud - Beeld en Geluid.ogg",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Rustige_sfeer_in_een_caf%C3%A9_-_SoundCloud_-_Beeld_en_Geluid.ogg",
+        "page": "https://commons.wikimedia.org/wiki/File:Rustige_sfeer_in_een_caf%C3%A9_-_SoundCloud_-_Beeld_en_Geluid.ogg",
+        "license": "CC BY-SA 3.0",
+        "artist": "Beeld en Geluid",
+        "metadata": {
+          "DateTime": {
+            "value": "2013-04-18 10:59:44",
+            "source": "mediawiki-metadata",
+            "hidden": ""
+          },
+          "ObjectName": {
+            "value": "Rustige sfeer in een caf\u00e9 - SoundCloud - Beeld en Geluid",
+            "source": "mediawiki-metadata"
+          },
+          "CommonsMetadataExtension": {
+            "value": 1.2,
+            "source": "extension",
+            "hidden": ""
+          },
+          "Categories": {
+            "value": "Sounds from Geluid van Nederland|Sounds from Geluid van Nederland to be checked",
+            "source": "commons-categories",
+            "hidden": ""
+          },
+          "Assessments": {
+            "value": "",
+            "source": "commons-categories",
+            "hidden": ""
+          },
+          "ImageDescription": {
+            "value": "Rustige sfeer in een caf\u00e9 (boerenschuur), met geroezemoes van publiek, waaronder enkele kinderen",
+            "source": "commons-desc-page"
+          },
+          "DateTimeOriginal": {
+            "value": "None-None-None",
+            "source": "commons-desc-page"
+          },
+          "Credit": {
+            "value": "Soundcloud: <a rel=\"nofollow\" class=\"external text\" data-mw-original-href=\"http://soundcloud.com/beeldengeluid\" href=\"https://soundcloud.com/beeldengeluid\">9632342</a>",
+            "source": "commons-desc-page"
+          },
+          "Artist": {
+            "value": "Beeld en Geluid",
+            "source": "commons-desc-page"
+          },
+          "Permission": {
+            "value": "<div class=\"responsive-license-cc layouttemplate licensetpl\" dir=\"ltr\" lang=\"en\"><div class=\"rlicense-icons\"><span class=\"skin-invert\" typeof=\"mw:File\"><span title=\"w:en:Creative Commons\"><img alt=\"w:en:Creative Commons\" src=\"https://thumb.wikimedia.org/wikipedia/commons/thumb/7/79/CC_some_rights_reserved.svg/120px-CC_some_rights_reserved.svg.png?utm_source=commons.wikimedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail\" decoding=\"async\" loading=\"lazy\" width=\"90\" height=\"36\" class=\"mw-file-element\" srcset=\"https://thumb.wikimedia.org/wikipedia/commons/thumb/7/79/CC_some_rights_reserved.svg/250px-CC_some_rights_reserved.svg.png?utm_source=commons.wikimedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail 2x\" data-file-width=\"744\" data-file-height=\"300\"></span></span><br>\n<span class=\"skin-invert\" typeof=\"mw:File\"><span title=\"attribution\"><img alt=\"attribution\" src=\"https://thumb.wikimedia.org/wikipedia/commons/thumb/1/11/Cc-by_new_white.svg/40px-Cc-by_new_white.svg.png?utm_source=commons.wikimedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail\" decoding=\"async\" loading=\"lazy\" width=\"24\" height=\"24\" class=\"mw-file-element\" srcset=\"https://thumb.wikimedia.org/wikipedia/commons/thumb/1/11/Cc-by_new_white.svg/60px-Cc-by_new_white.svg.png?utm_source=commons.wikimedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail 2x\" data-file-width=\"64\" data-file-height=\"64\"></span></span> <span class=\"skin-invert\" typeof=\"mw:File\"><span title=\"share alike\"><img alt=\"share alike\" src=\"https://thumb.wikimedia.org/wikipedia/commons/thumb/d/df/Cc-sa_white.svg/40px-Cc-sa_white.svg.png?utm_source=commons.wikimedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail\" decoding=\"async\" loading=\"lazy\" width=\"24\" height=\"24\" class=\"mw-file-element\" srcset=\"https://thumb.wikimedia.org/wikipedia/commons/thumb/d/df/Cc-sa_white.svg/60px-Cc-sa_white.svg.png?utm_source=commons.wikimedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail 2x\" data-file-width=\"64\" data-file-height=\"64\"></span></span></div><div class=\"rlicense-text\"><div class=\"rlicense-declaration\">This file is licensed under the <a href=\"https://en.wikipedia.org/wiki/en:Creative_Commons\" class=\"extiw\" title=\"w:en:Creative Commons\">Creative Commons</a> <a href=\"//creativecommons.org/licenses/by-sa/3.0/deed.en\" class=\"extiw\" title=\"creativecommons:by-sa/3.0/deed.en\">Attribution-Share Alike 3.0 Unported</a> license.</div><div class=\"rlicense-desc\" style=\"text-align:start;\" lang=\"en\">\n<dl><dd>You are free:\n<ul><li><b>to share</b> \u2013 to copy, distribute and transmit the work</li>\n<li><b>to remix</b> \u2013 to adapt the work</li></ul></dd>\n<dd>Under the following conditions:\n<ul><li><b>attribution</b> \u2013 You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.</li>\n<li><b>share alike</b> \u2013 If you remix, transform, or build upon the material, you must distribute your contributions under the <a href=\"https://creativecommons.org/share-your-work/licensing-considerations/compatible-licenses\" class=\"extiw\" title=\"ccorg:share-your-work/licensing-considerations/compatible-licenses\">same or compatible license</a> as the original.</li></ul></dd></dl></div><span class=\"licensetpl_link\" style=\"display:none;\">https://creativecommons.org/licenses/by-sa/3.0</span><span class=\"licensetpl_short\" style=\"display:none;\">CC BY-SA 3.0 </span><span class=\"licensetpl_long\" style=\"display:none;\">Creative Commons Attribution-Share Alike 3.0 </span><span class=\"licensetpl_link_req\" style=\"display:none;\">true</span><span class=\"licensetpl_attr_req\" style=\"display:none;\">true</span></div></div>",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "LicenseShortName": {
+            "value": "CC BY-SA 3.0",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "UsageTerms": {
+            "value": "Creative Commons Attribution-Share Alike 3.0",
+            "source": "commons-desc-page"
+          },
+          "AttributionRequired": {
+            "value": "true",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "LicenseUrl": {
+            "value": "https://creativecommons.org/licenses/by-sa/3.0",
+            "source": "commons-desc-page"
+          },
+          "Copyrighted": {
+            "value": "True",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "Restrictions": {
+            "value": "",
+            "source": "commons-desc-page",
+            "hidden": ""
+          },
+          "License": {
+            "value": "cc-by-sa-3.0",
+            "source": "commons-templates",
+            "hidden": ""
+          }
+        },
+        "cacheName": "cafe.ogg",
+        "seconds": 241
+      }
+    ],
+    "cycleSeconds": 180.506,
+    "sha256": "35d1f744d532f705e41aa5d4feda9c7eb99672919ca9f8b9b97175e8a648235c"
+  }
+]

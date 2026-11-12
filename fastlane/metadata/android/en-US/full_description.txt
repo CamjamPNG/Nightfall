@@ -1,0 +1,30 @@
+Build a quiet soundscape from independent sound layers. Nightfall is a free,
+offline sleep audio mixer with no accounts, advertising, purchases or tracking.
+
+Mix as many layers as your device can reliably handle. Each layer has its own
+gain, enable, mute, solo, pan, filters, EQ and fade controls. There is no fixed
+nine-layer limit. Performance warnings help you recognize device overload.
+
+Choose colored noise, synthesized weather, water, wind, fire and indoor
+textures, or bundled field recordings of birds, crickets, frogs and more.
+Synthesized environments are labeled honestly. Recording loops run for at
+least three minutes before repeating, with smooth transitions.
+
+Create original ambient and lo-fi music on your device. Choose a musical key,
+major or minor scale, A4 tuning, tempo, note density, instrument texture,
+reverb and delay. Saved seeds reproduce compositions. A4=432 Hz and 440 Hz
+are musical tuning references, not treatments or established sleep therapies.
+
+Features include:
+• Independent layers with a master volume and clipping protection
+• Fifteen built-in mixes and locally saved user presets
+• Preset favorites, duplication, renaming and JSON import/export
+• Sleep timers with gentle final fades and independent layer stop schedules
+• Background media playback and notification/lock-screen controls
+• Android-selected Bluetooth, wired headphone or speaker output
+• Optional light theme and reduced-motion waveform
+• No INTERNET permission; all playback and generation run locally
+
+Android battery policies and hardware affect long sessions. Keep listening
+levels comfortable. Optional binaural tones require stereo headphones; sleep
+stage and healing benefits are not established.

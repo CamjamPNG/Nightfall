@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: MIT
+name: Android release checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          gradle-version: '8.11.1'
+      - name: Install Android SDK packages
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"'
+      - name: Test, build unsigned release and lint
+        run: ./gradlew --no-daemon :core:test :app:assembleRelease :app:lintRelease
+      - name: Validate store metadata and bundled audio
+        run: python3 tools/check_release.py --apk app/build/outputs/apk/release/app-release-unsigned.apk
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: release-checks
+          path: |
+            app/build/outputs/apk/release/*.apk
+            core/build/reports/tests/test/
+            app/build/reports/lint-results-release.*
+          retention-days: 14
