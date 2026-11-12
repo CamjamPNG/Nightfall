@@ -65,7 +65,7 @@ Existing published assets are not silently replaced. Branch protection must
 permit the release bot to push version commits; otherwise the workflow fails
 without overwriting source. PR validation remains read-only and uses no key.
 
-## One-time signing setup — currently blocked by connection permissions
+## Signing setup
 
 A persistent RSA release key has been generated **outside the repository**.
 The private key and credentials are in `/workspace/.nightfall-signing/`, mode
@@ -75,9 +75,14 @@ not present in release downloads, logs, source archives or Git history.
 The public identity is in `release-signing-certificate.sha256` and
 `nightfall-release-certificate.pem` beside this document.
 
-The current GitHub connection returned HTTP 403 when fetching the Actions
-secrets public key. Automatic signed publication is **not active** until these
-repository Actions secrets are installed using a suitably authorized account:
+The owner has installed the two repository Actions secrets, and a manual
+workflow run confirmed they are readable. The credential check also verifies
+the keystore password and compares its exported certificate against the pinned
+release identity, including when a run has no new version to publish. The full
+build/sign/publish workflow runs on subsequent source updates.
+
+The workspace GitHub connection cannot administer Actions secrets (HTTP 403).
+For a future authorized setup or recovery, the required secrets are:
 
 - `NIGHTFALL_KEYSTORE_BASE64`: base64 of the existing `nightfall-release.p12`.
 - `NIGHTFALL_KEYSTORE_PASSWORD`: its existing private password; key alias is `nightfall`.

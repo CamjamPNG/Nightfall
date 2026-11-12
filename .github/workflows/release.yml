@@ -37,6 +37,9 @@ jobs:
           fi
           umask 077
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/nightfall-release.p12"
+          keytool -exportcert -keystore "$RUNNER_TEMP/nightfall-release.p12" -alias nightfall -storepass:env KEYSTORE_PASSWORD -file "$RUNNER_TEMP/nightfall-release-certificate.der"
+          EXPECTED=$(cat docs/release-signing-certificate.sha256)
+          printf '%s  %s\n' "$EXPECTED" "$RUNNER_TEMP/nightfall-release-certificate.der" | sha256sum --check
       - name: Prepare version, store metadata and release notes
         id: version
         env:
@@ -115,4 +118,4 @@ jobs:
           fi
       - name: Remove temporary signing key
         if: always()
-        run: rm -f "$RUNNER_TEMP/nightfall-release.p12"
+        run: rm -f "$RUNNER_TEMP/nightfall-release.p12" "$RUNNER_TEMP/nightfall-release-certificate.der"
