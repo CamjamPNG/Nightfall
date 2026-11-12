@@ -59,10 +59,15 @@ def update(root, version, code, messages):
     text = re.sub(r"versionCode\s*=\s*\d+", f"versionCode = {code}", text)
     recipe = root / "fdroid/metadata/io.github.camjampng.nightfall.yml"
     metadata = recipe.read_text()
-    block = f"  - versionName: '{version}'\n    versionCode: {code}\n    commit: v{version}\n    subdir: app\n    gradle:\n      - yes\n\n"
+    yaml_version = f"'{version}'" if version.count('.') == 1 else version
+    block = f"  - versionName: {yaml_version}\n    versionCode: {code}\n    commit: v{version}\n    subdir: app\n    gradle:\n      - yes\n\n"
     if f"commit: v{version}\n" in metadata: raise ValueError("Version already exists in F-Droid metadata")
-    metadata = metadata.replace("AutoUpdateMode:", block + "AutoUpdateMode:", 1)
-    metadata = re.sub(r"(?m)^CurrentVersion:.*$", f"CurrentVersion: '{version}'", metadata)
+    build_start = metadata.index("Builds:\n") + len("Builds:\n")
+    next_field = re.search(r"(?m)^[A-Za-z]\w*:", metadata[build_start:])
+    if not next_field: raise ValueError("Cannot find end of F-Droid Builds list")
+    insertion = build_start + next_field.start()
+    metadata = metadata[:insertion] + block + metadata[insertion:]
+    metadata = re.sub(r"(?m)^CurrentVersion:.*$", f"CurrentVersion: {yaml_version}", metadata)
     metadata = re.sub(r"(?m)^CurrentVersionCode:.*$", f"CurrentVersionCode: {code}", metadata)
     metadata = re.sub(r"(/changelogs/)\d+(\.txt)", rf"\g<1>{code}\2", metadata)
     subjects = [m.splitlines()[0] for m in messages] or ["Maintenance release"]

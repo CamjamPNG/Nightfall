@@ -30,7 +30,8 @@ for shot in shots:require(shot.read_bytes().startswith(b'\x89PNG\r\n\x1a\n'),'In
 recipe=ROOT/f'fdroid/metadata/{appid}.yml'
 require(recipe.exists(),'F-Droid metadata filename does not match applicationId')
 text=recipe.read_text()
-require(f"versionName: '{version}'" in text and f'versionCode: {code}' in text,'Recipe version mismatch')
+require(re.search(rf"(?m)^\s+versionName: ['\"]?{re.escape(version)}['\"]?$",text) and f'versionCode: {code}' in text,'Recipe version mismatch')
+require(re.search(rf"(?m)^CurrentVersion: ['\"]?{re.escape(version)}['\"]?$",text) and f'CurrentVersionCode: {code}' in text,'Current recipe version mismatch')
 require(f'commit: v{version}' in text,'Recipe tag mismatch')
 require('https://github.com/CamjamPNG/Nightfall.git' in text,'Missing verified source repository')
 require('scanignore:' not in text,'Broad scanner exclusions must not be introduced')

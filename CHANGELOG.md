@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1 — 2026-11-12
+
+- build(release): add signed APK options and four-level release automation
+
 ## 1.0
 
 - First public source release of the native offline sleep mixer.
