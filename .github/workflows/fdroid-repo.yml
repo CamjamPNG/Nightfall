@@ -62,16 +62,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASES: ${{ inputs.releases || '2' }}
         run: |
+          # Only the F-Droid flavour may enter the index, so the picker accepts one name and has
+          # no fallback: any other APK would be the update channel's, which declares INTERNET.
+          # Tags from before the channel split cannot publish it and are skipped instead.
+          git fetch --depth=1 origin '+refs/tags/*:refs/tags/*'
           mkdir -p "$RUNNER_TEMP/apks"
           : > "$RUNNER_TEMP/apks/list"
           for TAG in $(gh release list --limit "$RELEASES" --exclude-drafts --json tagName --jq '.[].tagName'); do
             NAMES=$(gh release view "$TAG" --json assets --jq '.assets[].name')
             ASSET=$(printf '%s\n' "$NAMES" | grep -iE '(^|[-_.])fdroid([-_.]|$)' | grep -i universal | head -1)
-            [ -n "$ASSET" ] || ASSET=$(printf '%s\n' "$NAMES" | grep -iE '(^|[-_.])fdroid([-_.]|$)' | head -1)
-            [ -n "$ASSET" ] || ASSET=$(printf '%s\n' "$NAMES" | grep -i universal | head -1)
             if [ -z "$ASSET" ]; then
-              echo "::error::$TAG has no installable APK asset to index"
-              exit 1
+              if git show "$TAG:app/build.gradle.kts" 2>/dev/null | grep -q productFlavors; then
+                echo "::error::$TAG builds the flavours but publishes no fdroid-flavour APK; tools/package_release.py must publish Nightfall-${TAG#v}-fdroid-universal.apk"
+                exit 1
+              fi
+              echo "::warning::$TAG predates the channel split and publishes no fdroid-flavour APK; skipping it"
+              continue
             fi
             echo "$TAG -> $ASSET"
             mkdir -p "$RUNNER_TEMP/apks/$TAG"

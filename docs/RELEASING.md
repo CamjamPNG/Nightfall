@@ -41,10 +41,10 @@ architecture options, because it exists for a repository index, and it is not an
 entry in `release-manifest.json`: the updater will never offer a build that
 cannot update itself. Its name is a contract — `tools/verify_release.py` and
 `tools/check_release.py` refuse a release whose asset is named otherwise, and the
-F-Droid repository workflow selects the index entry by that name. If the asset
-were missing, that workflow's remaining fallback would pick an update-capable APK
-that `tools/fdroid_repo.py` refuses for declaring `INTERNET`, so the run fails
-instead of publishing a build that can reach the network.
+F-Droid repository workflow selects the index entry by that name and accepts no
+substitute: a release that builds the flavours but publishes no such asset fails
+that run at selection, and a tag from before the channel split is skipped rather
+than indexed with its update-capable APK.
 
 Publishing it is deliberate about two things. Because it carries the pinned
 signature, it installs over a `github`-channel install with private data intact,
