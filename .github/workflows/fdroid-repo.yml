@@ -51,12 +51,28 @@ jobs:
           # A release published before that asset existed carries none and cannot be indexed, so it
           # is skipped by name rather than mistaken for a broken release; the release pipeline
           # refuses to publish without the asset, so a skip can only be history.
+          # "Cannot tell whether an asset exists" is not "no asset exists". An indeterminate lookup
+          # must never produce a landing-page-only site, because that deployment replaces the live
+          # one and takes a published repository out from under the people updating through it.
+          # Assigned rather than expanded inside the loop, so a failed call fails the step instead of
+          # leaving an empty list that reads as "nothing to index".
+          if ! TAGS=$(gh release list --limit "$RELEASES" --exclude-drafts --json tagName --jq '.[].tagName'); then
+            echo "::error::Could not read the published releases, so this run cannot tell whether an index exists that a landing-page-only deploy would drop. Nothing was published; the last good site stands."
+            exit 1
+          fi
+          MALFORMED=$(printf '%s\n' "$TAGS" | grep -vE '^v[0-9]+(\.[0-9]+){1,3}$' || true)
+          if [ -n "$MALFORMED" ]; then
+            echo "::error::The release list came back in an unexpected shape (first: $(printf '%s' "$MALFORMED" | head -1)), so this run cannot tell what it is indexing. Nothing was published; the last good site stands."
+            exit 1
+          fi
           mkdir -p "$RUNNER_TEMP/apks"
           : > "$RUNNER_TEMP/apks/list"
           SKIPPED=""
-          for TAG in $(gh release list --limit "$RELEASES" --exclude-drafts --json tagName --jq '.[].tagName'); do
+          for TAG in $TAGS; do
             NAMES=$(gh release view "$TAG" --json assets --jq '.assets[].name')
-            ASSET=$(printf '%s\n' "$NAMES" | grep -iE '(^|[-_.])fdroid([-_.]|$)' | grep -i universal | head -1)
+            # No match is the benign path: `|| true` keeps it one under any shell, with or without
+            # pipefail, instead of turning a pre-asset release into a failed run.
+            ASSET=$(printf '%s\n' "$NAMES" | grep -iE '(^|[-_.])fdroid([-_.]|$)' | grep -i universal | head -1) || true
             if [ -z "$ASSET" ]; then
               echo "::warning::$TAG publishes no Nightfall-<version>-fdroid-universal.apk, so there is nothing in it that may enter this index; skipping it"
               SKIPPED="$SKIPPED $TAG"
@@ -71,8 +87,8 @@ jobs:
             echo 'indexable=true' >> "$GITHUB_OUTPUT"
             cat "$RUNNER_TEMP/apks/list"
           else
-            # No release in the window carries one yet. The site still deploys, without a
-            # repository beneath it; the first release that publishes the asset builds one.
+            # A successful lookup that found no asset: the release list was read, and every tag in
+            # it was examined. Only this confirmed absence may deploy a site without a repository.
             echo "::warning::No release in the requested window publishes an F-Droid-channel APK, so this deploy carries the landing page alone. Skipped:${SKIPPED:- none}."
             echo 'indexable=false' >> "$GITHUB_OUTPUT"
           fi
