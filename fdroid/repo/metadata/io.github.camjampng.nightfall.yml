@@ -1,0 +1,13 @@
+# Metadata for the app as served by the self-hosted repository in fdroid/repo/.
+# Store text, icon and screenshots are not repeated here: tools/fdroid_repo.py
+# copies fastlane/metadata/android/en-US/ into the build tree on every run, so
+# the client's listing comes from the same files the other store channels use.
+# Builds, Repo and AutoUpdateMode are deliberately absent: this repository
+# serves APKs we publish rather than recipes fdroidserver builds.
+Categories:
+  - Ambient Sound
+License: MIT
+AuthorName: Camden VandenBosch
+SourceCode: https://github.com/CamjamPNG/Nightfall
+IssueTracker: https://github.com/CamjamPNG/Nightfall/issues
+AutoName: Nightfall
