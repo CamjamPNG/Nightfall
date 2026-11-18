@@ -21,8 +21,10 @@ eligible without evidence or a maintainer-approved exception.
 - Original code license: MIT
 - Store metadata, real native screenshots and icon: `fastlane/metadata/android/en-US`
 - Recipe: `fdroid/metadata/io.github.camjampng.nightfall.yml`
-- Build: OpenJDK 17+, SDK 35, Build Tools 35.0.0, Gradle 8.11.1; `subdir: app`,
-  `assembleRelease` today and `assembleFdroidRelease` once flavors exist
+- Build: OpenJDK 17+, SDK 35, Build Tools 35.0.0, Gradle 8.11.1; `subdir: app`.
+  Blocks pinned to tags from before the flavor split build the single
+  `assembleRelease` variant, which has no network permission and no updater;
+  blocks for later tags build the `fdroid` flavor with `assembleFdroidRelease`.
 
 Nightfall mixes independent procedural sources and locally bundled field
 recordings through one PCM AudioTrack. It has no arbitrary channel-count cap,
@@ -62,9 +64,11 @@ not a release identity.
 
 ## Posting steps when eligible
 
-1. Land the `fdroid` flavor and point every recipe build block at it, including
-   the block template in `tools/release_version.py`, then rebuild and re-run
-   `fdroid lint` and `fdroid build --server` against the resulting recipe.
+1. Land the `fdroid` flavor, then give every block whose tag contains it
+   `gradle: [fdroid]` and teach the block template in `tools/release_version.py`
+   to emit it. Leave the pre-flavor blocks on `gradle: [yes]`: their tags have no
+   flavor and `assembleFdroidRelease` does not exist there. Then rebuild and
+   re-run `fdroid lint` and `fdroid build --server` against the resulting recipe.
 2. Sign into GitLab and follow the current official quick-start guide:
    https://f-droid.org/en/docs/Submitting_to_F-Droid_Quick_Start_Guide/
 3. Check for an existing Nightfall request. State the development history or

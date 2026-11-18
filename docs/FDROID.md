@@ -70,23 +70,30 @@ prefix). Once the update channel lands as `github` and `fdroid` product flavors,
 `assembleRelease` stops meaning "the offline app": it would build the
 network-capable variant with the updater and `INTERNET`.
 
-The recipe must instead name the `fdroid` flavor, which fdroidserver turns into
-`assembleFdroidRelease` and which AGP writes to
-`app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk`.
-fdroidserver looks for that path on its own (`build.py` appends
-`build/outputs/apk/<flavor>/release` to its search), so no `output:` override is
-needed. The exact recipe diff is one line per build block:
+The migration is per block, not across the whole file. F-Droid checks out each
+block's own commit, so a block pinned to `v1.0` … `v1.0.1.2` must keep
+`gradle: yes`: those tags have no product flavors, `assembleFdroidRelease` does
+not exist in them, and switching them would make a legitimate re-build of a
+published version fail. They are also still correct as written — at those tags
+`assembleRelease` is the single offline variant, with no network permission and
+no updater. Only blocks whose tag contains the `fdroid` flavor name it:
 
 ```yaml
     gradle:
       - fdroid
 ```
 
+fdroidserver turns that into `assembleFdroidRelease`, and it finds the resulting
+`app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk` on its own
+(`build.py` appends `build/outputs/apk/<flavor>/release` to its search), so
+`subdir: app` stays correct and no `output:` override is needed.
+
 `tools/release_version.py` also writes new build blocks from a hardcoded
-template, so the same one-line change belongs in that template; otherwise every
-automatic release re-introduces a release-variant block. Both files are outside
-this document's ownership (build config and release tooling), which is why the
-change is sequenced rather than applied here.
+template, so that template has to emit `- fdroid` from the first release that
+carries the flavor; otherwise every automatic release adds a block that builds
+the network-capable variant. Both files are outside this document's ownership
+(build config and release tooling), which is why the change is sequenced rather
+than applied here.
 
 ### Development history
 

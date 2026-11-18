@@ -75,15 +75,16 @@ F-Droid's source preparation handles wrapper files normally.
 
 ## Submission status and remaining work
 
-1. **The recipe must select the `fdroid` build flavor before it is submitted.**
-   Each build block currently asks for no flavor, which fdroidserver runs as
-   `assembleRelease`. When the update channel introduces `github` and `fdroid`
-   product flavors, `assembleRelease` would build the network-capable variant
-   with the updater and `INTERNET`, which is the wrong artifact for F-Droid and
-   changes the anti-feature answer. Each block needs `gradle: [fdroid]`, which
-   fdroidserver runs as `assembleFdroidRelease` and finds at
+1. **Blocks for releases after the flavor split must select the `fdroid` build
+   flavor.** Each build block currently asks for no flavor, which fdroidserver
+   runs as `assembleRelease`. The four existing blocks pin tags `v1.0` …
+   `v1.0.1.2`, which predate any flavors, so they stay as they are: at those
+   tags `assembleRelease` is the single offline variant, and naming a flavor
+   there would ask for a task that tag does not have. Once a release tag defines
+   `github` and `fdroid`, its block needs `gradle: [fdroid]`, which fdroidserver
+   runs as `assembleFdroidRelease` and finds at
    `app/build/outputs/apk/fdroid/release/`. `tools/release_version.py` writes new
-   blocks from a template and needs the same one-line change.
+   blocks from a template and needs the same change from that release onward.
 2. Source is public. Each recipe build targets its matching release tag;
    verify it with `git ls-remote --tags https://github.com/CamjamPNG/Nightfall.git`.
 3. Review the development-age/user-adoption policy: the app was first published

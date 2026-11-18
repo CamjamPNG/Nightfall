@@ -45,11 +45,14 @@ MaintainerNotes: |
   adds no license restriction. Bundled non-executable recordings retain
   their CC BY, CC BY-SA or CC0 terms; see AUDIO_LICENSES.md and sidecars.
 
-  Every build block above must select the fdroid product flavor
-  (gradle: [fdroid]) once the updater introduces github/fdroid flavors. Until
-  then these blocks are equivalent, because assembleRelease is the only
-  release variant and it has no network permission. Do not submit while any
-  block can build the network-capable variant. See docs/FDROID.md.
+  Flavor migration: every block above pins a tag from before the github/fdroid
+  product flavors existed, so they keep "gradle: [yes]", which builds the single
+  offline release variant with no network permission, and they must not be
+  switched. A block pinned to a pre-flavor tag would have no
+  assembleFdroidRelease task to run. Use "gradle: [fdroid]" only for a tag whose
+  app/build.gradle.kts defines that flavor. tools/release_version.py writes new
+  blocks, so its template must emit the flavor from the first release that has
+  it. See docs/FDROID.md.
 
   New application: development-age or proven-user policy eligibility has
   not been demonstrated. No inclusion exception or hardware certification
