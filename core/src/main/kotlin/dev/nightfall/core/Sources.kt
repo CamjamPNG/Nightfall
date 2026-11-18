@@ -152,6 +152,7 @@ class EnvironmentSource(
     private var eventPan = 0f
     private var untilEvent = (rate * .5).toInt()
     private var phase = 0.0
+    private var rustlePhase = 0.0
     private var ring = 0f
     private var ringPhase = 0.0
     private var eventDecay = .9999f
@@ -403,13 +404,12 @@ class EnvironmentSource(
                     val hit =
                         ring * Wave.sin(ringPhase) * (if (settings.lowDistraction) .65f else 1f)
                     // The rustle's rate and phase ride the same random walk as the gust, so no sine in
-                    // this branch can return on a fixed period across a night.
-                    val rustleWave =
-                        .5f +
-                            .5f *
-                                Wave.sin(
-                                    t * rustleRate * (.75f + .5f * gustLevel) + gustLevel * 5.3f + variant
-                                )
+                    // this branch can return on a fixed period across a night. The phase accumulates
+                    // from the current rate rather than multiplying elapsed time by it: a rate that
+                    // moves under a running clock would otherwise sweep the rustle upward all night.
+                    rustlePhase += rustleRate * (.75 + .5 * gustLevel) / rate
+                    if (rustlePhase > 2 * PI) rustlePhase -= 2 * PI
+                    val rustleWave = .5f + .5f * Wave.sin(rustlePhase + gustLevel * 5.3 + variant)
                     val bed = gustLevel * (1f + rustle * rustleWave) * bedAmount
                     l = (low * (1f + sub) * bed * 3.2f + (w - low) * rustle * rustleWave * .55f) + hit
                     r = (low2 * (1f + sub) * bed * 3.2f + (w2 - low2) * rustle * rustleWave * .55f) +
