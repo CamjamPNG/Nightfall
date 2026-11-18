@@ -1,0 +1,194 @@
+/* Nightfall landing page. Palette matches app/src/main/java/dev/nightfall/Design.kt. */
+
+:root {
+  --navy: #0b101c;
+  --card: #171f32;
+  --lavender: #b8a9f4;
+  --active: #afa0ee;
+  --white: #f7f5ff;
+  --muted: #a7b0c4;
+  --divider: #354058;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--navy);
+  color: var(--white);
+  font: 400 17px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+}
+
+.wrap {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+header {
+  border-bottom: 1px solid var(--divider);
+  padding: 2.5rem 0 2rem;
+}
+
+header .wrap {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+}
+
+header .icon {
+  border-radius: 18px;
+  flex: 0 0 auto;
+}
+
+h1 {
+  font-size: 2rem;
+  line-height: 1.1;
+  margin: 0 0 0.35rem;
+  letter-spacing: -0.01em;
+}
+
+.tagline {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+main { padding: 1rem 0 3rem; }
+
+section { padding: 2rem 0; border-bottom: 1px solid var(--divider); }
+
+section:last-of-type { border-bottom: 0; }
+
+h2 {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--lavender);
+  margin: 0 0 1rem;
+  font-weight: 600;
+}
+
+p { margin: 0 0 1rem; }
+
+a { color: var(--lavender); text-underline-offset: 0.18em; }
+
+a:hover { color: var(--active); }
+
+:focus-visible {
+  outline: 2px solid var(--lavender);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: var(--card);
+  border: 1px solid var(--divider);
+  border-radius: 5px;
+  padding: 0.08em 0.35em;
+}
+
+ul.facts { margin: 1.25rem 0 0; padding: 0; list-style: none; }
+
+ul.facts li {
+  background: var(--card);
+  border: 1px solid var(--divider);
+  border-radius: 12px;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 0.7rem;
+  font-size: 0.98rem;
+}
+
+ul.facts strong { color: var(--white); }
+
+.shot { margin: 0; }
+
+.shot-placeholder {
+  aspect-ratio: 9 / 16;
+  max-width: 19rem;
+  margin: 0 1.25rem 1rem 0;
+  border: 1px dashed var(--divider);
+  border-radius: 16px;
+  background: repeating-linear-gradient(
+    -45deg, var(--card), var(--card) 12px, #1b2438 12px, #1b2438 24px
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+figcaption { color: var(--muted); font-size: 0.92rem; max-width: 34rem; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.25rem 0;
+  font-size: 0.94rem;
+}
+
+caption {
+  caption-side: bottom;
+  text-align: left;
+  color: var(--muted);
+  font-size: 0.86rem;
+  padding-top: 0.6rem;
+}
+
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--divider);
+}
+
+thead th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+tbody th { font-weight: 600; white-space: nowrap; }
+
+tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
+
+.note {
+  background: var(--card);
+  border-left: 3px solid var(--lavender);
+  border-radius: 0 10px 10px 0;
+  padding: 0.85rem 1rem;
+  font-size: 0.95rem;
+}
+
+ul.links { margin: 1rem 0 0; padding-left: 1.1rem; }
+
+ul.links li { margin-bottom: 0.4rem; }
+
+footer {
+  border-top: 1px solid var(--divider);
+  padding: 1.75rem 0 2.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+footer p { margin: 0; }
+
+@media (max-width: 34rem) {
+  h1 { font-size: 1.6rem; }
+  th, td { padding: 0.55rem 0.5rem; }
+  tbody th { white-space: normal; }
+  .shot-placeholder { margin-right: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}

@@ -21,8 +21,9 @@ its only network access, and it is a download, never an upload:
   is signed by the same certificate as the installed app, and hands it to
   Android's installer. The downloaded file is deleted from the app's cache after
   a failed or refused attempt.
-- It stores two facts in private preferences: when it last checked, and what the
-  installer reported about the last attempt.
+- It keeps four things in its own private preferences file: when it last attempted
+  a check, when it last got a successful answer, what the installer reported about
+  the last attempt, and which release's update row you dismissed.
 
 There is no background worker, alarm, notification channel or periodic wake-up:
 an app that is not in the foreground does not check anything.
