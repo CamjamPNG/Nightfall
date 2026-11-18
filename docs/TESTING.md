@@ -171,8 +171,44 @@ first use, so the CI step needs network access the first time it runs on a runne
 An API 35 software-emulated Pixel 7 profile rendered the native Home and Library
 screens. The development build created one active 48 kHz stereo floating-point
 AudioTrack; Android's media session reported PLAYING with the Nine-Layer Dream
-name and nine layers while the screen was off. The actual captures are used for
-the store screenshots; they are not UI mockups.
+name and nine layers while the screen was off. The two PNGs from that run were
+the store screenshots until 18 November 2026; they are no longer, and the emulator
+itself is not reproducible here (see below).
+
+## Store screenshots (Robolectric, JVM)
+
+`fastlane/metadata/android/en-US/images/phoneScreenshots/` now holds six frames
+generated from the shipped UI by `app/src/testGithub/java/dev/nightfall/render/`,
+not by a screen-capture of a running phone. The reasons are the ones in this file:
+these machines have no `/dev/kvm`, so an emulator does not run, and the two
+emulator captures had not been recaptured since 12 November 2026, so they showed
+an app without the update channel, the automatic install and the changelog —
+screens and copy the app no longer has.
+
+Each frame is 1078×2399 (411×914 dp at 420 dpi, a Pixel 7's logical size) and is
+the app's own window, drawn by a real Skia canvas under Robolectric's native
+graphics: `MainActivity`'s decor view is drawn into an off-screen bitmap. The
+screens are reached through the app's own controls — the navigation bar for tabs,
+a layer's own options button for the panel — and the mix is `Presets.all.last()`,
+so the title, the layer names, the gains and the layer count on screen are read
+out of the model the audio thread mixes. Regenerate with:
+
+```sh
+./gradlew :app:testGithubDebugUnitTest --tests 'dev.nightfall.render.*'
+```
+
+which writes `app/build/screenshots/github/`, uploads that directory with the CI
+run, and fails on the two ways a render goes quiet instead of wrong: a frame with
+too few distinct colours (it did not draw) and a frame identical to an earlier
+one (a screen stopped rendering).
+
+What these frames are not: a device. They have no status bar, no gesture bar and
+zero window insets, so their content sits 24–32 dp higher than on a phone that
+shows its status bar; the waveform is a single phase of an animation that is
+switched off for the render; `02-home-layers.png` is a scrolled frame, not the
+whole mixer; and the render-load and underrun numbers Settings prints are
+Robolectric's, not a phone's. No emulator or hardware render of the current UI
+exists.
 
 The automated Android instrumentation attempt did not pass. It terminated with
 `Process crashed`; Android process-exit diagnostics identified a startup ANR.

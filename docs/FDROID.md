@@ -321,14 +321,15 @@ on hardware. Today's numbers are recorded in
 
 ## Screenshots
 
-F-Droid shows screenshots from the source repository, and the two in
-`fastlane/metadata/android/en-US/images/phoneScreenshots/` are real captures of
-the running app from a software-emulated Pixel 7 profile, not mockups
-(`docs/TESTING.md` records that run). They were committed once, in the first
-release commit on 12 November 2026, and have not been recaptured since, so they
-show the app before the update-channel work and whatever UI that adds. They
-cannot be refreshed on these machines: there is no `/dev/kvm`, so an emulator
-does not run.
+F-Droid shows screenshots from the source repository, and the six in
+`fastlane/metadata/android/en-US/images/phoneScreenshots/` are generated from the
+shipped Compose UI by a JVM test, not drawn by hand: `docs/TESTING.md` records how,
+and why a renderer replaced the emulator. They are not mockups, and none of them
+was composited: each is `MainActivity`'s own window drawn by Robolectric's native
+graphics at 1078×2399 (411×914 dp at 420 dpi), with the app driven through its own
+navigation. What they cannot show is listed there too: no status bar, no gesture
+bar, zero window insets, no animation, and Settings' render-load numbers are
+Robolectric's rather than a phone's.
 
 The route that does not need an emulator is JVM rendering: Paparazzi, or
 Robolectric with native graphics, capturing the real Compose screens in a unit

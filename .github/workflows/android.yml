@@ -36,6 +36,7 @@ jobs:
           name: release-checks
           path: |
             app/build/outputs/apk/*/release/*.apk
+            app/build/screenshots/
             core/build/reports/tests/test/
             app/build/reports/tests/
             app/build/reports/lint-results-release.*
