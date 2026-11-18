@@ -1,0 +1,1 @@
+- docs: launch kit with verified channel rules, an IzzyOnDroid request, and a no-JS landing page (#12)

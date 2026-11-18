@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.1 — 2026-11-18
+
+- docs: launch kit with verified channel rules, an IzzyOnDroid request, and a no-JS landing page (#12)
+
 ## 1.3 — 2026-11-18
 
 - feat(update): one-tap in-app updates on the GitHub channel, no updater in the F-Droid build (#2)
