@@ -211,6 +211,9 @@ class CatalogueQualityTest {
         for (s in Library.all.filter { it.kind == "recording" }) {
             val samples = (java.io.File("../app/src/main/assets/audio/${s.asset}.pcm").length() / 2).toInt()
             val cycle = RecordingSource.cycleSeconds(samples)
+            val shortest = RecordingSource.shortestCycleSeconds(samples)
+            println("%s shortest cycle %.1fs of %.1fs".format(s.id, shortest, cycle))
+            assertTrue("${s.id} can repeat after only %.1fs".format(shortest), shortest >= 180.0)
             val mix = Mix(layers = listOf(Library.layer(s.id, .35f, "loop-probe")))
             val atCycle = CatalogueMetrics.selfCorrelation(mix, cycle, 12.0, 24000)
             val control = CatalogueMetrics.selfCorrelation(mix, cycle / 2, 12.0, 24000)

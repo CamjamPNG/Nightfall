@@ -331,8 +331,12 @@ class RecordingSource(private val rate: Int, private val samples: SampleData, se
 
     private val rng = RandomStream(seed or 1L)
 
-    /** How far a wrap point may move into the file, keeping every cycle longer than three minutes. */
-    private val wrapJitter = min(samples.size / 8, 60 * 24000)
+    /**
+     * How far a wrap point may move into the file. Each head still plays at least three minutes of
+     * material between one wrap and the next — the shortest cycle the catalogue promises — so the
+     * draw is bounded by the room a file leaves above that floor, and by a minute for the long files.
+     */
+    private val wrapJitter = wrapJitter(samples.size)
 
     private val heads = Array(2) { Head() }
     private var balance = 0.0
@@ -354,7 +358,17 @@ class RecordingSource(private val rate: Int, private val samples: SampleData, se
     companion object {
         const val OVERLAP = 24000
 
+        /** The catalogue promises three minutes of material before a recording repeats. */
+        const val SHORTEST_CYCLE = 180 * 24000
+
         fun cycleSeconds(samples: Int) = (samples - OVERLAP) / 24000.0
+
+        fun wrapJitter(samples: Int) =
+            minOf(samples / 8, 60 * 24000, samples - OVERLAP - SHORTEST_CYCLE)
+
+        /** The shortest cycle the randomised wrap points allow for a file of this length. */
+        fun shortestCycleSeconds(samples: Int) =
+            (samples - OVERLAP - wrapJitter(samples)) / 24000.0
     }
 
     private fun read(position: Double): Float {
