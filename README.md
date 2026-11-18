@@ -1,6 +1,6 @@
 # Nightfall
 
-A free, native Android sleep sound mixer. Kotlin, Jetpack Compose / Material 3, Android 8.0+ (API 26), target API 35. Midnight navy and lavender, with a local-first mixer at the center. No advertising, accounts, subscriptions, analytics, microphone access or runtime internet access.
+A free, native Android sleep sound mixer. Kotlin, Jetpack Compose / Material 3, Android 8.0+ (API 26), target API 35. Midnight navy and lavender, with a local-first mixer at the center. No advertising, accounts, subscriptions, analytics or microphone access. Two builds ship: the GitHub build can update itself from this repository's releases, which is its only network access; the F-Droid build has no updater and no network permission at all.
 
 ## Install and use
 
@@ -9,10 +9,20 @@ Choose **arm64-v8a for Pixel 7**, or Universal if unsure. All options include th
 same complete offline sound library. See [release and version rules](docs/RELEASING.md)
 for automatic publishing, signing setup and update-channel details.
 
-Build the installable debug APK with `./gradlew :app:assembleDebug`, or use a separately provided development APK. Generated APKs are not committed to source. The public release application ID is `io.github.camjampng.nightfall`. Install on a Pixel 7 or another Android 8+ device:
+An install from GitHub keeps working offline and does not need to be reinstalled
+by hand: when a release is newer than what you have, Nightfall shows an update row
+with the version name and one **Update** button. See [Updates](#updates).
+
+The project builds two channels from the same source: `github` (the updater and
+its network permission) and `fdroid` (no updater, no network permission, no
+network code). Build the installable GitHub debug APK with
+`./gradlew :app:assembleGithubDebug`, or the F-Droid one with
+`:app:assembleFdroidDebug`. `:app:assembleDebug` builds both. Generated APKs are
+not committed to source. The public release application ID is
+`io.github.camjampng.nightfall`. Install on a Pixel 7 or another Android 8+ device:
 
 ```sh
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/github/debug/app-github-debug.apk
 ```
 
 Alternatively, copy the APK to the phone and open it, allowing installation from your file manager when Android asks. This is a debug-signed development build, not a store release.
@@ -22,6 +32,50 @@ On first launch the active mix is **Nine-Layer Dream**. Press Play. Its independ
 There is **no fixed layer limit**. Nine is only the named integration test. Add repeated or different sources from Library; each has its own synthesis/read head and effects. Long lists are virtualized. Hardware has finite processing capacity: Home warns when rendering approaches its buffer budget or underruns accumulate. It does not enforce a nine-layer or other arbitrary channel cap.
 
 Connect a Bluetooth sleep mask or headphones using Android, then select Play. Nightfall uses the system-selected output, supplies media controls, and runs a foreground media service while listening. It pauses on disconnect by default; Settings can allow Android to reroute. Manufacturer battery restrictions, hardware and Android interruptions can affect long sessions; all-night behavior is not guaranteed for every phone.
+
+## Updates
+
+The GitHub build replaces itself in place. Settings → Updates shows the installed
+version and a **Check for updates** action; when a release is newer, a row appears
+over the app with the version name and one **Update** button. Nothing is
+installed without that tap, and a dismissal is remembered until the next launch.
+
+What happens after the tap:
+
+1. Nightfall reads `release-manifest.json` from the latest GitHub release and
+   picks the one APK for this device's architecture (an exact match, otherwise
+   Universal). The manifest carries the version code and name, the per-variant
+   download address, the byte size, the SHA-256 and the signing certificate.
+2. It downloads that one APK and checks four things before Android is asked to
+   install anything: the SHA-256 and size match the manifest, the package is
+   `io.github.camjampng.nightfall`, the version code is the released one, and the
+   signing certificate is **the same certificate as the installed app** and
+   contains only that device's native libraries. Any mismatch is discarded with a
+   visible reason.
+3. It refuses downgrades: a version code that is not strictly greater than the
+   installed one, or a version name that is not newer, is never installed.
+4. Android's `PackageInstaller` replaces the app. On Android 12 and newer with
+   this app's target SDK the install completes without further prompts; devices
+   whose image still requires one show Android's own confirmation dialog, which
+   Nightfall opens for you. Nightfall restarts afterwards and playback stops
+   during the restart.
+
+It asks GitHub at most **once every six hours** on its own, and a check you start
+is rate-limited to **one every fifteen minutes**; a failed attempt never spends the
+six-hour window, so a dropped connection costs you fifteen minutes, not an
+afternoon. Settings says when the next check is allowed. There is no background
+worker, alarm or periodic wake-up, so an idle Nightfall never touches the radio.
+Nothing is sent anywhere: the check is a plain download of a public file.
+
+Hiding the row stops it nagging; it never hides the update, which stays available
+in Settings until it is installed. If Android refuses or you cancel its
+confirmation, the reason appears at once, and a failure that outlived the app is
+reported the next time it opens. The F-Droid build has none of this: it ships no
+updater, no network permission and no network code, and Settings says updates
+arrive through F-Droid or your store.
+
+Not verified on hardware: see [docs/TESTING.md](docs/TESTING.md). The install path
+has not been exercised on a physical device in this workspace.
 
 ## Implemented
 
@@ -57,14 +111,17 @@ Prerequisites: a free OpenJDK 17 or later, Android SDK Platform 35, Build Tools 
 export JAVA_HOME=/path/to/openjdk-17
 export ANDROID_HOME=/path/to/android-sdk
 # Or put sdk.dir=/path/to/android-sdk in local.properties.
-./gradlew :core:test :app:assembleDebug :app:lintDebug :app:assembleDebugAndroidTest
+./gradlew :core:test :app:testGithubDebugUnitTest :app:assembleDebug :app:lintDebug :app:assembleGithubDebugAndroidTest
+# Both channels, including the release builds the update channel publishes:
+./gradlew :app:assembleGithubRelease :app:assembleFdroidRelease
 # With an unlocked device/emulator attached:
-./gradlew :app:connectedDebugAndroidTest
+./gradlew :app:connectedGithubDebugAndroidTest
 ```
 
-Build output: `app/build/outputs/apk/debug/app-debug.apk`. Unit-test reports: `core/build/reports/tests/test/index.html`. Lint: `app/build/reports/lint-results-debug.html`. Instrumentation reports: `app/build/reports/androidTests/connected/debug/index.html`.
+Build output: `app/build/outputs/apk/github/debug/app-github-debug.apk` (and the
+`fdroid` equivalent). Unit-test reports: `core/build/reports/tests/test/index.html`. Lint: `app/build/reports/lint-results-debug.html`. Instrumentation reports: `app/build/reports/androidTests/connected/debug/index.html`.
 
-The running application does not need a network connection. Audio assets are committed with the source. To reproduce them, install ffmpeg and Python 3 and run `python3 tools/prepare_audio.py`; downloads are build-time only. The generator verifies the three-minute minimum cycle for every recording.
+The running application does not need a network connection, in either channel. Audio assets are committed with the source. To reproduce them, install ffmpeg and Python 3 and run `python3 tools/prepare_audio.py`; downloads are build-time only. The generator verifies the three-minute minimum cycle for every recording.
 
 `core` is Android-independent Kotlin: models, validated JSON, catalogue, presets, deterministic sources, timer and PCM mixer. `app` provides Compose/MVVM, persistence, the audio host and media service. See `docs/ARCHITECTURE.md` for ownership, DSP, lifecycle and performance policy.
 

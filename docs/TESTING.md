@@ -2,7 +2,32 @@
 
 ## Executed checks
 
-- 10 release-tool tests cover all four version levels, ordering and resets,
+- 34 JVM tests in `app/src/testGithub` cover the update channel: release-manifest
+  parsing (untrusted documents, wrong types, unknown and duplicate architectures,
+  addresses that are not this repository's release assets, oversized input),
+  every trust refusal (`UpdatePolicy`), version-name ordering, and the downloader
+  against a local socket server (redirect following, progress ordering, a
+  response larger than the manifest allows, and a connection that dies mid-file).
+  The release-tool suite covers the manifest generator's schema, URLs and
+  rejection cases, and asserts that each F-Droid recipe block selects the flavour
+  its own tag defines.
+- `UpdateChannelStateTest` pins the channel's two pacing rules (a fifteen-minute
+  floor for every request, a six-hour interval only for the app's own check, a
+  failed attempt never starting that interval, a corrected clock treated as
+  expired), the minutes reported to the user, and the rule that hiding a banner
+  suppresses only that release's notice. The installer-outcome plumbing and the
+  foreground reconciliation are Android-bound and are not unit-tested.
+- Both channels build and pass lint: `:app:assembleGithubDebug`,
+  `:app:assembleFdroidDebug`, `:app:assembleGithubRelease`,
+  `:app:assembleFdroidRelease`, `:app:lintGithubDebug`, `:app:lintFdroidDebug`
+  (`abortOnError = true`). `tools/check_release.py --fdroid-apk` asserts the
+  F-Droid APK declares none of the network or install permissions and that none of
+  the fourteen updater classes it names appears in any dex; `--apk` asserts the
+  GitHub APK declares all of them and does carry the updater. The recipe check
+  reads `app/build.gradle.kts` at each pinned tag, and the CI job fetches tags so
+  that comparison runs instead of being skipped.
+
+- The release-tool suite covers all four version levels, ordering and resets,
   classification of mixed changes, synchronized Android/store/F-Droid metadata,
   rejection of duplicate versions and preservation of code/audio in ABI options.
   Signed APK variants are additionally checked with Android's apksigner, aapt,
@@ -38,8 +63,9 @@
   inventory has no GMS, Firebase, billing, ad or tracking SDK from the checked
   denylist. F-Droid's independent review remains necessary.
 
-Machine-readable results: `docs/verification/release-checks.json`,
-`dependency-audit.json`, `reproducibility.json`, and `release-dependencies.txt`.
+Machine-readable results: `docs/verification/update-channel.json`,
+`release-checks.json`, `dependency-audit.json`, `reproducibility.json`, and
+`release-dependencies.txt`.
 
 ## Android emulator observations
 
@@ -58,6 +84,19 @@ instrumentation passes are claimed from this run. Startup restoration was then
 moved off the main thread; this does not establish that every device issue has
 been resolved.
 
+## Update channel that was not exercised
+
+The install path was not run on hardware. This workspace has no `/dev/kvm`, so no
+emulator and no device was available: `PackageInstaller` sessions, the
+`STATUS_PENDING_USER_ACTION` fallback, the "install unknown apps" screen and the
+post-install restart are described from Android's documented behaviour, not from a
+measured run. Nothing here claims a silent install was observed.
+
+Also unverified: a real download of a published release from GitHub (the tests use
+a local server with the same protocol), behaviour behind a captive portal or a
+proxy, and how each OEM image prompts. Releasing a version with this channel and
+installing it on a physical device is the check that closes this gap.
+
 ## Pending hardware checks
 
 Verify the public package on a physical Pixel 7 with the intended Bluetooth
@@ -69,9 +108,9 @@ underrun run. Manufacturer-independent all-night playback is not guaranteed.
 ## Reproduce
 
 ```sh
-./gradlew :core:test :app:assembleRelease :app:lintRelease
+./gradlew :core:test :app:testGithubDebugUnitTest :app:assembleGithubRelease :app:assembleFdroidRelease :app:lintRelease
 python3 tools/check_release.py --apk app/build/outputs/apk/release/app-release-unsigned.apk
-./gradlew :app:connectedDebugAndroidTest
+./gradlew :app:connectedGithubDebugAndroidTest
 ```
 
 The core acceptance test creates `artifacts/nine-layer-dream.wav` and host JVM

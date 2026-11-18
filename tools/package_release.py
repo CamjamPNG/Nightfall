@@ -15,6 +15,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ABIS = ("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
 PACKAGE = "io.github.camjampng.nightfall"
+REPOSITORY = "CamjamPNG/Nightfall"
 
 
 def filter_apk(source, output, abi):
@@ -36,6 +37,36 @@ def sha256(path):
     return digest.hexdigest()
 
 
+def release_url(version, name):
+    """The address the app downloads one variant from; the parser in the app checks it exactly."""
+    return f"https://github.com/{REPOSITORY}/releases/download/v{version}/{name}"
+
+
+def release_manifest(version, code, apks):
+    """The machine-readable manifest published with each release, read by the in-app updater."""
+    if not re.fullmatch(r"\d+\.\d+(?:\.\d+){0,2}", version): raise ValueError("Invalid version")
+    if not 1 <= code <= 2100000000: raise ValueError("Invalid version code")
+    if len(apks) != 5: raise ValueError("Expected five APK options")
+    seen = set()
+    entries = []
+    for apk in apks:
+        name, abi = apk["file"], apk["abi"]
+        if abi not in ABIS + ("universal",): raise ValueError("Unknown ABI: " + str(abi))
+        if abi in seen: raise ValueError("Duplicate ABI: " + abi)
+        seen.add(abi)
+        if not name.endswith(".apk") or "/" in name: raise ValueError("Invalid APK name: " + name)
+        if not re.fullmatch(r"[a-f0-9]{64}", apk["sha256"]): raise ValueError("Invalid checksum for " + name)
+        if not isinstance(apk["bytes"], int) or apk["bytes"] <= 0: raise ValueError("Invalid size for " + name)
+        entries.append(dict(file=name, abi=abi, bytes=apk["bytes"], sha256=apk["sha256"],
+                            url=release_url(version, name)))
+    return dict(versionName=version, versionCode=code, applicationId=PACKAGE,
+                minSdk=26, targetSdk=35, certificateSha256=pin(), apks=entries)
+
+
+def pin():
+    return (ROOT / "docs/release-signing-certificate.sha256").read_text().strip()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apk", type=pathlib.Path, required=True)
@@ -48,10 +79,9 @@ def main():
     key = pathlib.Path(os.environ["NIGHTFALL_KEYSTORE_PATH"])
     if not key.is_file() or not os.environ.get("NIGHTFALL_KEYSTORE_PASSWORD"):
         raise ValueError("A persistent private signing key and password are required")
-    pin = (ROOT / "docs/release-signing-certificate.sha256").read_text().strip()
+    identity = pin()
     args.out.mkdir(parents=True, exist_ok=True)
-    manifest = dict(versionName=args.version, versionCode=args.code, applicationId=PACKAGE,
-                    minSdk=26, targetSdk=35, certificateSha256=pin, apks=[])
+    signed = []
     with zipfile.ZipFile(args.apk) as z:
         actual = {n.split("/")[1] for n in z.namelist() if n.startswith("lib/") and n.endswith(".so")}
         if actual != set(ABIS): raise ValueError("Unexpected source ABI set: " + str(actual))
@@ -70,7 +100,7 @@ def main():
                             "--out", str(output), str(aligned)], check=True)
             cert = subprocess.check_output([str(sdk / "apksigner"), "verify", "--verbose", "--print-certs", str(output)], text=True)
             fingerprints = re.findall(r"certificate SHA-256 digest: ([0-9a-f]+)", cert)
-            if fingerprints != [pin]: raise ValueError("Signing certificate differs from pinned release identity")
+            if fingerprints != [identity]: raise ValueError("Signing certificate differs from pinned release identity")
             subprocess.run([str(sdk / "zipalign"), "-c", "-P", "16", "4", str(output)], check=True)
             badging = subprocess.check_output([str(sdk / "aapt"), "dump", "badging", str(output)], text=True)
             for field in (f"name='{PACKAGE}'", f"versionName='{args.version}'", f"versionCode='{args.code}'"):
@@ -78,8 +108,9 @@ def main():
             with zipfile.ZipFile(output) as z:
                 included = {n.split("/")[1] for n in z.namelist() if n.startswith("lib/") and n.endswith(".so")}
                 if included != (set(ABIS) if abi is None else {abi}): raise ValueError("Incorrect APK architecture")
-            manifest["apks"].append(dict(file=name, abi=variant, bytes=output.stat().st_size, sha256=sha256(output)))
+            signed.append(dict(file=name, abi=variant, bytes=output.stat().st_size, sha256=sha256(output)))
             print("Verified", name, flush=True)
+    manifest = release_manifest(args.version, args.code, signed)
     metadata = args.out / "release-manifest.json"
     metadata.write_text(json.dumps(manifest, indent=2) + "\n")
     certificate = args.out / "nightfall-release-certificate.pem"

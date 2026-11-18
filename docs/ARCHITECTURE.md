@@ -32,6 +32,72 @@ Rendering uses a 4-block minimum output buffer (about 85 ms at 48 kHz), or Andro
 
 JSON imports validate known sound IDs, unique layer IDs, finite numeric values, ranges and names. JSON is decoded from the input stream without an arbitrary file or layer-count cap; actual available memory remains finite. Android's Storage Access Framework supplies import/export access without broad filesystem permission. User presets can be renamed, duplicated, favorited, deleted and exported; bundled presets can be duplicated and favorited.
 
+## Update channel
+
+`app` builds two flavours from one source set. Every updater source file lives in
+`app/src/github`, which declares `INTERNET`, `ACCESS_NETWORK_STATE`,
+`REQUEST_INSTALL_PACKAGES` and `UPDATE_PACKAGES_WITHOUT_USER_ACTION`. `app/src/main`
+names no update type at all: it calls three flavour-provided composables —
+`UpdateOverlay`, `UpdateForegroundEffect` and `UpdateSettingsSection` — and
+`app/src/fdroid` answers them in `UpdateSurfaces.kt` with no updater, stripping the
+four permissions and showing only the installed version and where updates come
+from. The F-Droid APK therefore contains no manifest parser, no fetcher, no
+installer, no state machine and no network code; `tools/check_release.py` asserts
+that from the built APK's dex and permissions, not from the source tree.
+
+The `github` channel reads the `release-manifest.json` asset that
+`tools/package_release.py` publishes with every release: version name and code,
+application id, `minSdk`/`targetSdk`, the pinned signing certificate digest, and
+one entry per APK with its file name, ABI, byte size, SHA-256 and absolute download
+address. Parsing (`ReleaseManifestParser`) and every trust decision
+(`UpdatePolicy`) are pure Kotlin with no Android types, so they are unit-tested
+against hostile documents: unknown architectures, downgrades and replays, foreign
+package ids, foreign certificate digests, checksums that do not match, addresses
+pointing anywhere but this repository's release assets, and truncated or oversized
+responses.
+
+A check is two steps and no more: one ranged read of the manifest, then — only
+after the user taps Update — one download of the single APK chosen for the
+device's architecture. `ReleaseFetch` reports progress, refuses a response larger
+than the manifest's byte count, and refuses a download that stops short. The file
+is then inspected by Android itself: package name, version code, signer
+certificate list and the native libraries it actually carries. Only a file that
+matches all of that reaches `PackageInstaller`.
+
+The install requests `USER_ACTION_NOT_REQUIRED` on Android 12 and newer, which
+completes with no prompt when the platform's conditions hold (this app targets 35
+and declares the permission the platform requires). `STATUS_PENDING_USER_ACTION`
+is handled as the fallback: the confirmation intent Android supplies is shown and
+its outcome recorded. `STATUS_SUCCESS` and every failure code are written to
+private preferences so the next launch can report a failure it did not live to
+see.
+
+`GithubUpdater` owns the state machine — idle, checking, available, downloading
+with progress, installing, up to date, a notice that a check was requested inside
+the interval, and failed with a reason — in a single `StateFlow` observed by a
+Compose banner and the Settings row. All I/O runs on `Dispatchers.IO`; nothing
+here is reachable from the audio thread, no work is scheduled when the app is not
+in the foreground, and there is no worker, alarm or service, so checking never
+wakes the radio behind the user's back.
+
+`CheckThrottle` keeps two rules because they are two different promises. Every
+request — the foreground hint and the Settings button take the same path — waits at
+least fifteen minutes since the previous attempt, and the attempt is recorded before
+the request, so a fetch or parse that fails counts too and nothing can be hammered.
+The app's own check additionally requires six hours since the last *successful*
+answer, so a failed attempt never spends that window. A press inside the floor makes
+no request: it re-shows the update already known or says how long until the next one
+is allowed. A stored timestamp in the future means the device clock moved and is
+treated as expired rather than locking the channel.
+
+Installer verdicts reach the live row through `InstallResults`, a process-local
+flow the receiver publishes to, so a rejection or a cancelled confirmation is shown
+immediately rather than after a restart. The same outcome is written to private
+preferences and reconciled on the next foreground entry, which is what covers a
+process Android killed mid-install. Dismissing the banner records the release whose
+notice was hidden and nothing else: the update stays available in Settings, and a
+different release brings the banner back.
+
 ## Limits
 
 DSP models are interpretations, not high-fidelity recordings of every named environment. Gray noise is an approximate preset. Headphone acoustic levels cannot be derived from gain percentages. Hardware Bluetooth behavior, power management, perceptual audio quality and all-night battery life need physical-device validation. Background execution is supported through Android's media foreground-service model; no manufacturer-independent all-night guarantee is made.

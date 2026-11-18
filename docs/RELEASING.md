@@ -2,9 +2,10 @@
 
 Each public release has five **signed, installable APKs**, a checksum file,
 release manifest and public signing certificate. GitHub also provides source
-archives. All APKs contain the complete offline library; architecture variants
-only omit incompatible native libraries. Their size differences are small
-because audio dominates the download. Android 8.0+ is required.
+archives. All APKs are built from the `github` flavour — the one with the in-app
+updater — and contain the complete offline library; architecture variants only
+omit incompatible native libraries. Their size differences are small because
+audio dominates the download. Android 8.0+ is required.
 
 | APK option | Device |
 | --- | --- |
@@ -16,12 +17,42 @@ because audio dominates the download. Android 8.0+ is required.
 
 Use Releases → Assets, download one APK and open it on Android. Updates from
 this GitHub channel retain the application ID and signing certificate, allowing
-Android to replace an older version while retaining local data. Installation
-still requires the user's action; Nightfall does not silently update itself or
-add network access. The earlier `dev.nightfall` development package is separate.
+Android to replace an older version while retaining local data.
+
+After the first manual install, this channel can update itself: the app reads
+`release-manifest.json` from the latest release, picks the APK for the device's
+architecture, verifies size, SHA-256 and signing certificate against the installed
+app, and installs it when the user taps Update. On Android 12+ with this target
+SDK the install needs no further prompt; where an OEM image still asks, Android's
+own confirmation is shown. Nothing is downloaded or installed without that tap,
+and nothing is sent to GitHub beyond the request itself. The `fdroid` flavour
+published by F-Droid has no updater and no network permission at all. The earlier `dev.nightfall` development package is separate.
 F-Droid-managed signing is also a separate channel unless a later independent
 reproducible-build/signature configuration is agreed. Export mixes before
 switching packages or signing channels; uninstalling deletes private app data.
+
+## Release manifest
+
+`tools/package_release.py` writes `release-manifest.json` beside the APKs:
+
+```json
+{
+  "versionName": "1.0.2", "versionCode": 5,
+  "applicationId": "io.github.camjampng.nightfall",
+  "minSdk": 26, "targetSdk": 35,
+  "certificateSha256": "<pinned release identity>",
+  "apks": [{"file": "Nightfall-1.0.2-arm64-v8a.apk", "abi": "arm64-v8a",
+            "bytes": 91097092, "sha256": "<digest>",
+            "url": "https://github.com/CamjamPNG/Nightfall/releases/download/v1.0.2/Nightfall-1.0.2-arm64-v8a.apk"}]
+}
+```
+
+The app reads this asset through `releases/latest/download/release-manifest.json`
+and accepts an APK address only when it is exactly this repository's release
+download for that version and file name. `tools/verify_release.py` re-checks the
+URLs against the tag before anything staged is published, so a manifest that
+points elsewhere cannot ship. Older manifests published before the `url` field
+existed are not re-published; `latest` always resolves to the newest release.
 
 ## Version policy
 
@@ -51,6 +82,9 @@ Once the two signing secrets below are installed, it:
 
 1. Checks out current `main` and computes the next version.
 2. Updates Android, F-Droid build metadata, store changelog and CHANGELOG together.
+   New F-Droid recipe entries declare `gradle: - fdroid`, so F-Droid builds the
+   flavour with no updater — one APK per build, and the recipe's tags from the
+   flavour split onward keep that selector.
 3. Runs release-tool tests, core audio tests, compilation, lint and asset checks.
 4. Filters the universal APK into real architecture options, aligns to 16 KiB,
    signs all APKs with the persistent key, and verifies signatures/package/version.
@@ -110,12 +144,14 @@ https://github.com/CamjamPNG/Nightfall/settings/secrets/actions
 python3 -m unittest discover -s tools/tests -v
 python3 tools/release_version.py --kind auto                 # preview only
 python3 tools/release_version.py --kind patch --write        # prepare next version
-./gradlew :core:test :app:assembleRelease :app:lintRelease
-python3 tools/check_release.py --apk app/build/outputs/apk/release/app-release-unsigned.apk
+./gradlew :core:test :app:testGithubDebugUnitTest :app:assembleGithubRelease :app:assembleFdroidRelease :app:lintRelease
+python3 tools/check_release.py \
+  --apk app/build/outputs/apk/github/release/app-github-release-unsigned.apk \
+  --fdroid-apk app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk
 # Load NIGHTFALL_KEYSTORE_PASSWORD securely; never put its value in command history.
 export NIGHTFALL_KEYSTORE_PATH=/secure/path/nightfall-release.p12
 python3 tools/package_release.py \
-  --apk app/build/outputs/apk/release/app-release-unsigned.apk \
+  --apk app/build/outputs/apk/github/release/app-github-release-unsigned.apk \
   --out artifacts/publish --version NEXT_VERSION --code NEXT_CODE
 ```
 
