@@ -2,7 +2,7 @@
 
 ## Executed checks
 
-- 29 JVM tests in `app/src/testGithub` cover the update channel: release-manifest
+- 32 JVM tests in `app/src/testGithub` cover the update channel: release-manifest
   parsing (untrusted documents, wrong types, unknown and duplicate architectures,
   addresses that are not this repository's release assets, oversized input),
   every trust refusal (`UpdatePolicy`), version-name ordering, and the downloader
@@ -10,6 +10,11 @@
   response larger than the manifest allows, and a connection that dies mid-file).
   17 release-tool tests include the manifest generator's schema, URLs and
   rejection cases, and the F-Droid recipe now selects the `fdroid` flavor.
+- `UpdateChannelStateTest` pins the channel's pacing and dismissal contract: the
+  six-hour gate (including a clock that moves backwards), the minutes reported to
+  the user, and the rule that hiding a banner suppresses only that release's
+  notice. The installer-outcome plumbing and the foreground reconciliation are
+  Android-bound and are not unit-tested.
 - Both channels build and pass lint: `:app:assembleGithubDebug`,
   `:app:assembleFdroidDebug`, `:app:assembleGithubRelease`,
   `:app:assembleFdroidRelease`, `:app:lintGithubDebug`, `:app:lintFdroidDebug`

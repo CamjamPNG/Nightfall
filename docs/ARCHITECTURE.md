@@ -70,11 +70,27 @@ private preferences so the next launch can report a failure it did not live to
 see.
 
 `GithubUpdater` owns the state machine — idle, checking, available, downloading
-with progress, installing, up to date, failed with a reason — in a single
-`StateFlow` observed by a Compose banner and the Settings row. All I/O runs on
-`Dispatchers.IO`; nothing here is reachable from the audio thread, no work is
-scheduled when the app is not in the foreground, and there is no worker, alarm or
-service, so checking never wakes the radio behind the user's back.
+with progress, installing, up to date, a notice that a check was requested inside
+the interval, and failed with a reason — in a single `StateFlow` observed by a
+Compose banner and the Settings row. All I/O runs on `Dispatchers.IO`; nothing
+here is reachable from the audio thread, no work is scheduled when the app is not
+in the foreground, and there is no worker, alarm or service, so checking never
+wakes the radio behind the user's back.
+
+One throttle governs every caller: `CheckThrottle` allows a manifest request only
+after six hours have passed since the previous attempt, the foreground hint and the
+Settings button take the same path, and the attempt is recorded before the request
+so a fetch or parse that fails spends the interval too. A button press inside the
+interval either re-shows the update already known or reports how long ago the last
+check was; it does not make a request.
+
+Installer verdicts reach the live row through `InstallResults`, a process-local
+flow the receiver publishes to, so a rejection or a cancelled confirmation is shown
+immediately rather than after a restart. The same outcome is written to private
+preferences and reconciled on the next foreground entry, which is what covers a
+process Android killed mid-install. Dismissing the banner records the release whose
+notice was hidden and nothing else: the update stays available in Settings, and a
+different release brings the banner back.
 
 ## Limits
 

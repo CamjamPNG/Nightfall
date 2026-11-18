@@ -20,19 +20,21 @@
       "note": "unchanged MixerTest and AudioAcceptanceTest"
     },
     "app_unit_github": {
-      "count": 29,
+      "count": 32,
       "failures": 0,
       "classes": [
         "ReleaseManifestParserTest",
         "UpdatePolicyTest",
-        "ReleaseFetchTest"
+        "ReleaseFetchTest",
+        "UpdateChannelStateTest"
       ],
       "covers": [
         "manifest parsing of untrusted documents: wrong types, unknown and duplicate ABIs, non-repository download addresses, oversized input",
         "every trust refusal: foreign package, downgrade, replay, older version name, foreign certificate digest, low API level, missing architecture",
         "downloaded APK checks: size, checksum, package, version code, single signer, signer equalling the installed app, native architectures",
         "version-name ordering across the four-level policy",
-        "downloader against a local socket server: redirect following, monotonic progress, oversized response, connection dying mid-file"
+        "downloader against a local socket server: redirect following, monotonic progress, oversized response, connection dying mid-file",
+        "the six-hour gate for every caller, the minutes reported to the user, and banner dismissal hiding only the notice for that release"
       ]
     },
     "release_tools": {
@@ -66,5 +68,10 @@
     "a download of a real published release from GitHub (tests use a local HTTP server)",
     "behaviour behind captive portals, proxies or per-OEM installer prompts",
     "the settings banner and row rendered on a screen; no emulator is available"
+  ],
+  "review_fixes": [
+    "a manual check obeys the same six-hour interval as the foreground hint and an attempt is recorded before the request, so a failed fetch or parse spends it too",
+    "dismissing a release hides only its banner; the update stays available in Settings and a manual check surfaces it again",
+    "installer verdicts reach the live row through a process-local flow, and the preferences copy is reconciled on foreground entry for a process that was killed mid-install"
   ]
 }

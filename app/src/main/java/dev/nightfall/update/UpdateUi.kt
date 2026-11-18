@@ -52,8 +52,9 @@ fun rememberUpdateApi(): UpdateApi {
 fun UpdateBanner(api: UpdateApi, modifier: Modifier = Modifier) {
     if (!api.supported) return
     val state by api.state.collectAsStateWithLifecycle()
+    val hidden by api.hiddenBannerVersion.collectAsStateWithLifecycle()
     val current = state
-    if (current is UpdateState.Idle || current is UpdateState.UpToDate) return
+    if (!shouldShowBanner(current, hidden)) return
     Card(
         modifier =
             modifier
@@ -170,6 +171,7 @@ private fun title(state: UpdateState): String =
         is UpdateState.Checking -> "Checking for updates"
         is UpdateState.Failed -> "Update not applied"
         is UpdateState.UpToDate -> "Nightfall is up to date"
+        is UpdateState.RecentCheck -> "Checked recently"
         UpdateState.Idle -> ""
     }
 
@@ -181,17 +183,21 @@ private fun detail(state: UpdateState): String =
         is UpdateState.Checking -> "Reading the latest release manifest"
         is UpdateState.Failed -> state.reason
         is UpdateState.UpToDate -> "Version ${state.versionName} is the newest release"
+        is UpdateState.RecentCheck -> "Nothing was requested this time"
         UpdateState.Idle -> ""
     }
 
 private fun statusLine(state: UpdateState): String =
     when (state) {
-        is UpdateState.Idle -> "Nightfall asks GitHub once every six hours while you have it open."
+        is UpdateState.Idle -> "Nightfall asks GitHub at most once every six hours, and only while it is open."
         is UpdateState.Checking -> "Checking…"
         is UpdateState.UpToDate -> "Nightfall ${state.versionName} is the latest release."
         is UpdateState.Available -> "Nightfall ${state.versionName} is available (${megabytes(state.bytes)} MB)."
         is UpdateState.Downloading -> "Downloading… ${(state.fraction * 100).roundToInt()}%"
         is UpdateState.Installing -> "Installing. Nightfall restarts when Android finishes."
+        is UpdateState.RecentCheck ->
+            "Nightfall asked GitHub ${state.minutesAgo} minute(s) ago. It checks at most once " +
+                "every six hours; the next request is allowed after that."
         is UpdateState.Failed -> state.reason
     }
 

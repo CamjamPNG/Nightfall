@@ -16,9 +16,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * The GitHub channel's updater. It reads the release manifest once per app foreground after six
- * hours, or when the user asks, downloads the single APK the manifest names for this device, checks
- * it against the manifest and against the installed app's signer, and hands it to Android.
+ * The GitHub channel's updater. It reads the release manifest at most once every six hours — on a
+ * foreground hint or a button press, both through [check] — downloads the single APK the manifest
+ * names for this device, checks it against the manifest and against the installed app's signer, and
+ * hands it to Android.
  *
  * Every byte of I/O happens on [Dispatchers.IO]; nothing here touches the audio thread, and no
  * alarm, worker or background service is created, so an idle app never wakes the radio.
@@ -28,22 +29,37 @@ class GithubUpdater(context: Context) : UpdateApi {
     private val installed = Apks.installed(app)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val _state = MutableStateFlow<UpdateState>(UpdateState.Idle)
+    private val _hiddenBanner = MutableStateFlow(UpdatePrefs.hiddenBanner(app))
     private var pending: AvailableUpdate? = null
-    private var dismissed: String? = UpdatePrefs.dismissed(app)
 
     override val supported = true
     override val installedVersion: String = "${installed.versionName} (${installed.versionCode})"
     override val state: StateFlow<UpdateState> = _state.asStateFlow()
+    override val hiddenBannerVersion: StateFlow<String?> = _hiddenBanner.asStateFlow()
 
     init {
         UpdatePrefs.takeFailure(app)?.let { _state.value = UpdateState.Failed(it) }
+        // A verdict that arrives while this process is alive updates the row immediately; the copy
+        // in preferences is what covers a process Android killed mid-install.
+        scope.launch {
+            InstallResults.results.collect { result ->
+                if (result.awaitingConfirmation) return@collect
+                _state.value =
+                    if (result.succeeded) UpdateState.Idle
+                    else UpdateState.Failed(result.reason ?: "The update did not finish installing")
+            }
+        }
     }
 
     override fun onForeground() {
+        val failure = UpdatePrefs.takeFailure(app)
+        if (failure != null && _state.value !is UpdateState.Installing) {
+            _state.value = UpdateState.Failed(failure)
+            return
+        }
         val current = _state.value
-        if (current !is UpdateState.Idle && current !is UpdateState.UpToDate) return
-        if (!online()) return
-        if (System.currentTimeMillis() - UpdatePrefs.lastCheck(app) < CHECK_INTERVAL_MS) return
+        if (current is UpdateState.Installing || current is UpdateState.Downloading || current is UpdateState.Checking)
+            return
         check(manual = false)
     }
 
@@ -51,11 +67,24 @@ class GithubUpdater(context: Context) : UpdateApi {
         val current = _state.value
         if (current is UpdateState.Checking || current is UpdateState.Downloading || current is UpdateState.Installing)
             return
+        val now = System.currentTimeMillis()
+        val lastAttempt = UpdatePrefs.lastAttempt(app)
+        if (!CheckThrottle.allows(now, lastAttempt)) {
+            if (manual) {
+                val known = pending
+                _state.value =
+                    if (known != null)
+                        UpdateState.Available(known.versionName, known.versionCode, known.apk.bytes)
+                    else UpdateState.RecentCheck(CheckThrottle.minutesSince(now, lastAttempt))
+            }
+            return
+        }
+        if (!manual && !online()) return
+        UpdatePrefs.recordAttempt(app, now)
         _state.value = UpdateState.Checking
         scope.launch {
             try {
                 val manifest = ReleaseManifestParser.parse(ReleaseFetch.manifestText())
-                UpdatePrefs.recordCheck(app)
                 if (manifest.versionCode <= installed.versionCode) {
                     pending = null
                     _state.value = UpdateState.UpToDate(installed.versionName)
@@ -68,9 +97,7 @@ class GithubUpdater(context: Context) : UpdateApi {
                         DeviceProfile(Build.SUPPORTED_ABIS.toList(), Build.VERSION.SDK_INT),
                     )
                 pending = update
-                _state.value =
-                    if (update.versionName == dismissed) UpdateState.Idle
-                    else UpdateState.Available(update.versionName, update.versionCode, update.apk.bytes)
+                _state.value = UpdateState.Available(update.versionName, update.versionCode, update.apk.bytes)
             } catch (e: UpdateProblem) {
                 _state.value = UpdateState.Failed(e.message ?: "This update was refused")
             } catch (e: IOException) {
@@ -100,9 +127,7 @@ class GithubUpdater(context: Context) : UpdateApi {
         scope.launch {
             val target = File(app.cacheDir, "updates/${update.apk.file}")
             try {
-                target.parentFile?.let { folder ->
-                    folder.listFiles()?.forEach { stale -> stale.delete() }
-                }
+                target.parentFile?.let { folder -> folder.listFiles()?.forEach { stale -> stale.delete() } }
                 ReleaseFetch.download(update.apk.url, target, update.apk.bytes) { fraction ->
                     _state.value = UpdateState.Downloading(update.versionName, fraction)
                 }
@@ -126,11 +151,11 @@ class GithubUpdater(context: Context) : UpdateApi {
     override fun dismiss() {
         when (val current = _state.value) {
             is UpdateState.Available -> {
-                UpdatePrefs.dismiss(app, current.versionName)
-                dismissed = current.versionName
-                _state.value = UpdateState.Idle
+                UpdatePrefs.hideBanner(app, current.versionName)
+                _hiddenBanner.value = current.versionName
             }
             is UpdateState.Failed -> _state.value = UpdateState.Idle
+            is UpdateState.RecentCheck -> _state.value = UpdateState.Idle
             else -> Unit
         }
     }
@@ -142,10 +167,6 @@ class GithubUpdater(context: Context) : UpdateApi {
         val network = manager.activeNetwork ?: return false
         val capabilities = manager.getNetworkCapabilities(network) ?: return false
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-    }
-
-    private companion object {
-        const val CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000L
     }
 }
 

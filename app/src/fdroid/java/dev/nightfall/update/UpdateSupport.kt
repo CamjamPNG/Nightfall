@@ -25,6 +25,7 @@ private class NoUpdater(context: Context) : UpdateApi {
         }
     private val idle = MutableStateFlow<UpdateState>(UpdateState.Idle)
     override val state: StateFlow<UpdateState> = idle.asStateFlow()
+    override val hiddenBannerVersion: StateFlow<String?> = MutableStateFlow<String?>(null).asStateFlow()
 
     override fun check(manual: Boolean) = Unit
 

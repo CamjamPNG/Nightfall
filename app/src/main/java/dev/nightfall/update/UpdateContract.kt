@@ -25,6 +25,9 @@ sealed interface UpdateState {
 
     data class Installing(val versionName: String) : UpdateState
 
+    /** A check was asked for inside the channel's interval, so nothing was requested. */
+    data class RecentCheck(val minutesAgo: Int) : UpdateState
+
     data class Failed(val reason: String, val action: FailureAction = FailureAction.NONE) :
         UpdateState
 }
@@ -49,6 +52,12 @@ interface UpdateApi {
 
     val state: StateFlow<UpdateState>
 
+    /**
+     * The release whose banner the user hid. Dismissing hides the notice, never the update: the
+     * Settings row keeps offering it, and a newer release brings the banner back.
+     */
+    val hiddenBannerVersion: StateFlow<String?>
+
     /** Checks for a newer release. [manual] is a button press rather than a background hint. */
     fun check(manual: Boolean)
 
@@ -58,9 +67,22 @@ interface UpdateApi {
     /** Called when the app comes to the foreground; implementations throttle this. */
     fun onForeground()
 
-    /** Hides the banner without forgetting the result shown in Settings. */
+    /** Hides the banner without discarding the result shown in Settings. */
     fun dismiss()
 
     /** Opens the system screen that allows Nightfall to install packages. */
     fun openInstallPermission()
 }
+
+/** Whether the floating row should be on screen for [state], given the release the user hid. */
+fun shouldShowBanner(state: UpdateState, hiddenVersion: String?): Boolean =
+    when (state) {
+        is UpdateState.Available -> state.versionName != hiddenVersion
+        is UpdateState.Checking,
+        is UpdateState.Downloading,
+        is UpdateState.Installing -> true
+        is UpdateState.Failed -> true
+        is UpdateState.UpToDate,
+        is UpdateState.RecentCheck,
+        UpdateState.Idle -> false
+    }

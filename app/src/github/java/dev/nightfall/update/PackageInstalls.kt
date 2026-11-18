@@ -49,7 +49,9 @@ object PackageInstalls {
         try {
             context.startActivity(intent)
         } catch (e: Exception) {
-            UpdatePrefs.record(context, PackageInstaller.STATUS_FAILURE, "This device has no screen for app install permission")
+            val reason = "This device has no screen for app install permission"
+            UpdatePrefs.record(context, PackageInstaller.STATUS_FAILURE, reason)
+            InstallResults.publish(InstallResult("", succeeded = false, awaitingConfirmation = false, reason = reason))
         }
     }
 
@@ -71,10 +73,15 @@ class UpdateInstallReceiver : BroadcastReceiver() {
         if (intent.action != ACTION_STATUS) return
         val version = intent.getStringExtra(EXTRA_VERSION).orEmpty()
         when (intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
-            PackageInstaller.STATUS_SUCCESS ->
+            PackageInstaller.STATUS_SUCCESS -> {
                 UpdatePrefs.record(context, PackageInstaller.STATUS_SUCCESS, version)
+                InstallResults.publish(InstallResult(version, succeeded = true, awaitingConfirmation = false, reason = null))
+            }
             PackageInstaller.STATUS_PENDING_USER_ACTION -> {
                 UpdatePrefs.record(context, PackageInstaller.STATUS_PENDING_USER_ACTION, version)
+                InstallResults.publish(
+                    InstallResult(version, succeeded = false, awaitingConfirmation = true, reason = null)
+                )
                 @Suppress("DEPRECATION")
                 val confirm = intent.getParcelableExtra(Intent.EXTRA_INTENT) as? Intent
                 if (confirm != null)
@@ -82,10 +89,16 @@ class UpdateInstallReceiver : BroadcastReceiver() {
                         confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         context.startActivity(confirm)
                     } catch (e: Exception) {
-                        UpdatePrefs.record(context, PackageInstaller.STATUS_FAILURE, "Android needs a confirmation that could not be shown")
+                        val reason = "Android needs a confirmation that could not be shown"
+                        UpdatePrefs.record(context, PackageInstaller.STATUS_FAILURE, reason)
+                        InstallResults.publish(InstallResult(version, succeeded = false, awaitingConfirmation = false, reason = reason))
                     }
             }
-            else -> UpdatePrefs.record(context, PackageInstaller.STATUS_FAILURE, reason(intent))
+            else -> {
+                val reason = reason(intent)
+                UpdatePrefs.record(context, PackageInstaller.STATUS_FAILURE, reason)
+                InstallResults.publish(InstallResult(version, succeeded = false, awaitingConfirmation = false, reason = reason))
+            }
         }
     }
 
