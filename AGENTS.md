@@ -23,8 +23,9 @@ report missing access honestly. Changes are published by GitHub Actions after
 pushes. Two channels are built from one source. The `github` channel checks the
 release manifest automatically at most once every six hours, a check the user
 starts is rate-limited to one every fifteen minutes, and a failed attempt never
-spends the six-hour window; it downloads the APK for this device and installs it
-through `PackageInstaller` when the user taps Update, and never downloads or
-installs anything without that tap. The `fdroid` channel carries no updater, no
-network code and no network permission at all. Both stay fully usable with no
-connection.
+spends the six-hour window; it may download the APK for this device and install it
+through `PackageInstaller` on its own, which is on by default in the `github`
+channel and can be turned off, and it always waits for playback to stop before it
+installs so an update never silences a night's audio. The `fdroid` channel carries
+no updater, no network code and no network permission at all. Both stay fully
+usable with no connection.
