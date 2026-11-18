@@ -37,6 +37,13 @@ class MusicSource(private val rate: Int, seed: Long, private val style: Int) : S
 
     companion object {
         fun frequency(midi: Int, tuning: Float): Double = tuning * 2.0.pow((midi - 69) / 12.0)
+
+        // Hoisted out of render(): allocating these per block put garbage on the audio thread.
+        private val MAJOR = intArrayOf(0, 2, 4, 5, 7, 9, 11)
+        private val MINOR = intArrayOf(0, 2, 3, 5, 7, 8, 10)
+        private val PROGRESSIONS =
+            arrayOf(intArrayOf(0, 5, 3, 4), intArrayOf(0, 3, 5, 4), intArrayOf(0, 4, 5, 3))
+        private val MELODY_STEPS = intArrayOf(0, 2, 4, 6, 8)
     }
 
     private fun note(
@@ -47,8 +54,20 @@ class MusicSource(private val rate: Int, seed: Long, private val style: Int) : S
         c: MusicConfig,
         texture: Int = c.texture,
     ) {
-        val v =
-            voices.firstOrNull { it.level == 0f } ?: voices.maxBy { it.age.toFloat() / it.length }
+        // One manual scan: the first idle voice, else the one furthest through its envelope.
+        var v = voices[0]
+        var furthest = -1f
+        for (candidate in voices) {
+            if (candidate.level == 0f) {
+                v = candidate
+                break
+            }
+            val progress = candidate.age.toFloat() / candidate.length
+            if (progress > furthest) {
+                furthest = progress
+                v = candidate
+            }
+        }
         v.phase = 0.0
         v.step = frequency(midi, c.tuning) / rate
         v.age = 0
@@ -69,14 +88,8 @@ class MusicSource(private val rate: Int, seed: Long, private val style: Int) : S
     ) {
         val c = layer.music
         val beat = 60.0 / c.tempo
-        val scale =
-            if (c.minor) intArrayOf(0, 2, 3, 5, 7, 8, 10) else intArrayOf(0, 2, 4, 5, 7, 9, 11)
-        val progressionNotes =
-            when ((c.seed.ushr(2) % 3).toInt()) {
-                0 -> intArrayOf(0, 5, 3, 4)
-                1 -> intArrayOf(0, 3, 5, 4)
-                else -> intArrayOf(0, 4, 5, 3)
-            }
+        val scale = if (c.minor) MINOR else MAJOR
+        val progressionNotes = PROGRESSIONS[(c.seed.ushr(2) % 3).toInt()]
         var degree = progressionNotes[(progression - 1).mod(4)]
         for (i in 0 until frames) {
             if (frame >= nextChord) {
@@ -102,8 +115,7 @@ class MusicSource(private val rate: Int, seed: Long, private val style: Int) : S
                 if (c.melody && random.unit() < c.density * .85f + .08f) {
                     val d =
                         degree +
-                            listOf(0, 2, 4, 6, 8)[
-                                random.index(if (random.unit() < c.randomness) 5 else 3)]
+                            MELODY_STEPS[random.index(if (random.unit() < c.randomness) 5 else 3)]
                     note(
                         60 + c.key + scale[d % 7] + (d / 7) * 12,
                         beat * (2 + random.index(4)),
