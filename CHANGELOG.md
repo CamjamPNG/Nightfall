@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.3 — 2026-11-18
+
+- docs: inventory every user-visible string and stage the localization extraction (#6)
+
 ## 1.1.2 — 2026-11-18
 
 - docs: add contributor, security, roadmap and launch surface (#4)
