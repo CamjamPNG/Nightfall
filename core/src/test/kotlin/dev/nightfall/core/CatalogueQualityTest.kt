@@ -139,7 +139,7 @@ class CatalogueQualityTest {
             }
         }
         println("worst in-preset layer spread ${CatalogueMetrics.fmt(worst)} LU: $worstName")
-        assertTrue("A preset layer sits ${CatalogueMetrics.fmt(worst)} LU under its neighbour", worst <= 15.0)
+        assertTrue("A preset layer sits ${CatalogueMetrics.fmt(worst)} LU under its neighbour", worst <= 12.0)
     }
 
     @Test
@@ -157,7 +157,7 @@ class CatalogueQualityTest {
         )
         assertTrue(
             "Presets differ by ${CatalogueMetrics.fmt(max.value - min.value)} LU; switching presets jumps",
-            max.value - min.value <= 3.0,
+            max.value - min.value <= 1.0,
         )
     }
 

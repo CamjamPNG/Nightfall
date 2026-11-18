@@ -379,8 +379,8 @@ object Presets {
 
     /**
      * Every preset is trimmed to the same measured loudness — −24 LUFS short-term at 48 kHz — so
-     * switching presets no longer jumps, and no advertised layer sits more than 12 LU under its
-     * neighbours. The layer gains set balance; `master` is the per-preset level trim, and the one
+     * switching presets no longer jumps, and every advertised layer sits within 12 LU of the loudest
+     * layer it is mixed with, which is also the widest gain ratio the presets use. The layer gains set balance; `master` is the per-preset level trim, and the one
      * preset that cannot reach the target through gains alone (ocean-waves would exceed 1.0) carries
      * the remainder there. Measured by `CatalogueQualityTest`.
      */
@@ -389,9 +389,9 @@ object Presets {
             p("Quiet Skies", "432-hz-ambient-music" to .56f, "light-drizzle" to .85f).at(.50f),
             p("Cozy Cabin", "fireplace" to .80f, "blizzard" to .45f, "gentle-breeze" to .45f)
                 .at(.50f),
-            p("Rainy Lo-fi", "lo-fi-sleep-music" to .72f, "moderate-rain" to .72f, "brown" to .21f)
+            p("Rainy Lo-fi", "lo-fi-sleep-music" to .68f, "moderate-rain" to .68f, "brown" to .38f)
                 .at(.50f),
-            p("Deep Sleep Noise", "brown" to 1f, "pink" to .25f).at(.50f),
+            p("Deep Sleep Noise", "brown" to .60f, "pink" to .25f).at(.74f),
             p("Ocean Night", "ocean-waves" to 1f, "gentle-breeze" to .44f).at(.62f),
             p(
                     "Storm Watch",
@@ -415,7 +415,7 @@ object Presets {
             p("Night Library", "quiet-library" to .59f, "moderate-rain" to .79f).at(.50f),
             p("Midnight Fire", "fireplace" to .79f, "minimalist-piano" to .53f).at(.50f),
             // Bundled recordings and the binaural tone that no earlier preset reached.
-            p("Summer Night", "crickets" to .80f, "frogs" to .66f, "nighttime-forest" to .43f)
+            p("Summer Night", "crickets" to .80f, "frogs" to .66f, "nighttime-forest" to .55f)
                 .at(.50f),
             p("City Rain", "distant-city-rain" to .71f, "moderate-rain" to .54f, "distant-train" to .42f)
                 .at(.50f),
@@ -427,14 +427,14 @@ object Presets {
             p(
                 "Nine-Layer Dream",
                 "lo-fi-sleep-music" to .45f,
-                "brown" to .22f,
+                "brown" to .30f,
                 "moderate-rain" to .50f,
-                "blizzard" to .30f,
-                "hail" to .25f,
-                "rolling-thunder" to .25f,
+                "blizzard" to .34f,
+                "hail" to .30f,
+                "rolling-thunder" to .45f,
                 "wind-through-pine-trees" to .40f,
                 "fireplace" to .45f,
                 "440-hz-ambient-music" to .30f,
-            ),
+            ).at(.45f),
         )
 }
