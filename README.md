@@ -92,13 +92,15 @@ shipped, so the size above is real and the reduction is not.
 
 This channel can update itself afterwards: Settings shows the installed version, and
 when a release is newer an update row appears with one **Update** button. On its own it
-asks GitHub never sooner than fifteen minutes after any previous attempt and, while
-answers are succeeding, no more than once every six hours — so a failing connection is
-retried on a later launch rather than waiting out six hours. A check you start obeys
-the same fifteen-minute floor. **Nothing downloads or installs without your tap.** The
+asks GitHub never sooner than fifteen minutes after any previous attempt, and never
+more often than once every six hours counted from the last successful answer — with no
+successful answer yet, the fifteen-minute floor is the only limit. A check you start
+obeys the same fifteen-minute floor. **Nothing downloads or installs without your tap.** The
 APK it accepts must match the manifest's size, SHA-256, package id, version code and
 the certificate of the app already installed. No background worker, alarm or periodic
-wake-up exists, so an app that is not in the foreground never checks anything. Details in
+wake-up exists, so an app that is not in the foreground never checks anything. Both
+pacing rules are in `CheckThrottle.kt`, which is the place to read before paraphrasing
+them. Details in
 [`docs/RELEASING.md`](docs/RELEASING.md) and [`PRIVACY.md`](PRIVACY.md).
 
 ### The F-Droid build — buildable from source today
@@ -173,10 +175,10 @@ difference the copy anywhere in this project is allowed to blur.
 So "Nightfall has no `INTERNET` permission" is true of the F-Droid channel and false of
 every file on the Releases page. There is also no switch that turns the check off in
 the current release: the `github` build runs one when it comes to the foreground, never
-sooner than fifteen minutes after any previous attempt and, while answers are
-succeeding, no more than once every six hours; a failing connection is retried on a
-later launch. Dismissing an update row hides that notice, and does not stop the next
-check. If a build that cannot open a socket at all is the point for you, that build is
+sooner than fifteen minutes after any previous attempt and never more often than once
+every six hours counted from the last successful answer. Dismissing an update row hides
+that notice, and does not stop the next check. If a build that cannot open a socket at
+all is the point for you, that build is
 the `fdroid` one — which today means building it yourself.
 
 Both channels declare what a background music player needs and nothing more:
