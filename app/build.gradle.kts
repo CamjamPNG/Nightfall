@@ -13,11 +13,19 @@ android {
         applicationId = "io.github.camjampng.nightfall"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.0.1.2"
+        versionCode = 10
+        versionName = "1.2.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     androidResources { noCompress += "pcm" }
+    // Two distribution channels. `github` ships the in-app updater and the only network
+    // permission in the product; `fdroid` ships no updater, no network permission and no
+    // network code, which is what F-Droid's inclusion policy requires of self-updating apps.
+    flavorDimensions += "channel"
+    productFlavors {
+        create("github") { dimension = "channel" }
+        create("fdroid") { dimension = "channel" }
+    }
     buildFeatures { compose = true }
     // Keep release bytes independent of Git checkout/export state.
     buildTypes { release { vcsInfo { include = false } } }
@@ -28,6 +36,25 @@ android {
     kotlinOptions { jvmTarget = "17" }
     lint { abortOnError = true }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        // DataStore is a per-process singleton: one JVM per test class keeps scenarios isolated.
+        unitTests.all { it.forkEvery = 1 }
+    }
+}
+
+// The flavor split turns lintDebug/lintRelease into per-channel tasks; keep the aggregate names
+// that the documented build gate and the release workflow use, covering both channels.
+tasks.register("lintDebug") {
+    group = "verification"
+    description = "Runs lint for both channels' debug variants."
+    dependsOn("lintGithubDebug", "lintFdroidDebug")
+}
+
+tasks.register("lintRelease") {
+    group = "verification"
+    description = "Runs lint for both channels' release variants."
+    dependsOn("lintGithubRelease", "lintFdroidRelease")
 }
 
 dependencies {
@@ -47,6 +74,11 @@ dependencies {
     debugImplementation(libs.compose.tooling)
     debugImplementation(libs.compose.test.manifest)
     testImplementation(libs.junit)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.androidx.test)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.compose.test)
+    testImplementation(libs.robolectric)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.androidx.test)
     androidTestImplementation(libs.androidx.runner)

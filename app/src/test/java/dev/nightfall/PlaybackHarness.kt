@@ -61,23 +61,13 @@ abstract class PlaybackHarness {
     }
 
     /**
-     * Bounded poll. AudioHost and DataStore publish from their own threads onto the main looper, and
-     * Robolectric's paused main looper only runs those posts when told to, so every poll drains it
-     * before looking at the condition.
+     * Bounded poll. AudioHost publishes its meters from a 250 ms main-dispatcher tick and DataStore
+     * writes state after a debounce, so every poll drains the main looper and lets virtual time pass
+     * instead of only looking at the condition.
      */
     protected fun await(condition: () -> Boolean) =
         compose.waitUntil(WAIT_MS) {
-            shadowOf(Looper.getMainLooper()).idle()
-            condition()
-        }
-
-    /**
-     * Polls while also letting virtual time pass, for work the app defers behind a `delay` on the
-     * main dispatcher (the state write is debounced by 250 ms of main-clock time).
-     */
-    protected fun awaitDeferred(condition: () -> Boolean) =
-        compose.waitUntil(WAIT_MS) {
-            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100))
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(50))
             condition()
         }
 

@@ -1,0 +1,69 @@
+{
+  "change": "in-app updater for the github release channel, two build flavours",
+  "date": "2026-11-18",
+  "build_gate": {
+    "command": "./gradlew :core:test :app:testGithubDebugUnitTest :app:testFdroidDebugUnitTest :app:assembleDebug :app:lintDebug :app:assembleGithubRelease :app:assembleFdroidRelease :app:lintRelease",
+    "result": "BUILD SUCCESSFUL",
+    "lint_variants": ["githubDebug", "fdroidDebug", "githubRelease", "fdroidRelease"],
+    "lint": "zero errors, abortOnError = true"
+  },
+  "tests": {
+    "core": {"count": 18, "failures": 0, "note": "unchanged MixerTest and AudioAcceptanceTest"},
+    "app_unit_github": {
+      "count": 34,
+      "failures": 0,
+      "classes": [
+        "ReleaseManifestParserTest",
+        "UpdatePolicyTest",
+        "ReleaseFetchTest",
+        "UpdateChannelStateTest"
+      ],
+      "covers": [
+        "manifest parsing of untrusted documents: wrong types, unknown and duplicate ABIs, non-repository download addresses, oversized input",
+        "every trust refusal: foreign package, downgrade, replay, older version name, foreign certificate digest, low API level, missing architecture",
+        "downloaded APK checks: size, checksum, package, version code, single signer, signer equalling the installed app, native architectures",
+        "version-name ordering across the four-level policy",
+        "downloader against a local socket server: redirect following, monotonic progress, oversized response, connection dying mid-file",
+        "the two pacing rules (fifteen-minute floor for every request, six-hour interval for the app's own check, failed attempts never starting the interval, a corrected clock treated as expired), the minutes reported to the user, and banner dismissal hiding only the notice for that release"
+      ]
+    },
+    "release_tools": {
+      "count": 19,
+      "failures": 0,
+      "note": "includes the manifest generator's schema, URLs and rejection cases, the recipe's flavour selection per tag (asserting at least one tag was read), and the fdroid recipe block for new releases"
+    }
+  },
+  "pacing": {
+    "every_request": "at least fifteen minutes since the previous attempt, recorded before the request so a failed fetch or parse counts",
+    "app_initiated": "at most once every six hours, measured from the last successful answer, so a failed attempt never spends that interval",
+    "user_initiated": "gated by the fifteen-minute floor only"
+  },
+  "channel_apks": {
+    "github": {
+      "file": "app/build/outputs/apk/github/release/app-github-release-unsigned.apk",
+      "permissions_added": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.REQUEST_INSTALL_PACKAGES",
+        "android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION"
+      ],
+      "updater_code": "present"
+    },
+    "fdroid": {
+      "file": "app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk",
+      "network_permissions": [],
+      "updater_code": "none of the classes tools/check_release.py looks for appears in any dex: GithubUpdater, ReleaseFetch, ReleaseManifestParser, PackageInstalls, UpdateInstallReceiver, CheckThrottle, UpdatePrefs, InstallResults, Apks, UpdatePolicy, ReleaseManifest, UpdateState, UpdateApi, UpdateUi. The whole app/src/github source set is excluded from this build, so the absence follows from the build graph as well as from this scan; the scan is what would catch a class drifting into shared code."
+    }
+  },
+  "structure": "every updater source file lives in app/src/github; app/src/main names no update type, calling three flavour-provided composables instead; INTERNET appears only in app/src/github/AndroidManifest.xml",
+  "recipe": "a build block may select the fdroid flavour only when the tag it pins defines the flavours; tools/check_release.py reads app/build.gradle.kts at each tag and android.yml now fetches tags so the rule is checked rather than skipped",
+  "not_verified": [
+    "PackageInstaller install path on a device or emulator: this machine has no /dev/kvm",
+    "STATUS_PENDING_USER_ACTION confirmation dialog and the post-install restart",
+    "the 'install unknown apps' screen",
+    "a download of a real published release from GitHub (tests use a local HTTP server)",
+    "behaviour behind captive portals, proxies or per-OEM installer prompts",
+    "the settings row and floating banner rendered on a screen; no emulator is available",
+    "the installer-outcome plumbing and the foreground reconciliation: Android-bound, not unit-tested"
+  ]
+}

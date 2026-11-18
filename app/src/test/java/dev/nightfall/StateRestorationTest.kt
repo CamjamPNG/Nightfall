@@ -29,7 +29,7 @@ class StateRestorationTest : PlaybackHarness() {
         val storedFile = {
             app.filesDir.walkTopDown().firstOrNull { it.name == "nightfall.preferences_pb" }
         }
-        awaitDeferred { (storedFile()?.length() ?: 0L) > 0 }
+        await { (storedFile()?.length() ?: 0L) > 0 }
         val written = String(checkNotNull(storedFile()).readBytes(), Charsets.ISO_8859_1)
         assertTrue("the gain never reached local storage", written.contains("0.27"))
         assertTrue("reduced motion never reached local storage", written.contains("reducedMotion"))

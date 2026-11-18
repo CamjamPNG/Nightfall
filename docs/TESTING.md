@@ -2,15 +2,44 @@
 
 ## Executed checks
 
-- 10 release-tool tests cover all four version levels, ordering and resets,
+- 34 JVM tests in `app/src/testGithub` cover the update channel: release-manifest
+  parsing (untrusted documents, wrong types, unknown and duplicate architectures,
+  addresses that are not this repository's release assets, oversized input),
+  every trust refusal (`UpdatePolicy`), version-name ordering, and the downloader
+  against a local socket server (redirect following, progress ordering, a
+  response larger than the manifest allows, and a connection that dies mid-file).
+  The release-tool suite covers the manifest generator's schema, URLs and
+  rejection cases, and asserts that each F-Droid recipe block selects the flavour
+  its own tag defines.
+- `UpdateChannelStateTest` pins the channel's two pacing rules (a fifteen-minute
+  floor for every request, a six-hour interval only for the app's own check, a
+  failed attempt never starting that interval, a corrected clock treated as
+  expired), the minutes reported to the user, and the rule that hiding a banner
+  suppresses only that release's notice. The installer-outcome plumbing and the
+  foreground reconciliation are Android-bound and are not unit-tested.
+- Both channels build and pass lint: `:app:assembleGithubDebug`,
+  `:app:assembleFdroidDebug`, `:app:assembleGithubRelease`,
+  `:app:assembleFdroidRelease`, `:app:lintGithubDebug`, `:app:lintFdroidDebug`
+  (`abortOnError = true`). `tools/check_release.py --fdroid-apk` asserts the
+  F-Droid APK declares none of the network or install permissions and that none of
+  the fourteen updater classes it names appears in any dex; `--apk` asserts the
+  GitHub APK declares all of them and does carry the updater. The recipe check
+  reads `app/build.gradle.kts` at each pinned tag, and the CI job fetches tags so
+  that comparison runs instead of being skipped.
+
+- The release-tool suite covers all four version levels, ordering and resets,
   classification of mixed changes, synchronized Android/store/F-Droid metadata,
   rejection of duplicate versions and preservation of code/audio in ABI options.
   Signed APK variants are additionally checked with Android's apksigner, aapt,
   zipalign and source-tag audio hashes before publication.
-- 18 deterministic JVM/core tests pass, with no failures or skips. They cover
-  nine simultaneous non-silent sources, 512 allocated layers, unrelated-source
-  phase continuity, independent gain/master/mute/solo, limiting, colored-noise
-  behavior, musical tuning/seeds, local-state serialization, timers and fades.
+- 42 deterministic JVM/core tests pass (41 executed, 1 skipped by design: the
+  opt-in `NIGHTFALL_CALIBRATE=1` level-calibration generator). They cover nine
+  simultaneous non-silent sources, 512 allocated layers, unrelated-source phase
+  continuity, independent gain/master/mute/solo, limiting, colored-noise
+  behavior, musical tuning/seeds, local-state serialization, timers and fades,
+  plus the loudness ledger and per-source level calibration, true-peak ceiling,
+  zero per-block allocation, click size at layer add/remove, loop seams on the
+  bundled recordings, spectral slope, DC offset and tuning in cents.
 - Duplicate noise layers have independent random streams. Pausing in the final
   timer fade preserves the fade level. Expired layer schedules stop source
   reads/rendering and can resume with a new schedule.
@@ -34,10 +63,12 @@
   inventory has no GMS, Firebase, billing, ad or tracking SDK from the checked
   denylist. F-Droid's independent review remains necessary.
 
-- 9 JVM playback-lifecycle tests pass under Robolectric (see below).
+- 9 JVM playback-lifecycle tests pass under Robolectric in both channels (see
+  below). They replace the instrumented attempt that never went green.
 
-Machine-readable results: `docs/verification/release-checks.json`,
-`dependency-audit.json`, `reproducibility.json`, and `release-dependencies.txt`.
+Machine-readable results: `docs/verification/update-channel.json`,
+`release-checks.json`, `dependency-audit.json`, `reproducibility.json`, and
+`release-dependencies.txt`.
 
 ## Playback lifecycle tests (Robolectric, JVM)
 
@@ -86,53 +117,22 @@ Limits of this harness, stated plainly:
 - One JVM per test class (`forkEvery = 1`) is required: in a shared JVM a later
   class restores state left by an earlier one and two scenarios time out.
 
-### Build wiring these tests need
+### Build wiring
 
-`app/build.gradle.kts`:
+The suite is configured in the repository: `app/build.gradle.kts` sets
+`testOptions { unitTests.isIncludeAndroidResources = true }` and
+`unitTests.all { it.forkEvery = 1 }`, and `testImplementation` carries the Compose
+BOM, `androidx.test:core`, `androidx.test.ext:junit`, `androidx.compose.ui:ui-test-junit4`
+and Robolectric 4.18.1 alongside the JUnit that was already there. Because the two
+channels are flavours rather than one variant, the scenarios run twice — under
+`:app:testGithubDebugUnitTest` and `:app:testFdroidDebugUnitTest` — and the CI job
+runs both, so the F-Droid build's playback lifecycle is gated as well as the
+GitHub build's.
 
-```kotlin
-android {
-    testOptions {
-        unitTests.isIncludeAndroidResources = true
-        // DataStore is a per-process singleton: one JVM per test class keeps scenarios isolated.
-        unitTests.all { it.forkEvery = 1 }
-    }
-}
-
-dependencies {
-    testImplementation(platform(libs.compose.bom))
-    testImplementation(libs.androidx.test)          // already present for androidTest
-    testImplementation(libs.androidx.test.core)
-    testImplementation(libs.compose.test)
-    testImplementation(libs.robolectric)
-}
-```
-
-`gradle/libs.versions.toml`:
-
-```toml
-[versions]
-robolectric = "4.18.1"
-androidx-test-core = "1.7.0"
-
-[libraries]
-androidx-test-core = { module = "androidx.test:core", version.ref = "androidx-test-core" }
-robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
-```
-
-`gradle/verification-metadata.xml` already carries the SHA-256 entries for every
+`gradle/verification-metadata.xml` carries the SHA-256 entries for every
 transitive artifact these dependencies resolve, so dependency verification stays
-strict without a second pass.
-
-`.github/workflows/android.yml`, in the existing Gradle step:
-
-```yaml
-          ./gradlew --no-daemon :core:test :app:testDebugUnitTest :app:assembleRelease :app:lintRelease
-```
-
-and in the artifact upload, add `app/build/reports/tests/testDebugUnitTest/`.
-Robolectric downloads its Android 35 runtime jar on first use, so that step needs
-network access the first time it runs on a runner.
+strict without a second pass. Robolectric downloads its Android 35 runtime jar on
+first use, so the CI step needs network access the first time it runs on a runner.
 
 ## Android emulator observations
 
@@ -152,6 +152,19 @@ moved off the main thread; this does not establish that every device issue has
 been resolved. That never-green `PlaybackIntegrationTest` has since been replaced
 by the Robolectric scenarios above, which run on a JVM without an emulator.
 
+## Update channel that was not exercised
+
+The install path was not run on hardware. This workspace has no `/dev/kvm`, so no
+emulator and no device was available: `PackageInstaller` sessions, the
+`STATUS_PENDING_USER_ACTION` fallback, the "install unknown apps" screen and the
+post-install restart are described from Android's documented behaviour, not from a
+measured run. Nothing here claims a silent install was observed.
+
+Also unverified: a real download of a published release from GitHub (the tests use
+a local server with the same protocol), behaviour behind a captive portal or a
+proxy, and how each OEM image prompts. Releasing a version with this channel and
+installing it on a physical device is the check that closes this gap.
+
 ## Pending hardware checks
 
 Verify the public package on a physical Pixel 7 with the intended Bluetooth
@@ -163,13 +176,15 @@ underrun run. Manufacturer-independent all-night playback is not guaranteed.
 ## Reproduce
 
 ```sh
-./gradlew :core:test :app:testDebugUnitTest :app:assembleRelease :app:lintRelease
-python3 tools/check_release.py --apk app/build/outputs/apk/release/app-release-unsigned.apk
+./gradlew :core:test :app:testGithubDebugUnitTest :app:testFdroidDebugUnitTest \
+  :app:assembleGithubRelease :app:assembleFdroidRelease :app:lintRelease
+python3 tools/check_release.py --apk app/build/outputs/apk/github/release/app-github-release-unsigned.apk --fdroid-apk app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk
 ```
 
 The core acceptance test creates `artifacts/nine-layer-dream.wav` and host JVM
 render measurements. The playback lifecycle tests report under
-`app/build/reports/tests/testDebugUnitTest/`. Neither is a Pixel 7 CPU, battery or
-listening result. `:app:connectedDebugAndroidTest` is no longer part of the
-record: there is no instrumented test left, and no `/dev/kvm` on the machines
-that run these checks.
+`app/build/reports/tests/testGithubDebugUnitTest/` and
+`app/build/reports/tests/testFdroidDebugUnitTest/`. Neither is a Pixel 7 CPU,
+battery or listening result. `:app:connectedGithubDebugAndroidTest` is no longer
+part of the record: there is no instrumented test left, and no `/dev/kvm` on the
+machines that run these checks.
