@@ -152,6 +152,12 @@ class OpusRecording(
         return cursor
     }
 
+    internal fun forget(cursor: OpusCursor) {
+        synchronized(cursors) {
+            cursors.remove(cursor)
+        }
+    }
+
     internal fun report(reason: String) {
         if (unavailable == null) unavailable = reason
         onUnavailable?.invoke(reason)
@@ -220,6 +226,8 @@ class OpusCursor(
         begin()
         val target = index.coerceIn(0, size - 1)
         synchronized(lock) {
+            // A closed cursor says nothing and waits for nothing: the layer that read it is gone.
+            if (closing) return 0f
             lastRead = System.currentTimeMillis()
             val buffer = ring ?: FloatArray(window).also { ring = it }
             val deadline = System.nanoTime() + WAIT_NANOS
@@ -253,10 +261,12 @@ class OpusCursor(
      */
     override fun close() {
         synchronized(lock) {
+            if (closing) return
             closing = true
             running = false
             lock.notifyAll()
         }
+        owner?.forget(this)
     }
 
     private fun full() = next - start >= (ring?.size ?: 1)
