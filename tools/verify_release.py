@@ -18,7 +18,7 @@ import release_artifact  # noqa: E402
 ABIS = {"arm64-v8a", "armeabi-v7a", "x86", "x86_64"}
 
 
-def verify_apk(file, abis, version, code, credits, pin):
+def verify_apk(file, abis, version, code, credits, pin, levels):
     """Prove one published APK's signer, alignment, identity, architecture and audio payloads."""
     sdk = release_artifact.build_tools()
     certificate = subprocess.check_output([str(sdk / "apksigner"), "verify", "--verbose", "--print-certs", str(file)], text=True)
@@ -27,7 +27,8 @@ def verify_apk(file, abis, version, code, credits, pin):
     badging = subprocess.check_output([str(sdk / "aapt"), "dump", "badging", str(file)], text=True)
     for field in ("name='io.github.camjampng.nightfall'", f"versionName='{version}'", f"versionCode='{code}'"):
         assert field in badging.splitlines()[0], "Wrong APK package/version: " + file.name
-    assert "sdkVersion:'26'" in badging and "targetSdkVersion:'35'" in badging
+    assert f"sdkVersion:'{levels[0]}'" in badging and f"targetSdkVersion:'{levels[1]}'" in badging, (
+        "Wrong SDK levels: " + file.name)
     with zipfile.ZipFile(file) as z:
         assert release_artifact.universal_abis(file) == abis, "Wrong architecture in " + file.name
         for asset in credits:
@@ -49,8 +50,9 @@ def main():
     assert manifest["certificateSha256"] == pin, "Unexpected signing identity"
     assert manifest["applicationId"] == "io.github.camjampng.nightfall"
     assert manifest["versionName"] == args.tag[1:]
-    assert manifest["minSdk"] == 26 and manifest["targetSdk"] == 35
     source = subprocess.check_output(["git", "show", f"refs/tags/{args.tag}:app/build.gradle.kts"], text=True)
+    levels = release_artifact.sdk_levels(source)
+    assert (manifest["minSdk"], manifest["targetSdk"]) == levels, "The manifest's SDK levels differ from the tagged source"
     assert re.search(r'versionName\s*=\s*"([^"]+)"', source)[1] == manifest["versionName"]
     assert int(re.search(r"versionCode\s*=\s*(\d+)", source)[1]) == manifest["versionCode"]
     assert {a["abi"] for a in manifest["apks"]} == ABIS | {"universal"}
@@ -97,11 +99,11 @@ def main():
     for apk in manifest["apks"]:
         file = folder / apk["file"]
         assert apk["sha256"] == sums[apk["file"]] and apk["bytes"] == file.stat().st_size
-        verify_apk(file, ABIS if apk["abi"] == "universal" else {apk["abi"]}, version, code, credits, pin)
+        verify_apk(file, ABIS if apk["abi"] == "universal" else {apk["abi"]}, version, code, credits, pin, levels)
         print("Validated", file.name, flush=True)
     if fdroid_asset in expected:
         file = folder / fdroid_asset
-        verify_apk(file, ABIS, version, code, credits, pin)
+        verify_apk(file, ABIS, version, code, credits, pin, levels)
         violation = release_artifact.fdroid_violation(file)
         assert violation is None, "F-Droid asset " + violation
         print("Validated", file.name, "without network permission or updater code", flush=True)
