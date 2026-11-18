@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.*
 
 private val Context.dataStore by preferencesDataStore("nightfall")
 
+private val stateKey = stringPreferencesKey("state_v1")
+
 class NightfallApp : Application() {
     lateinit var runtime: NightfallRuntime
         private set
@@ -56,7 +58,15 @@ data class PlaybackStatus(
     val error: String? = null,
 )
 
-class NightfallRuntime(val context: Context) {
+class NightfallRuntime(
+    val context: Context,
+    /**
+     * Writes one serialized state to storage. A parameter rather than a direct DataStore call so a
+     * test can hold a write open and prove what happens to an edit that arrives while it is still
+     * being written; the app always passes nothing and writes through DataStore.
+     */
+    private val write: suspend (String) -> Unit = { text -> context.dataStore.edit { it[stateKey] = text } },
+) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     // Keep Application.onCreate cheap; catalogue construction/restoration belongs off main.
     private val _saved = MutableStateFlow(SavedState(current = Mix(name = "Your soundscape")))
@@ -66,13 +76,12 @@ class NightfallRuntime(val context: Context) {
     val timer = SleepTimer()
     var host: AudioHost? = null
     var promotePlayback: (() -> Unit)? = null
-    private val key = stringPreferencesKey("state_v1")
     private var persist: Job? = null
 
     init {
         scope.launch(Dispatchers.IO) {
             try {
-                val text = context.dataStore.data.first()[key]
+                val text = context.dataStore.data.first()[stateKey]
                 if (text != null) {
                     val loaded = PresetJson.json.decodeFromString<SavedState>(text)
                     _saved.value =
@@ -103,7 +112,7 @@ class NightfallRuntime(val context: Context) {
                 delay(250)
                 withContext(NonCancellable) {
                     try {
-                        context.dataStore.edit { it[key] = PresetJson.json.encodeToString(_saved.value) }
+                        write(PresetJson.json.encodeToString(_saved.value))
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
