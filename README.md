@@ -173,14 +173,15 @@ difference the copy anywhere in this project is allowed to blur.
 
 So "Nightfall has no `INTERNET` permission" is true of the F-Droid channel and false of
 every file on the Releases page. There is also no switch that turns the check off in
-the current release: the `github` build asks GitHub never sooner than fifteen minutes
-after any previous attempt and never more often than once every six hours counted from
-the last successful answer — with no successful answer yet, the fifteen-minute floor is
-the only bound. Pacing lives in `CheckThrottle.kt` and the update states that can hold a
-check back live in `GithubUpdater.kt`; this page deliberately does not retell either.
-Dismissing an update row hides that notice, and does not stop the next check. If a build
-that cannot open a socket at all is the point for you, that build is the `fdroid` one —
-which today means building it yourself.
+the current release: its own check runs never sooner than fifteen minutes after any
+previous attempt and never more often than once every six hours counted from the last
+successful answer — with no successful answer yet, the fifteen-minute floor is the only
+bound — and a check you start obeys the fifteen-minute floor and nothing else. Pacing
+lives in `CheckThrottle.kt` and the update states that can hold a check back live in
+`GithubUpdater.kt`; this page deliberately does not retell either. Dismissing an update
+row hides that notice, and does not stop the next check. If a build that cannot open a
+socket at all is the point for you, that build is the `fdroid` one — which today means
+building it yourself.
 
 Both channels declare what a background music player needs and nothing more:
 foreground service, the media-playback foreground type, notifications, and a wake
