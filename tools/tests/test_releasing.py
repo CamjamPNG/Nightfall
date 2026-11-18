@@ -23,6 +23,7 @@ def load(name):
 version = load("release_version")
 packaging = load("package_release")
 artifact = load("release_artifact")
+site = load("assemble_site")
 
 
 class VersionPolicyTest(unittest.TestCase):
@@ -220,6 +221,44 @@ class FdroidAssetTest(unittest.TestCase):
                                      env=env, capture_output=True, text=True)
             self.assertNotEqual(refused.returncode, 0)
             self.assertIn("must be named", refused.stderr)
+
+
+class SiteArtifactTest(unittest.TestCase):
+    """GitHub Pages serves one artifact, so the landing page and the repository ship together."""
+
+    def repository(self, root):
+        repo = root / "generated/repo"
+        (repo / "icons").mkdir(parents=True)
+        for name in ("index-v1.json", "index-v1.jar", "index.xml", "entry.json"):
+            (repo / name).write_text("{}")
+        (repo / "icons/io.github.camjampng.nightfall.11.png").write_bytes(b"png")
+        (repo / "io.github.camjampng.nightfall_11.apk").write_bytes(b"apk")
+        return repo
+
+    def test_the_landing_page_owns_the_root_and_the_repository_lives_below_it(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            summary = root / "summary.json"
+            summary.write_text("{}")
+            out = site.assemble(self.repository(root), summary, root / "site")
+            self.assertTrue((out / "index.html").is_file())
+            self.assertTrue((out / "style.css").is_file())
+            self.assertTrue((out / ".nojekyll").is_file())
+            for name in ("index-v1.json", "index-v1.jar", "index.xml", "entry.json", "index-summary.json"):
+                self.assertTrue((out / "fdroid/repo" / name).is_file(), name)
+            self.assertEqual([p.name for p in (out / "fdroid/repo").glob("*.apk")],
+                             ["io.github.camjampng.nightfall_11.apk"])
+            self.assertFalse((out / "index-v1.json").exists(), "the index must not sit at the site root")
+
+    def test_an_incomplete_artifact_is_refused_rather_than_deployed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            repo = self.repository(root)
+            (repo / "index.xml").unlink()
+            with self.assertRaises(ValueError): site.assemble(repo, None, root / "site")
+            repo = self.repository(root / "second")
+            for apk in repo.glob("*.apk"): apk.unlink()
+            with self.assertRaises(ValueError): site.assemble(repo, None, root / "other")
 
 
 if __name__ == "__main__": unittest.main()

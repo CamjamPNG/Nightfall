@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-name: Publish F-Droid repository
+name: Publish the Nightfall site
 on:
   release:
     types: [published]
@@ -9,6 +9,13 @@ on:
     # release event alone would never reach here. Both publishers are followed.
     workflows: [Publish Android release, Publish already signed APKs]
     types: [completed]
+  push:
+    # The landing page is one part of the same artifact, so editing it deploys here rather than
+    # from a workflow of its own; two publishers would overwrite each other on one Pages site.
+    branches: [main]
+    paths:
+      - 'docs/site/**'
+      - '.github/workflows/fdroid-repo.yml'
   workflow_dispatch:
     inputs:
       releases:
@@ -19,7 +26,7 @@ permissions:
   pages: write
   id-token: write
 concurrency:
-  group: nightfall-fdroid-repository
+  group: nightfall-pages
   cancel-in-progress: false
 jobs:
   publish:
@@ -64,19 +71,18 @@ jobs:
         run: |
           # Only the F-Droid flavour may enter the index, so the picker accepts one name and has
           # no fallback: any other APK would be the update channel's, which declares INTERNET.
-          # Tags from before the channel split cannot publish it and are skipped instead.
-          git fetch --depth=1 origin '+refs/tags/*:refs/tags/*'
+          # A release published before that asset existed carries none and cannot be indexed, so it
+          # is skipped by name rather than mistaken for a broken release; the release pipeline
+          # refuses to publish without the asset, so a skip can only be history.
           mkdir -p "$RUNNER_TEMP/apks"
           : > "$RUNNER_TEMP/apks/list"
+          SKIPPED=""
           for TAG in $(gh release list --limit "$RELEASES" --exclude-drafts --json tagName --jq '.[].tagName'); do
             NAMES=$(gh release view "$TAG" --json assets --jq '.assets[].name')
             ASSET=$(printf '%s\n' "$NAMES" | grep -iE '(^|[-_.])fdroid([-_.]|$)' | grep -i universal | head -1)
             if [ -z "$ASSET" ]; then
-              if git show "$TAG:app/build.gradle.kts" 2>/dev/null | grep -q productFlavors; then
-                echo "::error::$TAG builds the flavours but publishes no fdroid-flavour APK; tools/package_release.py must publish Nightfall-${TAG#v}-fdroid-universal.apk"
-                exit 1
-              fi
-              echo "::warning::$TAG predates the channel split and publishes no fdroid-flavour APK; skipping it"
+              echo "::warning::$TAG publishes no Nightfall-<version>-fdroid-universal.apk, so there is nothing in it that may enter this index; skipping it"
+              SKIPPED="$SKIPPED $TAG"
               continue
             fi
             echo "$TAG -> $ASSET"
@@ -84,6 +90,10 @@ jobs:
             gh release download "$TAG" --pattern "$ASSET" --dir "$RUNNER_TEMP/apks/$TAG" --clobber
             find "$RUNNER_TEMP/apks/$TAG" -name '*.apk' >> "$RUNNER_TEMP/apks/list"
           done
+          if [ ! -s "$RUNNER_TEMP/apks/list" ]; then
+            echo "::error::No release in the requested window publishes an F-Droid-channel APK, so there is nothing to index. Skipped:${SKIPPED:- none}. Publish one with tools/package_release.py --fdroid-apk, or dispatch this workflow once a newer release exists."
+            exit 1
+          fi
           cat "$RUNNER_TEMP/apks/list"
       - name: Generate and verify the signed index
         env:
@@ -93,13 +103,12 @@ jobs:
           while read -r APK; do ARGS+=(--apk "$APK"); done < "$RUNNER_TEMP/apks/list"
           "$RUNNER_TEMP/venv/bin/python" tools/fdroid_repo.py build "${ARGS[@]}" \
             --out "$RUNNER_TEMP/fdroid" --keep 2 --summary "$RUNNER_TEMP/fdroid-index.json"
-      - name: Assemble the published site
+      - name: Assemble the single Pages artifact
         run: |
-          mkdir -p site/fdroid
-          cp -a "$RUNNER_TEMP/fdroid/repo" site/fdroid/repo
-          cp "$RUNNER_TEMP/fdroid-index.json" site/fdroid/repo/index-summary.json
-          touch site/.nojekyll
+          python3 tools/assemble_site.py --repo "$RUNNER_TEMP/fdroid/repo" \
+            --summary "$RUNNER_TEMP/fdroid-index.json" --out site
           du -sh site
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site
