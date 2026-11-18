@@ -15,7 +15,7 @@ import java.io.File
 /**
  * Hands a verified APK to Android's PackageInstaller.
  *
- * On Android 12 and newer, with targetSdk 35, the `UPDATE_PACKAGES_WITHOUT_USER_ACTION` permission
+ * On Android 12 and newer, with targetSdk 36, the `UPDATE_PACKAGES_WITHOUT_USER_ACTION` permission
  * declared and `USER_ACTION_NOT_REQUIRED` requested, an app updating itself completes without a
  * prompt. Devices whose OEM image still requires one answer with
  * [PackageInstaller.STATUS_PENDING_USER_ACTION], which is forwarded to the user.

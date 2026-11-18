@@ -77,7 +77,7 @@ process that dies mid-install finds it and a retry does not fetch ninety megabyt
 again.
 
 The install requests `USER_ACTION_NOT_REQUIRED` on Android 12 and newer, which
-completes with no prompt when the platform's conditions hold (this app targets 35
+completes with no prompt when the platform's conditions hold (this app targets 36
 and declares the permission the platform requires). `STATUS_PENDING_USER_ACTION`
 is handled as the fallback: the confirmation intent Android supplies is shown and
 its outcome recorded. `STATUS_SUCCESS` and every failure code are written to

@@ -24,7 +24,7 @@ jobs:
           java-version: '17'
       - name: Verify pre-signed public assets
         run: |
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;35.0.0"
           TAG="${GITHUB_REF_NAME#release-assets/}"
           python3 tools/verify_release.py --assets release-upload --tag "$TAG"
       - name: Publish complete release

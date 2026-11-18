@@ -119,7 +119,7 @@ class ReleaseManifestTest(unittest.TestCase):
         manifest = packaging.release_manifest(VERSION, CODE, apks(), log=log())
         self.assertEqual(set(manifest), MANIFEST_KEYS)
         self.assertEqual(manifest["applicationId"], "io.github.camjampng.nightfall")
-        self.assertEqual((manifest["minSdk"], manifest["targetSdk"]), (26, 35))
+        self.assertEqual((manifest["minSdk"], manifest["targetSdk"]), packaging.release_artifact.sdk_levels())
         self.assertEqual(manifest["certificateSha256"], PIN)
         self.assertEqual(manifest["versionName"], VERSION)
         self.assertEqual(manifest["versionCode"], CODE)

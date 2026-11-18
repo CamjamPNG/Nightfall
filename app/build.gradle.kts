@@ -8,11 +8,11 @@ plugins {
 
 android {
     namespace = "dev.nightfall"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig {
         applicationId = "io.github.camjampng.nightfall"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 23
         versionName = "1.9"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

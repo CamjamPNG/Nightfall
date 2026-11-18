@@ -38,6 +38,20 @@ def updater_markers(groups=None):
     return tuple(sorted({marker for group in (groups or updater_entry_points()).values() for marker in group}))
 
 
+def sdk_levels(source=None):
+    """The min and target SDK the app module declares, read from the module itself.
+
+    The manifest the updater reads and the checks the publish job runs each used to carry their own
+    copy of these two numbers, so an SDK bump left the tooling asserting the level before it.
+    """
+    text = (ROOT / 'app/build.gradle.kts').read_text(encoding='utf-8') if source is None else source
+    def level(name):
+        found = re.search(rf'(?m)^\s*{name}\s*=\s*(\d+)\s*$', text)
+        if not found: raise ValueError('The app module declares no ' + name)
+        return int(found.group(1))
+    return level('minSdk'), level('targetSdk')
+
+
 def build_tools():
     """The Android build-tools the release pipeline signs and inspects with."""
     home = os.environ.get('ANDROID_HOME')

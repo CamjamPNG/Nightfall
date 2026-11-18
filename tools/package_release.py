@@ -136,8 +136,9 @@ def release_manifest(version, code, apks, log=None):
             raise ValueError("Invalid release notes for " + str(release["version"]))
         releases.append(dict(version=release["version"], date=str(release.get("date", "")),
                              notes=[note for note in (plain_note(n) for n in notes) if note][:LOG_NOTES]))
+    min_sdk, target_sdk = release_artifact.sdk_levels()
     return dict(schemaVersion=SCHEMA, versionName=version, versionCode=code, applicationId=PACKAGE,
-                minSdk=26, targetSdk=35, certificateSha256=pin(), apks=entries, log=releases)
+                minSdk=min_sdk, targetSdk=target_sdk, certificateSha256=pin(), apks=entries, log=releases)
 
 
 def pin():

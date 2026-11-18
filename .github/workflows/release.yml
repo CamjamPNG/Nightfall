@@ -70,7 +70,7 @@ jobs:
       - name: Test and build
         if: steps.publish.outputs.needed == 'true'
         run: |
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;35.0.0"
           python3 -m unittest discover -s tools/tests -v
           ./gradlew --no-daemon :core:test :app:testGithubDebugUnitTest :app:assembleGithubRelease :app:assembleFdroidRelease :app:lintRelease
           python3 tools/check_release.py --apk app/build/outputs/apk/github/release/app-github-release-unsigned.apk --fdroid-apk app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk

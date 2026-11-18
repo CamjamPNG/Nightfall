@@ -236,6 +236,83 @@ moved off the main thread; this does not establish that every device issue has
 been resolved. That never-green `PlaybackIntegrationTest` has since been replaced
 by the Robolectric scenarios above, which run on a JVM without an emulator.
 
+## Android 16 (API 36) compatibility
+
+`compileSdk` and `targetSdk` are 36 from this change; `minSdk` stays 26. The build
+moves with them: **Android Gradle plugin 8.10.1**, which is the first line whose
+release notes state that the maximum API level it supports is 36, paired with the
+**Gradle 8.11.1** the wrapper already pinned (8.10's minimum is exactly 8.11.1, so
+the wrapper — and its distribution checksum — did not move). Kotlin, the Compose
+BOM and every dependency stay where they were.
+
+Targeting 16 turns on the behaviours below. Each one was checked against the
+platform note that introduces it, and each is either already satisfied by the code
+that was there or covered by a test that measures it.
+
+- **Edge to edge, with no opt-out.** "For apps targeting Android 16 (API level 36),
+  `R.attr#windowOptOutEdgeToEdgeEnforcement` is deprecated and disabled, and your
+  app can't opt-out of going edge-to-edge." The app never set that attribute and
+  has always called `enableEdgeToEdge` in `MainActivity.kt`; what the change puts on
+  it is the insets. All five tabs and the layer options inside them are drawn by one
+  `Scaffold`, whose content padding is the system-bar inset, and the navigation bar
+  carries its own bottom inset; `UpdateOverlay` is the only thing drawn outside
+  that `Scaffold` and it calls `statusBarsPadding`. `SystemBarInsetsRenderTest`
+  hands the window a 100 px status bar and a 100 px gesture bar and measures both
+  moves: the header lands exactly 100 px lower, the navigation bar stays above the
+  gesture bar, and the frame with bars is written beside the store set as
+  `app/build/screenshots/github/07-home-with-system-bars.png`.
+- **Predictive back by default.** "For apps targeting Android 16 (API level 36) or
+  higher ... the predictive back system animations ... are enabled by default.
+  Additionally, `onBackPressed` is not called and `KeyEvent.KEYCODE_BACK` is not
+  dispatched anymore." The app's only back handling is `BackHandler`
+  (`NightfallScreen.kt:88`), which registers on `OnBackPressedDispatcher` — the API
+  predictive back drives — so nothing was reading the key event that stops
+  arriving. `BackGestureTest` drives the dispatcher the way a committed gesture
+  does: back on a tab returns to Home, back on Home closes the screen, and after
+  the screen is finished the audio thread is still writing samples and the
+  foreground service has not stopped itself.
+- **Fixed-rate work scheduling.** "When targeting Android 16, at most one missed
+  execution of `scheduleAtFixedRate` is immediately executed when the app returns to
+  a valid lifecycle." Nothing in `app/` or `core/` schedules fixed-rate work: no
+  `WorkManager`, `JobScheduler`, `AlarmManager`, `ScheduledExecutor` or
+  `scheduleAtFixedRate` call exists, and the sleep timer is a pure function of
+  `elapsedRealtime` in `core`.
+- **Adaptive layouts on large screens.** "For apps targeting Android 16 (API level
+  36), orientation, resizability, and aspect ratio restrictions no longer apply on
+  displays with smallest width >= 600dp." The manifest declares no
+  `screenOrientation`, `resizableActivity` or aspect-ratio attribute, so there is
+  nothing to stop applying; what the change can expose is a wide, short window this
+  app has never drawn. `WideScreenRenderTest` draws the mixer and the catalogue at
+  914×411 dp, writes them beside the store set as `08-home-wide.png` and
+  `09-library-wide.png`, and asserts the catalogue is still reachable.
+- **Elegant font APIs.** "Android 16 deprecates the `elegantTextHeight` attribute,
+  and the attribute will be ignored once your app targets Android 16." The app sets
+  no `TextView` font attributes at all: every string is Compose text, and the
+  attribute has no Compose equivalent.
+- **Unchanged, and required either way:** the notification runtime permission is
+  already requested on API 33+ (`MainActivity.kt`), and playback declares the
+  `mediaPlayback` foreground-service type with `FOREGROUND_SERVICE_MEDIA_PLAYBACK`.
+
+Not applicable, with the reason: the health and fitness permissions (no
+`BODY_SENSORS`), the Bluetooth bond-loss intents (no Bluetooth code), MediaStore
+version lockdown (no `MediaStore` use), and GPU syscall filtering (the app issues no
+Mali ioctls). Local Network Permission and Safer Intents are both opt-in in Android
+16 and the app opts into neither; the updater's only socket is an HTTPS request to
+GitHub on the public internet, not a local network address.
+
+The 16 KB page-size change is the one that needed measuring rather than reading,
+because the app does carry native code: `libandroidx.graphics.path.so` and
+`libdatastore_shared_counter.so`, four ABIs each, from AndroidX. Both are aligned in
+the release APK — `zipalign -c -P 16` reports every `.so` `(OK)` and
+`readelf -l` shows a `p_align` of `0x4000` — so Android 16 runs the app directly
+instead of offering it page-size compatibility mode.
+
+What this does not prove: the Robolectric suite runs on the **API 35 runtime**,
+because Robolectric's SDK 36 sandbox refuses to start on the Temurin 17 the CI job
+uses ("Android SDK 36 requires Java 21"). The scenarios therefore exercise API 35
+platform code with the app's `targetSdk` at 36, and every device-behaviour claim
+above is a JVM measurement, not a phone.
+
 ## Update channel that was not exercised
 
 The install path was not run on hardware. This workspace has no `/dev/kvm`, so no
