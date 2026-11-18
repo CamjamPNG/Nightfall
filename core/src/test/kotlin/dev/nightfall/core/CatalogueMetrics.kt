@@ -237,5 +237,62 @@ object CatalogueMetrics {
         return if (sx <= 0.0 || sy <= 0.0) 0.0 else sum / sqrt(sx * sy)
     }
 
+    /**
+     * Largest envelope self-similarity in a lag window, as (lag seconds, correlation). A source whose
+     * level breathes on a fixed cycle peaks here; a randomised one does not.
+     */
+    fun envelopeCorrelationMax(
+        mix: Mix,
+        seconds: Double,
+        rate: Int = 12000,
+        minLagSeconds: Double = 60.0,
+        maxLagSeconds: Double = 400.0,
+    ): Pair<Double, Double> {
+        val hop = rate / 10
+        val envelope = ArrayList<Double>()
+        val mixer = PcmMixer(rate, 1024, loader)
+        mixer.sync(mix)
+        val buffer = FloatArray(1024 * 2)
+        var energy = 0.0
+        var counted = 0
+        var remaining = (seconds * rate).toLong()
+        while (remaining > 0) {
+            val n = min(remaining, 1024L).toInt()
+            mixer.render(buffer, n)
+            for (i in 0 until n) {
+                val v = (buffer[i * 2] + buffer[i * 2 + 1]) * .5f
+                energy += v.toDouble() * v
+                if (++counted == hop) {
+                    envelope += 10 * log10(max(energy / hop, 1e-20))
+                    energy = 0.0
+                    counted = 0
+                }
+            }
+            remaining -= n
+        }
+        val n = envelope.size
+        if (n < 4) return 0.0 to 0.0
+        val mean = envelope.average()
+        val centred = DoubleArray(n) { envelope[it] - mean }
+        var norm = 0.0
+        for (v in centred) norm += v * v
+        if (norm <= 0.0) return 0.0 to 0.0
+        var bestLag = 0.0
+        var best = 0.0
+        var lag = (minLagSeconds * 10).toInt().coerceAtLeast(1)
+        val limit = min((maxLagSeconds * 10).toInt(), n / 2)
+        while (lag <= limit) {
+            var sum = 0.0
+            for (i in 0 until n - lag) sum += centred[i] * centred[i + lag]
+            val r = sum / norm * (n.toDouble() / (n - lag))
+            if (abs(r) > abs(best)) {
+                best = r
+                bestLag = lag / 10.0
+            }
+            lag++
+        }
+        return bestLag to best
+    }
+
     fun fmt(x: Double, digits: Int = 1) = String.format("%.${digits}f", x)
 }
