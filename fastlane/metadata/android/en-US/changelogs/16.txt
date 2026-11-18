@@ -1,0 +1,1 @@
+- fix(build): enable R8 minification and resource shrinking (#16)

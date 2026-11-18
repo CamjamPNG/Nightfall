@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.2 — 2026-11-18
+
+- fix(build): enable R8 minification and resource shrinking (#16)
+
 ## 1.5.1 — 2026-11-18
 
 - docs: rewrite the README as a front door whose every claim is checkable (#14)
