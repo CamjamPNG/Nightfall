@@ -1,8 +1,8 @@
 # GitHub releases
 
 Each public release has six **signed, installable APKs**, a checksum file,
-release manifest and public signing certificate. GitHub also provides source
-archives. Five come from the `github` flavour — the one with the in-app updater —
+release manifest, public signing certificate and the two R8 mapping files that
+make its minified stack traces readable. GitHub also provides source archives. Five come from the `github` flavour — the one with the in-app updater —
 and one from the `fdroid` flavour, which has no updater and no network permission.
 All of them contain the complete offline library; architecture variants only
 omit incompatible native libraries. Their size differences are small because
@@ -132,7 +132,7 @@ Once the two signing secrets below are installed, it:
    signatures/package/version, and re-checks the F-Droid asset carries no network
    permission and no updater code.
 5. Atomically pushes the version commit and annotated tag, then publishes the
-   APKs, hashes and public certificate to GitHub Releases.
+   APKs, both mapping files, hashes and public certificate to GitHub Releases.
 
 Release commits do not recursively trigger more releases. Concurrent source
 changes cannot be overwritten: an atomic push fails if `main` changed during
@@ -157,15 +157,33 @@ for the activity, service and receiver the framework instantiates by name, and
 classes and the `Companion.serializer()` the JSON path resolves through.
 
 R8 renames release classes, so a stack trace from a published APK has to be read
-against the mapping file that build produced:
+against the mapping file that build produced. Both are published as release
+assets, because otherwise the only copy is the one on the runner that built the
+release:
+
+| Asset | Explains |
+| --- | --- |
+| `Nightfall-<version>-github-mapping.txt` | the five `github`-flavour APKs |
+| `Nightfall-<version>-fdroid-mapping.txt` | `Nightfall-<version>-fdroid-universal.apk` |
+
+They sit in Releases → Assets beside the APKs, are listed in `SHA256SUMS.txt`,
+and are named for the version rather than for the architecture: the mapping is
+the same for every architecture option of one channel. `tools/package_release.py`
+refuses a file that is not an R8 mapping or that names no Nightfall class, so an
+empty or mismatched file cannot be published as one.
+
+To read a reported trace, download the mapping for the channel the report came
+from and run Android's retrace from the build-tools of the same release:
 
 ```sh
-app/build/outputs/mapping/githubRelease/mapping.txt
-app/build/outputs/mapping/fdroidRelease/mapping.txt
+retrace -verbose Nightfall-<version>-github-mapping.txt trace.txt
 ```
 
-Those files are build outputs, not release assets, and are not published. Save
-them beside the tag's build log if a published APK needs to be read later.
+Line numbers survive inside the renamed classes (`-keepattributes
+SourceFile,LineNumberTable` in `app/proguard-rules.pro`), but the file name in a
+frame is reported as `SourceFile`, so the mapping is what turns a frame back into
+`dev.nightfall.…`, a method and a line. Without it a trace from a published build
+names nothing you can act on.
 
 What verification covers: the Robolectric playback suite runs on the debug
 variant, which is not minified, so it exercises behaviour and not the effect of
@@ -230,7 +248,9 @@ export NIGHTFALL_KEYSTORE_PATH=/secure/path/nightfall-release.p12
 python3 tools/package_release.py \
   --apk app/build/outputs/apk/github/release/app-github-release-unsigned.apk \
   --fdroid-apk app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk \
-  --out artifacts/publish --version NEXT_VERSION --code NEXT_CODE
+  --out artifacts/publish --version NEXT_VERSION --code NEXT_CODE \
+  --mapping github=app/build/outputs/mapping/githubRelease/mapping.txt \
+  --mapping fdroid=app/build/outputs/mapping/fdroidRelease/mapping.txt
 python3 tools/check_release.py \
   --fdroid-asset artifacts/publish/Nightfall-NEXT_VERSION-fdroid-universal.apk
 ```
