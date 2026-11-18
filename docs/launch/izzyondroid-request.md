@@ -129,44 +129,23 @@ is longer than three minutes" (`core/src/main/kotlin/dev/nightfall/core/Sources.
 `OVERLAP` is 24,000 frames, and the mixer resamples them into its 48 kHz stereo
 mix. Measured from the shipped PCM byte counts, the cycles run 180.5 s to 240.0 s.
 
-Two payloads, two different fixes, and one of them has landed.
-
-**Dex: done.** R8 minification and resource shrinking shipped in 1.5.2
-(`isMinifyEnabled = true`, `isShrinkResources = true`), and the release dex fell from
-47,367,428 bytes to 2,933,096 — 44.4 MB off the download, which is why the APK is
-79 MB rather than 91 MB. Anything that still describes the dex as unminified is
-describing `v1.3`.
-
-**Audio: encoded, not shipped.** The Opus re-encode exists in the repository —
-`app/src/opus/assets/audio` holds seven `.nfop` containers totalling
-**10,089,142 bytes**, against 77,449,472 bytes of PCM — and the decode path that reads
-them is tested on the JVM (`OpusStreamTest`, 14 of the core tests). It is selected by
-`-PnightfallOpus=true` and is off by default, so no published APK contains it: the
-build flag exists precisely so someone can hear it on a device before it becomes the
-default (`app/build.gradle.kts`, "until an Opus decode path has been heard on a
-device").
-
-Arithmetic on the measured assets — **not a build, and not to be quoted as one** —
-puts a flagged APK around 11.8 MB: 79,190,898 minus 77,449,472 plus 10,089,142. That
-is comfortably under the 30 MB ceiling, so the size gate is now one build and one
-listening test away rather than an engineering project. The remaining work is to build
-`-PnightfallOpus=true`, check it against `tools/check_release.py`, hear it on hardware,
-and publish it — a product decision for the audio-engine owner and Camden, not a
-copy decision.
-
 Two payloads, two different fixes, and both have now been built — one shipped, one
 flagged off.
 
-**Dex: 47.37 MB → 2,933,096 bytes.** In `v1.3` the release build set
+**Dex: 47,367,428 bytes to 2,933,096.** In `v1.3` the release build set
 `buildTypes { release { vcsInfo … } }` and nothing else, so the dex was three files
 totalling 47,367,428 bytes. R8 minification and resource shrinking shipped in 1.5.2
-(`isMinifyEnabled = true`, `isShrinkResources = true`), and the measured result is
-above: 2.93 MB, 44.4 MB off the download. Anything that still describes Nightfall's
-dex as unshrunk is describing `v1.3`.
+(`isMinifyEnabled = true`, `isShrinkResources = true`) and cut that to 2,933,096.
+Those are *uncompressed entry* sizes, and dex is compressed inside the APK, so the
+download fell by less than they suggest: `v1.3`'s `arm64-v8a` was 91,162,628 bytes and
+`v1.8.2`'s is 79,190,898, a measured 11,971,730 bytes (11.4 MiB) less. The 44.4 MB is
+a payload reduction and the 12 MB is the download reduction; quoting the first as
+bandwidth overstates the saving by nearly a factor of four. Anything that still
+describes Nightfall's dex as unshrunk is describing `v1.3`.
 
-**Audio, 77.45 MB, measured today.** I encoded three of the seven recordings with
-ffmpeg to size the options. Those three are 19.4% of the PCM payload, and the
-arithmetic below scales them to the set — that scaling is an estimate and is
+**Audio: 77,449,472 bytes of PCM, measured today.** I encoded three of the seven
+recordings with ffmpeg to size the options. Those three are 19.4% of the PCM payload,
+and the arithmetic below scales them to the set — that scaling is an estimate and is
 labelled as one:
 
 | Encoding of the 3 sampled files | Bytes | Share of that PCM | Scaled to all 7 |
@@ -180,13 +159,21 @@ only combination that plausibly lands under 30 MB, and Opus puts a decoder in th
 path that currently memory-maps raw PCM — a change to the render path, whose deadline
 the project treats as a hard constraint (`docs/ARCHITECTURE.md`).
 
-**Both halves have since been built; neither ships by default.** R8 landed in 1.5.2.
-The re-encode landed in the same shape the estimate predicted: the committed `.nfop`
-set is 10,089,142 bytes, close to the ~9.6 MB the 48 kbit/s sample scaled to, and the
-flag that selects it (`-PnightfallOpus=true`) is off because nobody has heard the
-decoded output on a device yet. So the honest sequence has shortened to: build the
-flagged variant, measure it, hear it, publish it — then file the request with an APK
-under 30 MB.
+**The encoded set exists; it does not ship.** The re-encode landed in the shape the
+estimate predicted: `app/src/opus/assets/audio` holds seven `.nfop` containers
+totalling 10,089,142 bytes, close to the ~9.6 MB the 48 kbit/s sample scaled to. The
+decode path that reads them is tested on the JVM (`OpusStreamTest`, 14 of the core
+tests) and is selected by `-PnightfallOpus=true`, off by default, because nobody has
+heard the decoded output on a device yet (`app/build.gradle.kts`: "until an Opus
+decode path has been heard on a device").
+
+Arithmetic on the measured assets — **not a build, and not to be quoted as one** —
+puts a flagged APK around 11.8 MB: 79,190,898 minus 77,449,472 plus 10,089,142. That
+is comfortably under the 30 MB ceiling, so the size gate is now one build and one
+listening test away rather than an engineering project. The remaining work is to build
+`-PnightfallOpus=true`, check it against `tools/check_release.py`, hear it on hardware,
+and publish it — a product decision for the audio-engine owner and Camden, not a copy
+decision.
 
 ### Gate 3 — the channel, which needs Camden's account
 

@@ -89,7 +89,10 @@ F-Droid build has no network permission at all."
 The size is still the number that decides two of the channels below, but it has moved.
 The APK is 79.2 MB, not 91.2 MB, because R8 minification and resource shrinking landed
 in 1.5.2 (`isMinifyEnabled = true`, `isShrinkResources = true` in
-`app/build.gradle.kts`) and took the dex from 47,367,428 bytes to 2,933,096. What is left
+`app/build.gradle.kts`) and took the dex from 47,367,428 bytes to 2,933,096. Those are
+uncompressed entry sizes and dex is compressed inside the APK, so the download fell by
+the smaller measured 11,971,730 bytes — quote the payload figure as payload and the
+APK delta as the download. What is left
 is almost entirely the sound library: 77,449,472 bytes of uncompressed PCM
 (`noCompress += "pcm"`, so the mixer can map the files), which is 97.8% of the download.
 Native libraries are not the cause and never were: all five per-ABI APKs are within
@@ -229,7 +232,7 @@ Each claim is checkable in the repository and each has its limit stated next to 
 | Synthesis is labeled as synthesis | Catalogue descriptions; "distant household ambience" is declared unavailable rather than faked | Some sounds are interpretations, not recordings of that place |
 | MIT licence, voluntary commercial courtesy | `LICENSE`, `COMMERCIAL_COURTESY.md` | The courtesy request is not a licence condition |
 | Two local release builds are byte-identical | `docs/verification/reproducibility.json`, tag `v1.0.1.2` | Not an independent F-Droid build, and not a signature reproduction |
-| Six APKs plus `SHA256SUMS.txt` and the release certificate | release assets for `v1.8.2` | Five of them are the `github` channel; only the sixth, `fdroid-universal`, has no network permission. All of them are 79.2 MB, and 77.4 MB of each is recordings — the code is down to 2.9 MB, so the download is as small as its PCM |
+| Six APKs plus `SHA256SUMS.txt` and the release certificate | release assets for `v1.8.2` | Five of them are the `github` channel; only the sixth, `fdroid-universal`, has no network permission. All of them are 79.2 MB, and 77.4 MB of each is recordings |
 
 **Never say:** "clinically proven", "improves sleep quality", "scientifically
 tuned", "500,000 users", "rated 4.8", "bestseller", "tested on hundreds of
