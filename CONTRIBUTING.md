@@ -28,9 +28,10 @@ mergable no matter how good the code is:
   access.**
 - **No fixed layer limit.** Performance warnings tell the user their device is
   struggling; a hard cap is not the fix.
-- **The signing identity is the update channel.** Never change the application id
+- **Release signing is the update path.** Never change the application id
   (`io.github.camjampng.nightfall`), never commit a key or keystore, never
-  regenerate signing material. Users update in place, and a new key strands them.
+  regenerate signing material. Android replaces an installed app only when the
+  new APK carries the same certificate, so a new key strands every existing user.
 - **Published releases are immutable.** Never move a tag, replace a published
   APK, or hand-bump a version. The workflow owns versions.
 - **Honest claims.** Anything not measured stays described as not measured. See

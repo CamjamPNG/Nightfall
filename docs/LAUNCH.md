@@ -96,13 +96,16 @@ looks maintained gets linked.
 developed for at least three months, unless it has proven users, or the
 maintainer already has other apps in the repository, or it was built for an event.
 Applications must not download executable code or self-update without explicit
-opt-in consent, which is why the F-Droid build must ship with no update channel at
-all. Independent build, licence and anti-feature review follow.
+opt-in consent. Nightfall as it stands downloads nothing and has no `INTERNET`
+permission, so the F-Droid build needs no carve-out and meets that clause as-is.
+Independent build, licence and anti-feature review follow.
 
 **Risk:** submitting before the development-age question has an honest answer is a
-decline that also makes the project look careless. It is also the *only* channel
-where Nightfall's F-Droid build being stripped of the updater is a feature rather
-than a missing feature — lead with that.
+decline that also makes the project look careless. The other trap is claiming a
+difference between channels that does not exist: today the GitHub APKs and an
+F-Droid build are the same offline app, updated by installing a new APK by hand.
+Say that plainly. If an in-app update channel is ever added, the F-Droid build
+must not carry it, and that is a fact to state only once it is true of the tree.
 
 **Prerequisite:** `ROADMAP.md` item 3, plus a working hardware verification pass so
 the listing's claims and the build are not contradicted by the testing record.

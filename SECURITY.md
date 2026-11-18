@@ -25,7 +25,8 @@ what remains rather than implying the project is too small to have one.
    the APK as raw PCM and decoded by the app's own `Pcm16Data`. A path that
    reads outside a mapping, or a missed bounds check on a short or truncated
    asset, is in scope.
-4. **Release integrity and signing.** The update channel is a signing identity.
+4. **Release integrity and signing.** Release signing is the update path: Android
+   replaces an installed app only when the new APK carries the same certificate.
    The pinned SHA-256 of the release certificate is in
    `docs/release-signing-certificate.sha256` and the public certificate is in
    `docs/nightfall-release-certificate.pem`. The release workflow refuses to
@@ -33,11 +34,12 @@ what remains rather than implying the project is too small to have one.
    someone else publish to the same application id, replace a published asset,
    move a tag, or weaken that check is the most severe class of bug in this
    project.
-5. **The update channel, where a build has one.** Android requires the user to
+5. **Updates.** No build of this app ships an in-app updater today: you install a
+   new APK yourself. If one is ever added, Android still requires the user to
    approve every install, and the app must never silently download or install an
    update, add network access on its own, or follow a redirect to an unexpected
    host. An update path that bypasses the pinned signer, or that fetches
-   executable code, is in scope.
+   executable code, would be in scope.
 
 ## What is out of scope
 
