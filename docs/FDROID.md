@@ -102,7 +102,7 @@ fdroidserver's own behaviour, not a choice made here.
 
 **Publishing.** The workflow assembles `site/fdroid/repo/` and deploys it with
 GitHub Actions Pages, so the workflow owns the index and no branch carries it.
-Only the newest two versions are published; at about 91 MB per APK the site
+Only the newest two versions are published; at about 79 MB per APK the site
 stays well inside the 1 GB Pages limit, and a device on an older version still
 updates straight to the newest one. GitHub Pages is not an F-Droid mirror:
 its 100 GB monthly bandwidth cap is roughly a thousand downloads per month.

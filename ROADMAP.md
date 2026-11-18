@@ -12,12 +12,20 @@ though it is the least fun.
 ## Where it stands
 
 Shipping today: a working offline mixer with no `INTERNET` permission, no layer
-cap, 15 built-in presets, local preset storage and JSON exchange, sleep timers
+cap, 21 built-in presets, local preset storage and JSON exchange, sleep timers
 with per-layer stop schedules, a Media3 foreground media session with lock-screen
-and Bluetooth controls, and 18 deterministic core tests plus 10 release-tool
-tests that pass on any machine with a JVM. Signed GitHub releases with a pinned
-certificate. `docs/TESTING.md` records exactly what was executed and what was
-not.
+and Bluetooth controls, 69 deterministic core tests (68 run by default; one
+calibration generator is opt-in), 53 release-tooling tests and 10 playback-lifecycle
+scenarios. Signed GitHub releases with a pinned certificate. `docs/TESTING.md` records
+exactly what was executed and what was not.
+
+What each suite needs, none of which includes a phone or an emulator:
+
+| Suite | Needs | Check it |
+| --- | --- | --- |
+| `./gradlew :core:test` | a JDK, and no Android SDK | with `ANDROID_HOME` unset and no `local.properties`: `BUILD SUCCESSFUL`, 68 passed and 1 skipped |
+| the Robolectric playback scenarios in `app/src/test` | the Android SDK, no device | `./gradlew :app:testGithubDebugUnitTest` |
+| `python3 -m unittest discover -s tools/tests` | Python 3 | 53 tests, `OK` |
 
 The gap between "shipping" and "proven" is the whole roadmap.
 

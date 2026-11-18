@@ -36,10 +36,23 @@ closed.
 ## Before you paste anything: two checks
 
 1. **Re-read the numbers against the release you are actually linking.** These drafts
-   name `v1.8.2`, 79 MB, 68 tests and six APKs. `gh release list --limit 1` and
-   `gh release view <tag> --json assets` are enough to confirm or correct all four in
-   under a minute. If a newer release exists, update the version and the sizes before
-   posting; a stale size is the one error a reader catches immediately.
+   name `v1.8.2`, 79 MB, 69 tests and six APKs, all measured on 18 November 2026. No draft
+   quotes a catalogue or preset count; if you add one, take it from the command below
+   rather than from `docs/LAUNCH.md`, which carries figures the posts do not need. `gh release list --limit 1` and
+   `gh release view <tag> --json assets` are enough to confirm or correct the version
+   and the sizes in under a minute; the catalogue and preset counts come from the
+   compiled module:
+
+   ```sh
+   ./gradlew :core:jar
+   CP="core/build/libs/core.jar:$(find ~/.gradle/caches -name 'kotlin-stdlib-2.1.20.jar' | head -1):$(find ~/.gradle/caches -name 'kotlinx-serialization-core-jvm-*.jar' | head -1):$(find ~/.gradle/caches -name 'kotlinx-serialization-json-jvm-*.jar' | head -1)"
+   printf 'var l = dev.nightfall.core.Library.INSTANCE;\nvar p = dev.nightfall.core.Presets.INSTANCE;\nSystem.out.println("catalogue=" + l.getAll().size() + " available=" + (int) l.getAll().stream().filter(s -> s.getAvailable()).count() + " presets=" + p.getAll().size());\n/exit\n' | jshell --class-path "$CP" -q -
+   # catalogue=98 available=97 presets=21
+   ```
+
+   Run both before posting: these figures move whenever a release or the catalogue
+   does, and a wrong count in public copy is the one error a reader catches. A stale
+   size is the other.
 2. **Post as the developer, in the first lines.** Every draft says so. Keep it.
 
 ## The one blocker this kit cannot clear: the demo clip needs your Pixel 7

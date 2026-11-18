@@ -71,8 +71,9 @@ accelerated blocks and takes around two minutes. It always runs in CI, because t
 the build gate lives; `-PwithoutNight` skips it locally when you did not touch the render
 path. Tagged tests live under `@Category(Night::class)` if you need to select them directly.
 
-Gradle configures both modules before running any task, so the Android SDK has to
-be installed even for `:core:test`, but nothing Android is compiled for it. The
+`:core:test` needs no Android SDK: the core module has no Android dependency, so with
+`ANDROID_HOME` unset and no `local.properties` the task still configures and runs. Only the
+`:app:*` tasks, the Robolectric playback scenarios included, need the SDK installed. The
 first run downloads the Gradle distribution and the dependency set and takes a few
 minutes; after that this command takes seconds.
 
@@ -91,7 +92,8 @@ This is the command a change has to survive, and the same one CI runs in
 ./gradlew :core:test :app:assembleDebug :app:lintDebug
 ```
 
-- `:core:test` — the 18 deterministic JVM tests: nine simultaneous sources,
+- `:core:test` — the 69 deterministic JVM tests (68 run; one calibration generator is
+  opt-in): nine simultaneous sources,
   independent gain/mute/solo, phase continuity when layers are added or removed,
   limiting, colored-noise spectra, musical tuning, timers and fades, JSON
   round-trips, and 512 allocated layers.
@@ -161,13 +163,13 @@ persistence, say plainly in the PR what you ran on a device and what you did not
 | Path | What lives there |
 | --- | --- |
 | `core/src/main/kotlin/dev/nightfall/core/` | Android-free DSP: `Library.kt` catalogue, `Sources.kt` renderers, `MusicSource.kt`, `PcmMixer.kt`, `Models.kt` state and JSON |
-| `core/src/test/kotlin/` | The 18 JVM tests |
+| `core/src/test/kotlin/` | The 69 JVM tests (68 run; one calibration generator is opt-in) |
 | `app/src/main/java/dev/nightfall/` | Compose UI, `AudioHost` (the single output stream), `PlaybackService` (Media3), DataStore persistence |
 | `app/src/pcm/assets/audio/` | Bundled 24 kHz mono PCM recordings plus `.pcm.license` sidecars |
 | `docs/` | Architecture, testing record, release process, verification JSON, pinned public certificate |
 | `tools/` | Release and audio tooling (Python, stdlib only) |
 | `fdroid/` | Prepared F-Droid recipe and submission notes |
-| `fastlane/metadata/` | Store listing, icon and real device screenshots |
+| `fastlane/metadata/` | Store listing, icon and the six JVM-rendered screenshots (not device captures; see `docs/TESTING.md`) |
 
 `core` must stay Android-free: no `android.*` imports, no `Context`, no logging
 framework. That restriction is what lets the audio engine be tested anywhere and
@@ -336,7 +338,7 @@ four questions:
 1. **What ships.** Behavior, not a restatement of the diff.
 2. **Why.** The problem, or the reason the old behavior was wrong.
 3. **How you verified it.** The commands you ran and what you observed. Paste the
-   relevant lines. "Build passed" is not evidence; `:core:test` 18/18 passed and
+   relevant lines. "Build passed" is not evidence; `:core:test` showing 68 passed and 1 skipped, and
    `:app:lintDebug` clean is.
 4. **What you did not verify.** Listening quality, a Bluetooth mask, overnight
    battery — say so. That honesty is the project's differentiator, and reviewers
