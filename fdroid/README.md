@@ -17,7 +17,7 @@ file is the review-facing summary of what the recipe asserts.
 
 `fdroid/repo/` is not part of the inclusion recipe. It is the configuration for
 our own signed repository at
-`https://camjampng.github.io/nightfall/fdroid/repo`, which serves the APKs we
+`https://camjampng.github.io/Nightfall/fdroid/repo`, which serves the APKs we
 publish so F-Droid-client users can install and update Nightfall without waiting
 for `fdroiddata`. F-Droid has not verified those builds and they are signed by
 the maintainer's repository key rather than by F-Droid. Only offline builds

@@ -8,11 +8,17 @@ CLI is authorized to write repository Actions secrets:
 
     python3 tools/configure_fdroid_repo_key.py --keystore ~/nightfall-fdroid-repo.p12
 
-It generates the key if the file does not exist, uploads
-FDROID_REPO_KEYSTORE_BASE64 and FDROID_REPO_KEYSTORE_PASSWORD, and prints the
-repository fingerprint and the client add-URL. The password is generated locally
-and sent straight to GitHub; it is never printed. Keep the .p12 file: without it
-the repository cannot be re-signed under the same identity.
+It generates the key if the file does not exist, stores its password in
+``<keystore>.password`` (mode 0600) beside it, uploads
+FDROID_REPO_KEYSTORE_BASE64 and FDROID_REPO_KEYSTORE_PASSWORD, and records the
+fingerprint in fdroid/repo/fingerprint.txt so the published index and the
+documented add-URL are provably the same identity. That file is the one thing to
+commit; the tool refuses to build when it is missing or does not match the key.
+
+The password is generated locally and sent straight to GitHub; it is never
+printed. Keep the .p12 and its .password file together: without them the
+repository cannot be re-signed or recovered under the same identity, and every
+installed user would have to remove and re-add the repository.
 """
 import argparse
 import base64
@@ -28,6 +34,7 @@ import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "fdroid/repo/config.yml"
+FINGERPRINT = ROOT / "fdroid/repo/fingerprint.txt"
 SECRETS = ("FDROID_REPO_KEYSTORE_BASE64", "FDROID_REPO_KEYSTORE_PASSWORD")
 
 
@@ -80,12 +87,17 @@ def main():
     args = parser.parse_args()
     alias, dname, url = settings()
     path = args.keystore.expanduser()
-    password = args.password or os.environ.get("FDROID_REPO_KEYSTORE_PASSWORD")
+    backup = path.with_name(path.name + ".password")
+    password = (args.password or os.environ.get("FDROID_REPO_KEYSTORE_PASSWORD")
+                or (backup.read_text().strip() if backup.exists() else ""))
     if not path.exists():
         require(password or args.upload, "Pass --upload to generate the key and its password")
         password = password or secrets.token_urlsafe(32)
         generate(path, alias, dname, password)
-    require(password, "An existing keystore needs its password: pass --password or set FDROID_REPO_KEYSTORE_PASSWORD")
+        backup.write_text(password + "\n")
+        backup.chmod(0o600)
+    require(password, f"Pass the existing keystore's password with --password, FDROID_REPO_KEYSTORE_PASSWORD, "
+                      f"or restore the backup at {backup}")
     digest = fingerprint(path, alias, password)
     if args.upload:
         require(shutil.which("gh") is not None, "The GitHub CLI is required to install Actions secrets")
@@ -93,9 +105,11 @@ def main():
                        (["--repo", args.repository] if args.repository else []), check=True)
         subprocess.run(["gh", "secret", "set", SECRETS[1], "--body", password] +
                        (["--repo", args.repository] if args.repository else []), check=True, capture_output=True)
-    print(json.dumps(dict(keystore=str(path), alias=alias, fingerprint=digest,
-                          add_url=f"{url}?fingerprint={digest.upper()}", uploaded=bool(args.upload),
-                          key_material_committed=False), indent=2))
+    FINGERPRINT.write_text(digest + "\n")
+    print(json.dumps(dict(keystore=str(path), password_backup=str(backup), alias=alias,
+                          fingerprint=digest, add_url=f"{url}?fingerprint={digest.upper()}",
+                          uploaded=bool(args.upload), key_material_committed=False,
+                          commit=["fdroid/repo/fingerprint.txt"]), indent=2))
 
 
 if __name__ == "__main__":

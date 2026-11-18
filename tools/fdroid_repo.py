@@ -34,6 +34,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 TEMPLATE = ROOT / "fdroid/repo"
 STORE = ROOT / "fastlane/metadata/android"
 PIN = ROOT / "docs/release-signing-certificate.sha256"
+FINGERPRINT = TEMPLATE / "fingerprint.txt"
 NETWORK_PERMISSIONS = (
     "android.permission.INTERNET",
     "android.permission.ACCESS_NETWORK_STATE",
@@ -169,6 +170,25 @@ def update(out):
     return result
 
 
+def documented_fingerprint():
+    """The repository identity the documentation gives users, or a refusal.
+
+    This file is written from the signing keystore by
+    tools/configure_fdroid_repo_key.py and committed, so the fingerprint in the
+    client add-URL cannot drift away from the key that signs the index.
+    """
+    if not FINGERPRINT.exists():
+        raise ValueError("Missing " + str(FINGERPRINT) + "; run tools/configure_fdroid_repo_key.py --upload")
+    value = FINGERPRINT.read_text().strip().lower()
+    require(
+        re.fullmatch(r"[0-9a-f]{64}", value) is not None,
+        "fdroid/repo/fingerprint.txt is empty or malformed: run "
+        "tools/configure_fdroid_repo_key.py --upload and commit the fingerprint it writes, so the "
+        "published index and the documented add-URL cannot disagree",
+    )
+    return value
+
+
 def keystore_fingerprint():
     keystore = os.environ.get("FDROID_REPO_KEYSTORE", "")
     password = os.environ.get("FDROID_REPO_KEYSTORE_PASSWORD", "")
@@ -227,7 +247,15 @@ def verify(out, infos, package, signer):
                             apk=apk.name, bytes=apk.stat().st_size, sha256=version["hash"],
                             permissions=granted))
     fingerprint = jar_fingerprint(repo / "index-v1.jar")
-    require(fingerprint == keystore_fingerprint(), "index-v1.jar is not signed by the configured repository key")
+    require(
+        fingerprint == keystore_fingerprint(),
+        "index-v1.jar is not signed by the configured repository key",
+    )
+    require(
+        fingerprint == documented_fingerprint(),
+        f"index-v1.jar is signed by {fingerprint}, but fdroid/repo/fingerprint.txt documents "
+        f"{documented_fingerprint()}; clients given the documented fingerprint would reject this index",
+    )
     return dict(package=package, fingerprint=fingerprint, appSigner=signer,
                 address=index["repo"]["address"], versions=summary)
 
@@ -247,6 +275,7 @@ def main():
     package = application_id()
     signer = pinned_signer()
     keystore_fingerprint()
+    documented_fingerprint()
     infos = [inspect_apk(path) for path in args.apk]
     for info in infos:
         reason = refusal(info, package, signer)

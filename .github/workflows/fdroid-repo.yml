@@ -3,6 +3,12 @@ name: Publish F-Droid repository
 on:
   release:
     types: [published]
+  workflow_run:
+    # Releases published by the repository's own workflows use GITHUB_TOKEN,
+    # and GitHub does not start workflows for events that token creates, so a
+    # release event alone would never reach here. Both publishers are followed.
+    workflows: [Publish Android release, Publish already signed APKs]
+    types: [completed]
   workflow_dispatch:
     inputs:
       releases:
@@ -17,6 +23,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   publish:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:

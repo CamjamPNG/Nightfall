@@ -3,7 +3,7 @@
 # runs "fdroid update" there. Secret values are expanded from the environment by
 # fdroidserver's {env: NAME} syntax, so no key path or password is ever written
 # to a committed file. A missing variable fails the build.
-repo_url: https://camjampng.github.io/nightfall/fdroid/repo
+repo_url: https://camjampng.github.io/Nightfall/fdroid/repo
 repo_name: Nightfall
 repo_description: >-
   Nightfall releases built and signed by the Nightfall maintainer. F-Droid has

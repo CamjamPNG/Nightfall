@@ -6,7 +6,7 @@ Nightfall reaches F-Droid users by two routes, and this document covers both.
 and sign ourselves from the APKs we publish, which the official F-Droid client
 can add to install Nightfall and receive updates. It is not F-Droid-verified;
 adding it means trusting the maintainer's repository key. Its address is
-`https://camjampng.github.io/nightfall/fdroid/repo`, and nothing is served there
+`https://camjampng.github.io/Nightfall/fdroid/repo`, and nothing is served there
 until the one-time setup below has run once. See
 [the self-hosted repository](#the-self-hosted-repository).
 
@@ -23,15 +23,16 @@ and the review-facing notes are in [`fdroid/README.md`](../fdroid/README.md).
 ## The self-hosted repository
 
 ```
-https://camjampng.github.io/nightfall/fdroid/repo
+https://camjampng.github.io/Nightfall/fdroid/repo
 ```
 
 Add that address in the F-Droid client (Settings → Repositories → Add). Because
 it is a custom repository the client asks for a fingerprint before it will trust
-the index; the add-URL with the current fingerprint is printed by
-`tools/configure_fdroid_repo_key.py` and by every publishing run of the
-`Publish F-Droid repository` workflow, and it is `address?fingerprint=…` with the
-upper-case SHA-256 of the repository certificate.
+the index: the add-URL is `address?fingerprint=…` with the upper-case SHA-256 of
+the repository certificate, and `tools/configure_fdroid_repo_key.py` prints the
+finished URL. The path keeps the repository's capital N because GitHub Pages
+project paths are case-sensitive (`/Nightfall/` serves, `/nightfall/` is a 404);
+that was checked against existing Pages sites, not assumed.
 
 **What it serves, and what it does not.** Only the offline build: the `fdroid`
 flavor once releases carry product flavors, and today's single offline release
@@ -53,12 +54,20 @@ Nightfall out of `fdroiddata`.
 **Two different keys, never interchangeable.** The app APKs keep the pinned
 release certificate in `docs/` (the same identity the GitHub channel uses, so an
 installed app updates normally). The repository index is signed by a separate
-key whose public certificate exists only in the Actions secret — losing it means
-every existing user has to remove and re-add the repository, so keep the `.p12`
-backed up alongside the app key.
+key whose certificate is recorded in `fdroid/repo/fingerprint.txt` and whose
+private half exists only in the Actions secret. That file is committed and is
+what the add-URL's fingerprint is built from, and `tools/fdroid_repo.py`
+refuses to build when the key it signs with does not match it, so the published
+index and the documented identity cannot disagree. Losing the key means every
+existing user has to remove and re-add the repository, so keep the `.p12` and
+the `<keystore>.password` file the setup writes beside it.
 
-**How it is generated.** `.github/workflows/fdroid-repo.yml` runs on every
-published release and on manual dispatch. It downloads the newest two releases'
+**How it is generated.** `.github/workflows/fdroid-repo.yml` runs when
+`Publish Android release` or `Publish already signed APKs` finishes
+successfully, on a published release, and on manual dispatch. The workflow_run
+triggers exist because a release created with the repository's `GITHUB_TOKEN`
+does not itself start a workflow run, so the release event alone would leave the
+index stale. It downloads the newest two releases'
 APKs, then `tools/fdroid_repo.py build` inspects each one (package, versionCode,
 permissions, signing certificate), copies the accepted APKs into an
 fdroidserver directory, and runs `fdroid update --clean --use-date-from-apk
@@ -121,24 +130,30 @@ pointed at Actions:
    python3 tools/configure_fdroid_repo_key.py --keystore ~/nightfall-fdroid-repo.p12 --upload
    ```
 
-   That creates a 4096-bit RSA PKCS12 key, sets
-   `FDROID_REPO_KEYSTORE_BASE64` (base64 of the `.p12`) and
-   `FDROID_REPO_KEYSTORE_PASSWORD`, and prints the fingerprint and the add-URL.
-   The password is generated locally and sent straight to GitHub; it is never
-   printed and never committed. Back up `~/nightfall-fdroid-repo.p12` with the
-   app signing key: it is the only copy of the repository identity.
+   That creates a 4096-bit RSA PKCS12 key, writes its password to
+   `~/nightfall-fdroid-repo.p12.password`, sets `FDROID_REPO_KEYSTORE_BASE64`
+   (base64 of the `.p12`) and `FDROID_REPO_KEYSTORE_PASSWORD`, records the
+   fingerprint in `fdroid/repo/fingerprint.txt`, and prints the add-URL. The
+   password is generated locally and sent straight to GitHub; it is never
+   printed. Back up the `.p12` and its `.password` file with the app signing key
+   — they are the only copy of the repository identity, and the password is not
+   recoverable from GitHub once written. Commit `fdroid/repo/fingerprint.txt`
+   (it is the one source file this setup touches); the index build fails until
+   it matches the key.
 2. Settings → Pages → Build and deployment → Source: **GitHub Actions**.
 3. Actions → **Publish F-Droid repository** → Run workflow.
 
 **What has not been verified.** No Pages deployment has run from this
 repository, so the URL above is the address the workflow and `config.yml`
-target, not one that has served a request. No F-Droid client on a phone has
-added the repository, fetched the index, installed 1.1.3 or auto-updated from
-1.1.2 to 1.1.3. The index was generated and verified locally against the
-published 1.1.3 and 1.1.2 universal APKs with a throwaway repository key, which
-proves the procedure and the refusal paths but not the deployed
-key. `index-v1.jar` is SHA-1 JAR-signed because fdroidserver signs it that way
-for client compatibility; `entry.jar` and the index-v2 files carry the modern
+target, not one that has served a request. The trigger chain has not been
+exercised either: the repository has never seen `Publish Android release` finish
+and wake this workflow. No F-Droid client on a phone has added the repository,
+fetched the index, installed a version or auto-updated between two of them. The
+index was generated and verified locally against the published 1.1.3 and 1.2
+universal APKs with a throwaway repository key, which proves the procedure, the
+fingerprint invariant and the refusal paths but not the deployed key.
+`index-v1.jar` is SHA-1 JAR-signed because fdroidserver signs it that way for
+client compatibility; `entry.jar` and the index-v2 files carry the modern
 algorithm.
 
 ## What an inclusion request needs

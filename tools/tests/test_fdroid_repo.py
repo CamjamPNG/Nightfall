@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 import importlib.util
 import pathlib
+import tempfile
 import unittest
 
 TOOLS = pathlib.Path(__file__).resolve().parents[1]
@@ -66,6 +67,33 @@ class RetentionTest(unittest.TestCase):
     def test_duplicate_versioncode_is_rejected(self):
         with self.assertRaises(ValueError):
             repo.retain([apk(versionCode=8), apk(versionCode=8, sha256="1" * 64)], 2)
+
+
+class DocumentedFingerprintTest(unittest.TestCase):
+    def setUp(self):
+        self.folder = tempfile.TemporaryDirectory()
+        self.path = pathlib.Path(self.folder.name) / "fingerprint.txt"
+        self.saved = repo.FINGERPRINT
+        repo.FINGERPRINT = self.path
+
+    def tearDown(self):
+        repo.FINGERPRINT = self.saved
+        self.folder.cleanup()
+
+    def test_empty_fingerprint_is_refused(self):
+        self.path.write_text("")
+        with self.assertRaises(ValueError) as caught:
+            repo.documented_fingerprint()
+        self.assertIn("configure_fdroid_repo_key", str(caught.exception))
+
+    def test_committed_fingerprint_is_read_case_insensitively(self):
+        self.path.write_text("  " + SIGNER.upper() + "\n")
+        self.assertEqual(repo.documented_fingerprint(), SIGNER)
+
+    def test_non_hex_fingerprint_is_refused(self):
+        self.path.write_text("nightfall\n")
+        with self.assertRaises(ValueError):
+            repo.documented_fingerprint()
 
 
 if __name__ == "__main__":
