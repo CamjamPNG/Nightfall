@@ -1,48 +1,62 @@
 // SPDX-License-Identifier: MIT
 package dev.nightfall.core
 
-import java.io.File
-import java.nio.ByteBuffer
 import kotlin.math.*
 
 /**
- * Measurement helpers for catalogue-level audio analysis: level, spectral balance, DC, periodicity
- * and similarity. Everything is processed one block at a time, so a long render never has to be held
- * in memory. Test-only; nothing here runs on the render path.
+ * Catalogue-level analysis on top of [M]: identity between two renders, envelope percentiles, spectral
+ * balance, and repetition at a fixed lag. [M] owns rendering and loudness; this adds the measurements
+ * those tests do not need. Test-only.
  */
 object CatalogueMetrics {
-    const val RATE = 48000
     private const val FFT = 16384
     private const val FLOOR_DB = 120.0
     private const val DB_STEP = .1
 
     /** 1/3-octave centres, 25 Hz to 16 kHz. */
-    val thirdOctave =
+    private val thirdOctave =
         doubleArrayOf(
             25.0, 31.5, 40.0, 50.0, 63.0, 80.0, 100.0, 125.0, 160.0, 200.0, 250.0, 315.0, 400.0,
             500.0, 630.0, 800.0, 1000.0, 1250.0, 1600.0, 2000.0, 2500.0, 3150.0, 4000.0, 5000.0,
             6300.0, 8000.0, 10000.0, 12500.0, 16000.0,
         )
 
-    class Analysis(
-        val rmsDb: Double,
-        val peakDb: Double,
-        val dc: Double,
-        val crest: Double,
-        val p50Db: Double,
-        val p90Db: Double,
-        val p99Db: Double,
-        val centroid: Double,
-        val band: DoubleArray,
-    )
+    private val recordings = HashMap<String, SampleData>()
+
+    private val loader: (String) -> SampleData? = { id ->
+        recordings.getOrPut(id) { M.assetLoader().invoke(id) ?: error("missing recording $id") }
+    }
+
+    fun render(mix: Mix, seconds: Double, rate: Int = M.RATE): M.Signal =
+        M.render(mix, seconds, loader).let {
+            if (rate == M.RATE) it else throw IllegalArgumentException("only 48 kHz is supported here")
+        }
+
+    /** One layer of [id] alone, at a fixed gain so two entries are comparable. */
+    fun solo(id: String, seconds: Double, gain: Float = .35f): M.Signal =
+        render(Mix(layers = listOf(Library.layer(id, gain, "catalogue-probe"))), seconds)
+
+    /**
+     * Relative difference between two renders of the same seed, as the RMS of their difference over
+     * the RMS of the first. Two entries running one algorithm against one seed give exactly 0.
+     */
+    fun relativeDifference(a: M.Signal, b: M.Signal): Double {
+        var diff = 0.0
+        var energy = 0.0
+        for (i in a.left.indices) {
+            diff += (a.left[i] - b.left[i]).toDouble().pow(2)
+            diff += (a.right[i] - b.right[i]).toDouble().pow(2)
+            energy += a.left[i].toDouble().pow(2) + a.right[i].toDouble().pow(2)
+        }
+        return sqrt(diff / max(energy, 1e-20))
+    }
 
     private class Histogram {
         private val counts = IntArray((FLOOR_DB / DB_STEP).toInt() + 1)
         private var total = 0
 
         fun add(db: Double) {
-            val i = (-db / DB_STEP).roundToInt().coerceIn(0, counts.size - 1)
-            counts[i]++
+            counts[(-db / DB_STEP).roundToInt().coerceIn(0, counts.size - 1)]++
             total++
         }
 
@@ -58,6 +72,43 @@ object CatalogueMetrics {
             }
             return 0.0
         }
+    }
+
+    private fun envelope(signal: M.Signal, hopMs: Int = 100): Histogram {
+        val hop = M.RATE * hopMs / 1000
+        val hist = Histogram()
+        val mono = signal.mono()
+        var start = 0
+        while (start + hop <= mono.size) {
+            var sum = 0.0
+            for (i in start until start + hop) sum += mono[i].toDouble() * mono[i]
+            hist.add(if (sum <= 0.0) -FLOOR_DB else 10 * log10(sum / hop))
+            start += hop
+        }
+        return hist
+    }
+
+    /** 99th-percentile level of the 100 ms envelope: how loud a source sits when it is doing something. */
+    fun p99Db(signal: M.Signal): Double = envelope(signal).percent(.99)
+
+    fun percentileDb(signal: M.Signal, fraction: Double): Double = envelope(signal).percent(fraction)
+
+    /** Share of 100 ms frames louder than the median by more than [aboveDb]: how often events land. */
+    fun eventDensity(signal: M.Signal, aboveDb: Double = 8.0): Double {
+        val hop = M.RATE / 10
+        val mono = signal.mono()
+        val levels = ArrayList<Double>(mono.size / hop + 1)
+        var start = 0
+        while (start + hop <= mono.size) {
+            var sum = 0.0
+            for (i in start until start + hop) sum += mono[i].toDouble() * mono[i]
+            levels += if (sum <= 0.0) -FLOOR_DB else 10 * log10(sum / hop)
+            start += hop
+        }
+        if (levels.isEmpty()) return 0.0
+        val sorted = levels.sorted()
+        val gate = sorted[sorted.size / 2] + aboveDb
+        return levels.count { it > gate }.toDouble() / levels.size
     }
 
     private fun fft(re: DoubleArray, im: DoubleArray) {
@@ -107,83 +158,32 @@ object CatalogueMetrics {
         }
     }
 
-    /** Streaming level, envelope and spectrum accumulator over interleaved stereo blocks. */
-    class Accumulator(private val rate: Int = RATE) {
-        private var sumSquares = 0.0
-        private var sumMono = 0.0
-        private var frames = 0L
-        private var peak = 0f
-        private val envelope = Histogram()
-        private var hopEnergy = 0.0
-        private var hopCount = 0
-        private val hop = max(1, rate / 10)
-        private val window = DoubleArray(FFT) { .5 - .5 * cos(2.0 * PI * it / FFT) }
-        private val block = DoubleArray(FFT)
-        private var blockFill = 0
-        private val re = DoubleArray(FFT)
-        private val im = DoubleArray(FFT)
-        private val power = DoubleArray(FFT / 2 + 1)
-        private var windows = 0
-
-        fun add(buffer: FloatArray, count: Int) {
-            for (i in 0 until count) {
-                val l = buffer[i * 2]
-                val r = buffer[i * 2 + 1]
-                sumSquares += l.toDouble() * l + r.toDouble() * r
-                sumMono += (l + r) * .5
-                peak = max(peak, max(abs(l), abs(r)))
-                hopEnergy += l.toDouble() * l + r.toDouble() * r
-                hopCount += 2
-                if (hopCount >= hop * 2) {
-                    envelope.add(db(sqrt(hopEnergy / hopCount)))
-                    hopEnergy = 0.0
-                    hopCount = 0
-                }
-                block[blockFill++] = (l + r) * .5
-                if (blockFill == FFT) {
-                    if (windows < 16) accumulate()
-                    blockFill = 0
-                }
-                frames++
-            }
-        }
-
-        private fun accumulate() {
-            for (i in 0 until FFT) re[i] = block[i] * window[i]
+    /** Energy per 1/3-octave band in dB relative to the loudest, Hann-windowed, up to 16 windows. */
+    fun bandProfile(signal: M.Signal): DoubleArray {
+        val mono = signal.mono()
+        val window = DoubleArray(FFT) { .5 - .5 * cos(2.0 * PI * it / FFT) }
+        val power = DoubleArray(FFT / 2 + 1)
+        val re = DoubleArray(FFT)
+        val im = DoubleArray(FFT)
+        var windows = 0
+        var start = 0
+        while (start + FFT <= mono.size && windows < 16) {
+            for (i in 0 until FFT) re[i] = mono[start + i] * window[i]
             im.fill(0.0)
             fft(re, im)
             for (k in power.indices) power[k] += re[k] * re[k] + im[k] * im[k]
             windows++
+            start += FFT
         }
-
-        fun finish(): Analysis {
-            val rms = if (frames == 0L) 0.0 else sqrt(sumSquares / (frames * 2))
-            return Analysis(
-                rmsDb = db(rms),
-                peakDb = if (peak <= 0f) -FLOOR_DB else 20 * log10(peak.toDouble()),
-                dc = if (frames == 0L) 0.0 else sumMono / frames,
-                crest = if (rms <= 0.0) 0.0 else peak / rms,
-                p50Db = envelope.percent(.5),
-                p90Db = envelope.percent(.9),
-                p99Db = envelope.percent(.99),
-                centroid = centroid(power, rate),
-                band = bandProfile(power, rate),
-            )
-        }
-    }
-
-    /** Energy in each 1/3-octave band, in dB relative to the loudest band. */
-    fun bandProfile(spectrum: DoubleArray, rate: Int): DoubleArray {
-        val binHz = rate.toDouble() / ((spectrum.size - 1) * 2)
+        val binHz = M.RATE.toDouble() / FFT
         val raw =
             DoubleArray(thirdOctave.size) { b ->
                 val centre = thirdOctave[b]
                 var sum = 0.0
                 var k = ceil(centre / 2.0.pow(1.0 / 6) / binHz).toInt()
-                val last =
-                    floor(centre * 2.0.pow(1.0 / 6) / binHz).toInt().coerceAtMost(spectrum.size - 1)
+                val last = floor(centre * 2.0.pow(1.0 / 6) / binHz).toInt().coerceAtMost(power.size - 1)
                 while (k <= last) {
-                    sum += spectrum[k]
+                    sum += power[k]
                     k++
                 }
                 sum
@@ -194,122 +194,31 @@ object CatalogueMetrics {
         }
     }
 
-    fun centroid(spectrum: DoubleArray, rate: Int): Double {
-        val binHz = rate.toDouble() / ((spectrum.size - 1) * 2)
-        var num = 0.0
-        var den = 0.0
-        for (k in 1 until spectrum.size) {
-            num += k * binHz * spectrum[k]
-            den += spectrum[k]
-        }
-        return if (den <= 0.0) 0.0 else num / den
-    }
-
-    fun db(x: Double) = if (x <= 0.0) -FLOOR_DB else 20 * log10(x)
-
-    fun fmt(x: Double, digits: Int = 1) = String.format("%.${digits}f", x)
-
-    /** Mean absolute difference of two band profiles, in dB. */
     fun bandDistance(a: DoubleArray, b: DoubleArray): Double {
         var sum = 0.0
         for (i in a.indices) sum += abs(a[i] - b[i])
         return sum / a.size
     }
 
-    private val recordings = HashMap<String, SampleData>()
-
-    val recordingLoader: (String) -> SampleData? = { id ->
-        recordings.getOrPut(id) {
-            val file = File("../app/src/main/assets/audio/$id.pcm")
-            require(file.exists()) { "Missing bundled recording $id" }
-            Pcm16Data(ByteBuffer.wrap(file.readBytes()))
-        }
-    }
-
-    fun mixer(rate: Int = RATE) = PcmMixer(rate, recordings = recordingLoader)
-
-    /** Render [seconds] of a single-layer mix and analyse it. */
-    fun analyse(
-        mixer: PcmMixer,
-        seconds: Double,
-        rate: Int = RATE,
-        block: Int = 1024,
-    ): Analysis {
-        val accumulator = Accumulator(rate)
-        val buffer = FloatArray(block * 2)
-        var remaining = (seconds * rate).toLong()
-        while (remaining > 0) {
-            val n = min(remaining, block.toLong()).toInt()
-            mixer.render(buffer, n)
-            accumulator.add(buffer, n)
-            remaining -= n
-        }
-        return accumulator.finish()
-    }
-
-    fun analyseSound(
-        soundId: String,
-        seconds: Double,
-        rate: Int = RATE,
-        layer: Layer = Library.layer(soundId, unique = "probe"),
-        settings: Settings = Settings(),
-    ): Analysis {
-        val mixer = mixer(rate)
-        mixer.settings = settings
-        mixer.sync(Mix(layers = listOf(layer.copy(id = "probe"))))
-        return analyse(mixer, seconds, rate)
-    }
-
     /**
-     * Relative difference between two same-seed renders, as the RMS of their difference over the RMS
-     * of the first. Two entries that run the same algorithm against the same seed give exactly 0.
+     * Correlation between the render and itself [lagSeconds] earlier, over [windowSeconds]. Streams a
+     * ring buffer of one lag, so a four-minute lag costs 4 minutes of samples, not the whole render.
      */
-    fun relativeDifference(a: PcmMixer, b: PcmMixer, seconds: Double, rate: Int = RATE): Double {
-        val block = 1024
-        val x = FloatArray(block * 2)
-        val y = FloatArray(block * 2)
-        var diff = 0.0
-        var energy = 0.0
-        var remaining = (seconds * rate).toLong()
-        while (remaining > 0) {
-            val n = min(remaining, block.toLong()).toInt()
-            a.render(x, n)
-            b.render(y, n)
-            for (i in 0 until n * 2) {
-                diff += (x[i] - y[i]).toDouble().pow(2)
-                energy += x[i].toDouble().pow(2)
-            }
-            remaining -= n
-        }
-        return sqrt(diff / max(energy, 1e-20))
-    }
-
-    /**
-     * Correlation between the render and itself [lag] seconds earlier, averaged over
-     * [window] seconds. Uses a ring buffer of exactly one lag, so memory stays proportional to the
-     * lag rather than the render.
-     */
-    fun selfCorrelation(
-        mixer: PcmMixer,
-        lagSeconds: Double,
-        windowSeconds: Double,
-        rate: Int = RATE,
-    ): Double {
-        val block = 1024
+    fun selfCorrelation(mix: Mix, lagSeconds: Double, windowSeconds: Double, rate: Int = M.RATE): Double {
         val lag = (lagSeconds * rate).toLong()
         val window = (windowSeconds * rate).toLong()
         require(lag > 0 && window > 0)
         val ring = FloatArray(lag.toInt())
-        val buffer = FloatArray(block * 2)
+        val buffer = FloatArray(1024 * 2)
+        val mixer = PcmMixer(rate, 1024, loader)
+        mixer.sync(mix)
         var position = 0L
         var sum = 0.0
         var sx = 0.0
         var sy = 0.0
-        var counted = 0L
-        val total = lag + window
-        var remaining = total
+        var remaining = lag + window
         while (remaining > 0) {
-            val n = min(remaining, block.toLong()).toInt()
+            val n = min(remaining, 1024L).toInt()
             mixer.render(buffer, n)
             for (i in 0 until n) {
                 val v = (buffer[i * 2] + buffer[i * 2 + 1]) * .5f
@@ -319,13 +228,14 @@ object CatalogueMetrics {
                     sum += v.toDouble() * w
                     sx += v.toDouble() * v
                     sy += w.toDouble() * w
-                    counted++
                 }
                 ring[index] = v
                 position++
             }
             remaining -= n
         }
-        return if (sx <= 0.0 || sy <= 0.0 || counted == 0L) 0.0 else sum / sqrt(sx * sy)
+        return if (sx <= 0.0 || sy <= 0.0) 0.0 else sum / sqrt(sx * sy)
     }
+
+    fun fmt(x: Double, digits: Int = 1) = String.format("%.${digits}f", x)
 }

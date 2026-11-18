@@ -5,10 +5,11 @@ package dev.nightfall.core
  * One catalogue entry.
  *
  * [intensity], [brightness] and [eventRate] are the layer defaults for the knobs the synthesis for
- * [kind] actually reads, so a name behaves the way it is named: a strong wind is brighter and louder
- * than a breeze, heavy rain has denser drops than drizzle, and ice storm lands harder than sleet.
- * [gain] is calibrated from measurement so every entry lands near the same level at the same slider
- * position (see `CatalogueQualityTest`).
+ * [kind] actually reads, so a name behaves the way it is named: a strong wind is brighter than a
+ * breeze, heavy rain has denser drops than drizzle, ice storm lands harder than sleet, and thunder's
+ * interval follows how frequent the name says it is. Output level is not decided here: `Levels` owns
+ * that, so changing a source's character does not change how loud its slider is (re-run
+ * `LevelCalibrationTest` when these defaults change).
  */
 data class Sound(
     val id: String,
@@ -19,7 +20,6 @@ data class Sound(
     val intensity: Float = .5f,
     val brightness: Float = .5f,
     val eventRate: Float = .4f,
-    val gain: Float = .35f,
     val description: String = "Locally synthesized",
     val asset: String? = null,
 ) {
@@ -33,112 +33,6 @@ data class Sound(
 object Library {
     private val synthesis = "Continuous spectral synthesis"
 
-    /**
-     * Default layer gain per entry, measured so a newly added sound lands at the same level as the
-     * rest of the catalogue: 99th-percentile level of the 100 ms envelope is trimmed to −42 dBFS at
-     * 48 kHz, measured over 120 s through `PcmMixer` at default settings. Black noise and gentle
-     * snowfall are capped by gain 1.0 because their synthesis is intrinsically 10–14 dB quieter.
-     */
-    private val calibrated =
-        mapOf(
-            "white" to 0.20f,
-            "pink" to 0.38f,
-            "brown" to 0.10f,
-            "red" to 0.09f,
-            "blue" to 0.40f,
-            "violet" to 0.22f,
-            "purple" to 0.22f,
-            "gray" to 0.28f,
-            "green" to 0.22f,
-            "black" to 1.00f,
-            "velvet" to 0.57f,
-            "light-drizzle" to 1.00f,
-            "moderate-rain" to 0.56f,
-            "heavy-rain" to 0.35f,
-            "rain-on-window" to 0.57f,
-            "rain-on-tent" to 0.55f,
-            "rain-on-leaves" to 0.55f,
-            "rain-on-metal-roof" to 0.54f,
-            "rain-on-car-roof" to 0.55f,
-            "rain-in-forest" to 0.57f,
-            "rain-over-distant-ocean" to 0.57f,
-            "distant-thunder" to 1.00f,
-            "rolling-thunder" to 0.81f,
-            "close-thunder" to 0.64f,
-            "thunderstorm" to 0.55f,
-            "occasional-lightning-associated-thunder" to 0.66f,
-            "tropical-storm" to 0.43f,
-            "severe-rainstorm" to 0.39f,
-            "windy-thunderstorm" to 0.52f,
-            "blizzard" to 0.87f,
-            "gentle-snowfall-atmosphere" to 1.00f,
-            "heavy-snowfall-with-wind" to 0.83f,
-            "hail" to 0.72f,
-            "sleet" to 0.79f,
-            "ice-storm" to 0.67f,
-            "arctic-wind" to 0.89f,
-            "snow-against-windows" to 1.00f,
-            "gentle-breeze" to 1.00f,
-            "strong-wind" to 0.53f,
-            "wind-through-pine-trees" to 0.67f,
-            "wind-through-deciduous-trees" to 0.65f,
-            "mountain-wind" to 0.61f,
-            "ocean-wind" to 0.73f,
-            "wind-against-cabin-walls" to 1.00f,
-            "howling-wind" to 0.43f,
-            "ocean-waves" to 0.69f,
-            "beaches" to 0.69f,
-            "streams" to 0.82f,
-            "rivers" to 0.82f,
-            "waterfalls" to 0.83f,
-            "lakes" to 0.83f,
-            "wind-in-leaves" to 0.74f,
-            "caves" to 1.00f,
-            "mountain-ambience" to 0.75f,
-            "campfires" to 0.64f,
-            "crackling-wood" to 0.56f,
-            "forest-birds" to 0.72f,
-            "crickets" to 0.81f,
-            "frogs" to 1.00f,
-            "nighttime-forest" to 0.49f,
-            "fireplace" to 0.59f,
-            "box-fan" to 0.57f,
-            "ceiling-fan" to 0.59f,
-            "air-conditioner" to 0.56f,
-            "air-purifier" to 0.56f,
-            "heating-system" to 0.55f,
-            "quiet-room" to 0.55f,
-            "ticking-clock" to 1.00f,
-            "airplane-cabin" to 0.57f,
-            "train-interior" to 0.59f,
-            "ship-cabin" to 0.55f,
-            "distant-train" to 0.56f,
-            "gentle-vehicle-ambience" to 0.56f,
-            "quiet-library" to 0.42f,
-            "distant-city-rain" to 0.68f,
-            "soft-coffee-shop-ambience" to 0.71f,
-            "space-themed-soundscape" to 0.56f,
-            "gentle-mechanical-hum" to 0.59f,
-            "432-hz-ambient-music" to 0.71f,
-            "440-hz-ambient-music" to 0.67f,
-            "lo-fi-sleep-music" to 0.55f,
-            "soft-piano" to 0.87f,
-            "minimalist-piano" to 0.92f,
-            "gentle-music-box" to 0.78f,
-            "soft-synth-pads" to 0.60f,
-            "warm-analog-style-synth" to 0.65f,
-            "space-ambience" to 0.59f,
-            "dreamy-atmospheric-music" to 0.72f,
-            "soft-strings" to 0.62f,
-            "gentle-bells" to 0.80f,
-            "meditation-drones" to 0.71f,
-            "singing-bowl-style-synthesis" to 0.90f,
-            "generative-lullabies" to 0.79f,
-            "slow-percussion-free-lo-fi" to 0.57f,
-            "gentle-lo-fi" to 0.68f,
-            "evolving-cinematic-ambient-textures" to 0.59f,
-            "binaural" to 0.24f,
-        )
 
     private fun entry(
         name: String,
@@ -160,7 +54,6 @@ object Library {
             intensity,
             brightness,
             eventRate,
-            calibrated[slug(name)] ?: .35f,
             description = description,
             asset = asset,
         )
@@ -451,14 +344,14 @@ object Library {
             s.variant,
         )
 
-    fun layer(id: String, gain: Float? = null, unique: String = java.util.UUID.randomUUID().toString()): Layer {
+    fun layer(id: String, gain: Float = .35f, unique: String = java.util.UUID.randomUUID().toString()): Layer {
         val s = byId.getValue(id)
         val seed = unique.hashCode().toLong()
         return Layer(
             unique,
             id,
             s.name,
-            gain ?: s.gain,
+            gain,
             width = if (s.kind == "binaural") 1f else .7f,
             intensity = s.intensity,
             brightness = s.brightness,
@@ -485,52 +378,56 @@ object Presets {
         )
 
     /**
-     * Every preset is trimmed to the same measured output level (see `CatalogueQualityTest`), so
-     * changing presets no longer jumps output by up to 18 dB, and no advertised layer sits more than
-     * 12 dB under its neighbours.
+     * Every preset is trimmed to the same measured loudness — −24 LUFS short-term at 48 kHz — so
+     * switching presets no longer jumps, and no advertised layer sits more than 12 LU under its
+     * neighbours. The layer gains set balance; `master` is the per-preset level trim, and the one
+     * preset that cannot reach the target through gains alone (ocean-waves would exceed 1.0) carries
+     * the remainder there. Measured by `CatalogueQualityTest`.
      */
     val all =
         listOf(
-            p("Quiet Skies", "432-hz-ambient-music" to .30f, "light-drizzle" to .45f).at(0.90f),
-            p("Cozy Cabin", "fireplace" to .45f, "blizzard" to .25f, "gentle-breeze" to .25f).at(0.68f),
-            p("Rainy Lo-fi", "lo-fi-sleep-music" to .50f, "moderate-rain" to .50f, "brown" to .15f)
-                .at(0.27f),
-            p("Deep Sleep Noise", "brown" to .14f, "pink" to .25f).at(0.35f),
-            p("Ocean Night", "ocean-waves" to .52f, "gentle-breeze" to .23f).at(0.89f),
+            p("Quiet Skies", "432-hz-ambient-music" to .56f, "light-drizzle" to .85f).at(.50f),
+            p("Cozy Cabin", "fireplace" to .80f, "blizzard" to .45f, "gentle-breeze" to .45f)
+                .at(.50f),
+            p("Rainy Lo-fi", "lo-fi-sleep-music" to .72f, "moderate-rain" to .72f, "brown" to .21f)
+                .at(.50f),
+            p("Deep Sleep Noise", "brown" to 1f, "pink" to .25f).at(.50f),
+            p("Ocean Night", "ocean-waves" to 1f, "gentle-breeze" to .44f).at(.62f),
             p(
                     "Storm Watch",
-                    "moderate-rain" to .45f,
-                    "rolling-thunder" to .25f,
-                    "strong-wind" to .20f,
+                    "moderate-rain" to .87f,
+                    "rolling-thunder" to .48f,
+                    "strong-wind" to .39f,
                 )
-                .at(0.57f),
-            p("Winter Storm", "hail" to .25f, "blizzard" to .35f, "fireplace" to .40f).at(0.66f),
+                .at(.50f),
+            p("Winter Storm", "hail" to .44f, "blizzard" to .62f, "fireplace" to .70f).at(.50f),
             p(
                     "Forest Cabin",
-                    "wind-through-pine-trees" to .30f,
-                    "fireplace" to .40f,
-                    "crickets" to .25f,
+                    "wind-through-pine-trees" to .50f,
+                    "fireplace" to .67f,
+                    "crickets" to .42f,
                 )
-                .at(0.69f),
-            p("Space Drift", "440-hz-ambient-music" to .35f, "soft-synth-pads" to .30f).at(0.82f),
-            p("Airplane Sleep", "airplane-cabin" to .40f, "brown" to .12f).at(0.38f),
-            p("Mountain Stream", "rivers" to .40f, "wind-through-pine-trees" to .30f).at(0.81f),
-            p("Piano Rain", "soft-piano" to .35f, "rain-on-window" to .40f).at(0.64f),
-            p("Night Library", "quiet-library" to .30f, "moderate-rain" to .40f).at(0.64f),
-            p("Midnight Fire", "fireplace" to .45f, "minimalist-piano" to .30f).at(0.70f),
+                .at(.50f),
+            p("Space Drift", "440-hz-ambient-music" to .79f, "soft-synth-pads" to .68f).at(.50f),
+            p("Airplane Sleep", "airplane-cabin" to .94f, "brown" to .28f).at(.50f),
+            p("Mountain Stream", "rivers" to .80f, "wind-through-pine-trees" to .60f).at(.50f),
+            p("Piano Rain", "soft-piano" to .64f, "rain-on-window" to .74f).at(.50f),
+            p("Night Library", "quiet-library" to .59f, "moderate-rain" to .79f).at(.50f),
+            p("Midnight Fire", "fireplace" to .79f, "minimalist-piano" to .53f).at(.50f),
             // Bundled recordings and the binaural tone that no earlier preset reached.
-            p("Summer Night", "crickets" to .63f, "frogs" to .52f, "nighttime-forest" to .34f).at(1.00f),
-            p("City Rain", "distant-city-rain" to .60f, "moderate-rain" to .45f, "distant-train" to .35f)
-                .at(0.44f),
-            p("Coffee Shop", "soft-coffee-shop-ambience" to .50f, "quiet-library" to .35f, "distant-city-rain" to .25f)
-                .at(1.00f),
-            p("Dawn Birds", "forest-birds" to .60f, "wind-in-leaves" to .45f).at(0.65f),
-            p("Binaural Drift", "binaural" to .35f, "432-hz-ambient-music" to .40f).at(0.30f),
-            p("Piano Only", "soft-piano" to .57f).at(1.00f),
+            p("Summer Night", "crickets" to .80f, "frogs" to .66f, "nighttime-forest" to .43f)
+                .at(.50f),
+            p("City Rain", "distant-city-rain" to .71f, "moderate-rain" to .54f, "distant-train" to .42f)
+                .at(.50f),
+            p("Coffee Shop", "soft-coffee-shop-ambience" to .73f, "quiet-library" to .51f, "distant-city-rain" to .37f)
+                .at(.50f),
+            p("Dawn Birds", "forest-birds" to .90f, "wind-in-leaves" to .68f).at(.50f),
+            p("Binaural Drift", "binaural" to .69f, "432-hz-ambient-music" to .79f).at(.50f),
+            p("Piano Only", "soft-piano" to .90f).at(.50f),
             p(
                 "Nine-Layer Dream",
                 "lo-fi-sleep-music" to .45f,
-                "brown" to .07f,
+                "brown" to .22f,
                 "moderate-rain" to .50f,
                 "blizzard" to .30f,
                 "hail" to .25f,
@@ -538,6 +435,6 @@ object Presets {
                 "wind-through-pine-trees" to .40f,
                 "fireplace" to .45f,
                 "440-hz-ambient-music" to .30f,
-            ).at(0.30f),
+            ),
         )
 }
