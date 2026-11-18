@@ -71,8 +71,9 @@ accelerated blocks and takes around two minutes. It always runs in CI, because t
 the build gate lives; `-PwithoutNight` skips it locally when you did not touch the render
 path. Tagged tests live under `@Category(Night::class)` if you need to select them directly.
 
-Gradle configures both modules before running any task, so the Android SDK has to
-be installed even for `:core:test`, but nothing Android is compiled for it. The
+`:core:test` needs no Android SDK: the core module has no Android dependency, so with
+`ANDROID_HOME` unset and no `local.properties` the task still configures and runs. Only the
+`:app:*` tasks, the Robolectric playback scenarios included, need the SDK installed. The
 first run downloads the Gradle distribution and the dependency set and takes a few
 minutes; after that this command takes seconds.
 
