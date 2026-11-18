@@ -101,8 +101,10 @@
   inventory has no GMS, Firebase, billing, ad or tracking SDK from the checked
   denylist. F-Droid's independent review remains necessary.
 
-- 10 JVM playback-lifecycle tests pass under Robolectric in both channels (see
-  below). They replace the instrumented attempt that never went green.
+- 13 Robolectric scenarios pass in both channels (see below): eleven
+  playback-lifecycle ones, which replace the instrumented attempt that never went
+  green, and two Android 16 assertions that need the API 36 sandbox CI now runs
+  (`Android16RuntimeTest`).
 
 Machine-readable results: `docs/verification/update-channel.json`,
 `release-checks.json`, `dependency-audit.json`, `reproducibility.json`, and
@@ -179,8 +181,18 @@ GitHub build's.
 
 `gradle/verification-metadata.xml` carries the SHA-256 entries for every
 transitive artifact these dependencies resolve, so dependency verification stays
-strict without a second pass. Robolectric downloads its Android 35 runtime jar on
-first use, so the CI step needs network access the first time it runs on a runner.
+strict without a second pass. Robolectric downloads the platform jar for the
+sandbox it runs — Android 35 for the `release` job, Android 16 for the `api36`
+job — on first use, so each CI job needs network access the first time it runs on
+a runner. A cold Gradle home on Temurin 21 resolves the same descriptors the
+Temurin 17 job does, so the 21 job needed no new verification entries.
+
+The sandbox level is a build input, not a test constant: Robolectric reads `sdk`
+from `robolectric.properties` on the test classpath and has no system-property
+override, so `app/build.gradle.kts` puts one of two checked-in files on that
+classpath — `src/robolectricApi35/resources/` by default and
+`src/robolectricApi36/resources/` for `-PnightfallRobolectricSdk=36`. The tests
+are identical in both; only the platform runtime beneath them changes.
 
 ## Android emulator observations
 
@@ -307,11 +319,38 @@ the release APK — `zipalign -c -P 16` reports every `.so` `(OK)` and
 `readelf -l` shows a `p_align` of `0x4000` — so Android 16 runs the app directly
 instead of offering it page-size compatibility mode.
 
-What this does not prove: the Robolectric suite runs on the **API 35 runtime**,
-because Robolectric's SDK 36 sandbox refuses to start on the Temurin 17 the CI job
-uses ("Android SDK 36 requires Java 21"). The scenarios therefore exercise API 35
-platform code with the app's `targetSdk` at 36, and every device-behaviour claim
-above is a JVM measurement, not a phone.
+Two runtimes, two jobs. Robolectric's SDK 36 sandbox refuses to start on the
+Temurin 17 that builds the release APK and the F-Droid recipe ("Android SDK 36
+requires Java 21"), so the `release` job keeps running the whole suite on the
+**API 35 runtime** with the app's `targetSdk` at 36, and it is what ships. The
+`api36` job runs the same tests on Temurin 21 with the **API 36 runtime**: the
+platform classes are Android 16's own rather than 15's.
+
+What the 36 sandbox adds is measured, not asserted in prose: on API 36 the
+window's back dispatcher is a `ProxyOnBackInvokedDispatcher` that forwards to a
+`WindowOnBackInvokedDispatcher` once the view is attached, the app has a callback
+registered on it at `PRIORITY_DEFAULT` (the priority AndroidX's `ComponentActivity`
+uses), and invoking that callback — what the system does when a predictive-back
+gesture commits — returns to Home without finishing the activity, with the PCM
+worker still writing more samples after the screen closed and `PlaybackService`
+not stopped by itself. The same runtime is handed a 132 px
+status bar and a 96 px gesture bar: the header moves from 16 px to 148 px and the
+navigation bar's bottom from 463 px to 367 px, so the screens consume the window's
+own non-zero insets on a platform that no longer allows the edge-to-edge opt-out.
+
+`Android16RuntimeTest` fails on its first assertion if the run is not the API 36
+sandbox, so a mis-set job cannot pass it vacuously; on the 35 runtime the two
+tests are reported skipped rather than passed. Breaking the app's `BackHandler`
+turns the predictive-back assertion red ("back reported through
+OnBackInvokedDispatcher closed the screen instead of returning to Home"), which is
+what makes it an assertion rather than a re-run.
+
+What this still does not prove: a phone. No gesture is generated, no system bar is
+real, and `SystemClock` is virtual. Predictive back and the insets above are
+measured on a JVM against the 36 platform classes; whether a physical Android 16
+device reports the same insets and animation stays unverified and is part of the
+hardware list below. The `release` job's runtime is unchanged: on Temurin 17 those
+two scenarios are skipped and every other test still runs on API 35.
 
 ## Update channel that was not exercised
 

@@ -41,3 +41,32 @@ jobs:
             app/build/reports/tests/
             app/build/reports/lint-results-release.*
           retention-days: 14
+  # The same app unit tests, on Android 16's own platform runtime. Robolectric's API 36 sandbox
+  # refuses to start on the Temurin 17 that `release` and the F-Droid recipe build with ("Android SDK
+  # 36 requires Java 21"), so `release` runs the suite on the API 35 sandbox with a 36 target and this
+  # job is the only place the behaviour targeting 36 turns on is executed rather than read: predictive
+  # back reported through OnBackInvokedDispatcher, and edge-to-edge insets on a 36 window. It runs the
+  # app unit tests only — no APK assemblies, no lint — restores the same Gradle cache as `release`,
+  # and nothing depends on it.
+  api36:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          gradle-version: '8.11.1'
+      - name: Install Android SDK packages
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;35.0.0"'
+      - name: App unit tests on the API 36 runtime
+        run: ./gradlew --no-daemon :app:testGithubDebugUnitTest :app:testFdroidDebugUnitTest -PnightfallRobolectricSdk=36
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: api36-test-reports
+          path: app/build/reports/tests/
+          retention-days: 7
