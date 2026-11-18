@@ -1,0 +1,1 @@
+- feat(update): one-tap in-app updates on the GitHub channel, no updater in the F-Droid build (#2)

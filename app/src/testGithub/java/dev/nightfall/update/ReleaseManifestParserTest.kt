@@ -1,0 +1,133 @@
+// SPDX-License-Identifier: MIT
+package dev.nightfall.update
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class ReleaseManifestParserTest {
+    private fun refused(text: String): String {
+        val problem = assertThrows(UpdateProblem::class.java) { ReleaseManifestParser.parse(text) }
+        return problem.message.orEmpty()
+    }
+
+    private fun refusedWith(fragment: String, text: String) {
+        val message = refused(text)
+        assertTrue("expected a reason mentioning '$fragment', got '$message'", message.contains(fragment, ignoreCase = true))
+    }
+
+    @Test
+    fun readsThePublishedShape() {
+        val manifest = ReleaseManifestParser.parse(TestManifests.manifest())
+        assertEquals("1.0.2", manifest.versionName)
+        assertEquals(5, manifest.versionCode)
+        assertEquals(TestManifests.PACKAGE, manifest.applicationId)
+        assertEquals(26, manifest.minSdk)
+        assertEquals(35, manifest.targetSdk)
+        assertEquals(TestManifests.PIN, manifest.certificateSha256)
+        assertEquals(5, manifest.apks.size)
+        val arm64 = manifest.apks.first { it.abi == "arm64-v8a" }
+        assertEquals("Nightfall-1.0.2-arm64-v8a.apk", arm64.file)
+        assertEquals(TestManifests.SIZES.getValue("arm64-v8a"), arm64.bytes)
+        assertEquals(
+            "https://github.com/CamjamPNG/Nightfall/releases/download/v1.0.2/Nightfall-1.0.2-arm64-v8a.apk",
+            arm64.url,
+        )
+    }
+
+    @Test
+    fun ignoresKeysItDoesNotUse() {
+        val text = TestManifests.manifest().replaceFirst("{", """{"notes": "hello", "channel": {"nested": [1]},""")
+        assertEquals(5, ReleaseManifestParser.parse(text).versionCode)
+    }
+
+    @Test
+    fun acceptsAnUppercaseCertificateDigestAndNormalisesIt() {
+        val text = TestManifests.manifest(certificate = TestManifests.PIN.uppercase())
+        assertEquals(TestManifests.PIN, ReleaseManifestParser.parse(text).certificateSha256)
+    }
+
+    @Test
+    fun rejectsTextThatIsNotAManifest() {
+        refusedWith("not valid JSON", "not json at all")
+        refusedWith("not valid JSON", """{"versionName": }""")
+        refusedWith("not a JSON object", "[1, 2, 3]")
+        refusedWith("not a JSON object", "\"1.0.2\"")
+        refusedWith("larger than expected", "x".repeat(70 * 1024))
+    }
+
+    @Test
+    fun rejectsUnusableVersions() {
+        for (version in listOf("1", "v1.0", "1.0-beta", "1.0.0.0.0", "", "1..0")) {
+            refusedWith("version name", TestManifests.manifest(versionName = version))
+        }
+        refusedWith("versionCode", TestManifests.manifest(versionCode = 0))
+        refusedWith("versionCode", TestManifests.manifest(versionCode = 2_100_000_001))
+        refusedWith("versionCode", TestManifests.manifest().replace(""""versionCode": 5""", """"versionCode": "5""""))
+        refusedWith("versionCode", TestManifests.manifest().replace(""""versionCode": 5""", """"versionCode": 5.5"""))
+    }
+
+    @Test
+    fun rejectsUnusableSdkBoundsAndIdentities() {
+        refusedWith("minSdk", TestManifests.manifest(minSdk = 0))
+        refusedWith("targetSdk", TestManifests.manifest(minSdk = 33, targetSdk = 26))
+        refusedWith("applicationId", TestManifests.manifest(applicationId = ""))
+        refusedWith("certificate", TestManifests.manifest(certificate = "abc"))
+        refusedWith("certificate", TestManifests.manifest(certificate = "z".repeat(64)))
+    }
+
+    @Test
+    fun rejectsUnusableApkLists() {
+        refusedWith("lists no APKs", TestManifests.manifest(apks = emptyList()))
+        refusedWith("lists no APKs", TestManifests.manifest().replace(Regex("\"apks\": \\[[\\s\\S]*]"), "\"apks\": []"))
+        val duplicate = listOf(TestManifests.apk("arm64-v8a"), TestManifests.apk("arm64-v8a"))
+        refusedWith("arm64-v8a twice", TestManifests.manifest(apks = duplicate))
+        val tooMany = (1..17).map { TestManifests.apk("arm64-v8a", file = "Nightfall-1.0.2-$it.apk") }
+        refusedWith("too many", TestManifests.manifest(apks = tooMany))
+    }
+
+    @Test
+    fun rejectsUnusableApkEntries() {
+        refusedWith("unusable APK name", TestManifests.manifest(apks = listOf(TestManifests.apk("arm64-v8a", file = "../x.apk"))))
+        refusedWith("unusable APK name", TestManifests.manifest(apks = listOf(TestManifests.apk("arm64-v8a", file = "sub/x.apk"))))
+        refusedWith("unusable APK name", TestManifests.manifest(apks = listOf(TestManifests.apk("arm64-v8a", file = "x.zip"))))
+        refusedWith("unknown architecture", TestManifests.manifest(apks = listOf(TestManifests.apk("mips"))))
+        refusedWith("size", TestManifests.manifest(apks = listOf(TestManifests.apk("arm64-v8a", bytes = 0))))
+        refusedWith("size", TestManifests.manifest(apks = listOf(TestManifests.apk("arm64-v8a", bytes = -5))))
+        refusedWith("checksum", TestManifests.manifest(apks = listOf(TestManifests.apk("arm64-v8a", sha256 = "nothex"))))
+        refusedWith("malformed APK entry", TestManifests.manifest(apks = listOf("\"just a string\"")))
+        refusedWith("malformed APK entry", TestManifests.manifest(apks = listOf("42")))
+        // Manifests published before the download URL existed carry no address for the APK.
+        refusedWith(
+            "no url",
+            TestManifests.manifest(
+                apks =
+                    listOf(
+                        """{"file": "Nightfall-1.0.2-arm64-v8a.apk", "abi": "arm64-v8a", "bytes": 1000, """ +
+                            """"sha256": "${"a".repeat(64)}"}"""
+                    )
+            ),
+        )
+    }
+
+    @Test
+    fun rejectsAnyAddressOtherThanThisRepositorysReleaseAsset() {
+        val hostile =
+            listOf(
+                "https://evil.example/Nightfall-1.0.2-arm64-v8a.apk",
+                "http://github.com/CamjamPNG/Nightfall/releases/download/v1.0.2/Nightfall-1.0.2-arm64-v8a.apk",
+                "https://github.com/other/Nightfall/releases/download/v1.0.2/Nightfall-1.0.2-arm64-v8a.apk",
+                "https://github.com/CamjamPNG/Nightfall/releases/download/v9.9.9/Nightfall-1.0.2-arm64-v8a.apk",
+                "https://github.com/CamjamPNG/Nightfall/releases/download/v1.0.2/other.apk",
+                "https://github.com/CamjamPNG/Nightfall/releases/download/v1.0.2/Nightfall-1.0.2-arm64-v8a.apk?x=1",
+                "https://github.com.evil.example/CamjamPNG/Nightfall/releases/download/v1.0.2/Nightfall-1.0.2-arm64-v8a.apk",
+            )
+        for (url in hostile) {
+            refusedWith(
+                "unexpected address",
+                TestManifests.manifest(apks = listOf(TestManifests.apk("arm64-v8a", url = url))),
+            )
+        }
+    }
+}

@@ -18,6 +18,7 @@ import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import dev.nightfall.core.*
+import dev.nightfall.update.UpdateSettingsSection
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -737,10 +738,12 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        item { SectionLabel("Updates") }
+        item { UpdateSettingsSection() }
         item { SectionLabel("Your data & audio") }
         item {
             Text(
-                "Everything runs on your device. No account, advertising, analytics, tracking, purchases or network permission. Mixes and settings are stored locally. Keep listening levels comfortable; percentages describe layer gain, not acoustic loudness.",
+                "Everything that makes sound runs on your device. No account, advertising, analytics, tracking or purchases. Mixes and settings are stored locally. Keep listening levels comfortable; percentages describe layer gain, not acoustic loudness.",
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

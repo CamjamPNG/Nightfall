@@ -72,8 +72,8 @@ jobs:
         run: |
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
           python3 -m unittest discover -s tools/tests -v
-          ./gradlew --no-daemon :core:test :app:assembleRelease :app:lintRelease
-          python3 tools/check_release.py --apk app/build/outputs/apk/release/app-release-unsigned.apk
+          ./gradlew --no-daemon :core:test :app:testGithubDebugUnitTest :app:assembleGithubRelease :app:assembleFdroidRelease :app:lintRelease
+          python3 tools/check_release.py --apk app/build/outputs/apk/github/release/app-github-release-unsigned.apk --fdroid-apk app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk
       - name: Package, sign and verify APK options
         if: steps.publish.outputs.needed == 'true'
         env:
@@ -82,7 +82,7 @@ jobs:
           CODE: ${{ steps.version.outputs.code }}
         run: |
           export NIGHTFALL_KEYSTORE_PATH="$RUNNER_TEMP/nightfall-release.p12"
-          python3 tools/package_release.py --apk app/build/outputs/apk/release/app-release-unsigned.apk --out artifacts/publish --version "$VERSION" --code "$CODE"
+          python3 tools/package_release.py --apk app/build/outputs/apk/github/release/app-github-release-unsigned.apk --out artifacts/publish --version "$VERSION" --code "$CODE"
       - name: Push verified source version and tag atomically
         if: steps.publish.outputs.needed == 'true' && steps.version.outputs.prepared == 'true'
         env:
