@@ -1,0 +1,1 @@
+- test(screenshots): render the real screens to PNGs on the JVM, and make them the store set (#19)

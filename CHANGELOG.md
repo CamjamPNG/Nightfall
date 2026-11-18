@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.1 — 2026-11-18
+
+- test(screenshots): render the real screens to PNGs on the JVM, and make them the store set (#19)
+
 ## 1.7 — 2026-11-18
 
 - sounds: stop the music repeating one four-chord phrase all night (#18)
