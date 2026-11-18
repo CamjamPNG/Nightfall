@@ -59,9 +59,17 @@ cd Nightfall
 # Linux / Windows default: ~/Android/Sdk     macOS: ~/Library/Android/sdk
 echo "sdk.dir=$HOME/Android/Sdk" > local.properties
 
-# The DSP core alone: 18 tests, no emulator, no device.
+# The DSP core alone, no emulator, no device.
 ./gradlew :core:test
+
+# The same, minus the eight-hour night render: about four minutes instead of six.
+./gradlew :core:test -PwithoutNight
 ```
+
+`:core:test` includes `NightRunTest`, which renders a whole eight-hour night of audio in
+accelerated blocks and takes around two minutes. It always runs in CI, because that is where
+the build gate lives; `-PwithoutNight` skips it locally when you did not touch the render
+path. Tagged tests live under `@Category(Night::class)` if you need to select them directly.
 
 Gradle configures both modules before running any task, so the Android SDK has to
 be installed even for `:core:test`, but nothing Android is compiled for it. The
