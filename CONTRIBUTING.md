@@ -91,7 +91,8 @@ This is the command a change has to survive, and the same one CI runs in
 ./gradlew :core:test :app:assembleDebug :app:lintDebug
 ```
 
-- `:core:test` — the 18 deterministic JVM tests: nine simultaneous sources,
+- `:core:test` — the 69 deterministic JVM tests (68 run; one calibration generator is
+  opt-in): nine simultaneous sources,
   independent gain/mute/solo, phase continuity when layers are added or removed,
   limiting, colored-noise spectra, musical tuning, timers and fades, JSON
   round-trips, and 512 allocated layers.
@@ -336,7 +337,7 @@ four questions:
 1. **What ships.** Behavior, not a restatement of the diff.
 2. **Why.** The problem, or the reason the old behavior was wrong.
 3. **How you verified it.** The commands you ran and what you observed. Paste the
-   relevant lines. "Build passed" is not evidence; `:core:test` 18/18 passed and
+   relevant lines. "Build passed" is not evidence; `:core:test` showing 68 passed and 1 skipped, and
    `:app:lintDebug` clean is.
 4. **What you did not verify.** Listening quality, a Bluetooth mask, overnight
    battery — say so. That honesty is the project's differentiator, and reviewers

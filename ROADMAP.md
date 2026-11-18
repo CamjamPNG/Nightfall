@@ -12,11 +12,11 @@ though it is the least fun.
 ## Where it stands
 
 Shipping today: a working offline mixer with no `INTERNET` permission, no layer
-cap, 15 built-in presets, local preset storage and JSON exchange, sleep timers
+cap, 21 built-in presets, local preset storage and JSON exchange, sleep timers
 with per-layer stop schedules, a Media3 foreground media session with lock-screen
-and Bluetooth controls, and 18 deterministic core tests plus 10 release-tool
-tests that pass on any machine with a JVM. Signed GitHub releases with a pinned
-certificate. `docs/TESTING.md` records exactly what was executed and what was
+and Bluetooth controls, 69 deterministic core tests, 53 release-tooling tests and 10
+playback-lifecycle scenarios that pass on any machine with a JVM and a Python 3. Signed
+GitHub releases with a pinned certificate. `docs/TESTING.md` records exactly what was executed and what was
 not.
 
 The gap between "shipping" and "proven" is the whole roadmap.

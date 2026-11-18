@@ -73,8 +73,9 @@ policy says gets a project degraded. Nothing in this repository is set up to fil
 that answer, and no request has been filed.
 
 One honest counterweight worth having ready, because it is true and checkable:
-`docs/TESTING.md` records what was and was not executed, `core/src/test` holds 42
-deterministic tests, and the README carries an explicit unverified list. If the
+`docs/TESTING.md` records what was and was not executed, `core/src/test` holds 69
+deterministic tests (68 of which run without an opt-in flag), and the README carries an
+explicit unverified list. If the
 request is filed, that record is the argument that a human is accountable for the
 output — not a claim that no tool was used.
 
