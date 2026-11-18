@@ -59,15 +59,14 @@ therapy.
 
 ## Screenshots
 
-> **Placeholder.** Real, current screenshots are coming from an in-repo render job —
-> the Compose screens captured by a JVM test (Robolectric with native graphics), which
-> is the only route available here because these build machines have no `/dev/kvm` for
-> an emulator. The two PNGs already in
-> `fastlane/metadata/android/en-US/images/phoneScreenshots/` are genuine captures of
-> the running app from a software-emulated Pixel 7, taken in the first release commit
-> and not recaptured since, so they predate the update-channel work. Nothing on this
-> page is a mockup, and this section stays empty rather than showing a design the app
-> no longer has.
+The six PNGs in `fastlane/metadata/android/en-US/images/phoneScreenshots/` are the
+shipped Compose UI, rendered on a JVM: `MainActivity`'s own window, drawn by
+Robolectric's native graphics with the app driven through its own navigation. That is
+the only route available here, because these build machines have no `/dev/kvm` for an
+emulator. Nothing is a mockup and nothing was composited by hand. They show no status
+bar and no animation, and the render-load figures in Settings are the harness's rather
+than a phone's; `docs/TESTING.md` records how they are generated, how to regenerate
+them, and what they cannot show.
 
 ## Install
 
