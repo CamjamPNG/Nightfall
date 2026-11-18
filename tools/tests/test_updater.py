@@ -3,6 +3,8 @@
 import importlib.util
 import json
 import pathlib
+import re
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -127,6 +129,28 @@ class ChannelTest(unittest.TestCase):
             for permission in checking.NETWORK_PERMISSIONS:
                 self.assertTrue(checking.declares(binary, permission), permission)
             self.assertIn("dev/nightfall/update/GithubUpdater", checking.updater_symbols(github_apk))
+
+    def test_the_recipe_flavour_of_a_block_is_read_exactly(self):
+        plain = "  - versionName: '1.0'\n    versionCode: 1\n    gradle:\n      - yes\n"
+        chosen = "  - versionName: 1.2\n    versionCode: 9\n    gradle:\n      - fdroid\n"
+        missing = "  - versionName: 1.2\n    versionCode: 9\n"
+        self.assertFalse(checking.selects_fdroid(plain))
+        self.assertTrue(checking.selects_fdroid(chosen))
+        self.assertFalse(checking.selects_fdroid(missing))
+
+    def test_the_real_recipe_matches_its_tags(self):
+        """Every block selects the flavour exactly when its own tag defines one."""
+        self.assertEqual(subprocess.run([sys.executable, str(TOOLS / "check_release.py")],
+                                        capture_output=True, text=True).returncode, 0)
+        text = (packaging.ROOT / "fdroid/metadata/io.github.camjampng.nightfall.yml").read_text()
+        blocks = re.split(r"(?m)^  - versionName:", text)[1:]
+        self.assertTrue(blocks)
+        for block in blocks:
+            tag = re.search(r"commit:\s*(\S+)", block)[1]
+            source = checking.tag_source(tag)
+            if source is None:
+                continue
+            self.assertEqual(checking.selects_fdroid(block), "productFlavors" in source, tag)
 
     def test_utf16_manifest_strings_are_also_recognised(self):
         self.assertTrue(checking.declares("x".encode() + "android.permission.INTERNET".encode("utf-16-le"),

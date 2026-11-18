@@ -38,7 +38,7 @@
       ]
     },
     "release_tools": {
-      "count": 17,
+      "count": 19,
       "failures": 0,
       "note": "includes the manifest generator's schema, URLs and rejection cases"
     }

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 """Offline validation of release metadata and bundled audio; no network requests."""
-import argparse, hashlib, json, pathlib, re, struct, sys, zipfile
+import argparse, hashlib, json, pathlib, re, struct, subprocess, sys, zipfile
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 p=argparse.ArgumentParser()
 p.add_argument('--apk',type=pathlib.Path,help='GitHub-channel APK, the one published for updates')
@@ -10,8 +10,6 @@ p.add_argument('--github-apk',type=pathlib.Path,help='GitHub-channel APK whose u
 args=p.parse_args()
 def require(condition,message):
     if not condition:raise ValueError(message)
-# The last release published before the flavours existed; earlier recipe entries keep their own build.
-CHANNEL_SPLIT_CODE=4
 NETWORK_PERMISSIONS=('android.permission.INTERNET','android.permission.ACCESS_NETWORK_STATE','android.permission.REQUEST_INSTALL_PACKAGES','android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION')
 UPDATER_ENTRY_POINTS=('dev/nightfall/update/GithubUpdater','dev/nightfall/update/ReleaseFetch','dev/nightfall/update/ReleaseManifestParser','dev/nightfall/update/PackageInstalls','dev/nightfall/update/UpdateInstallReceiver')
 def apk_manifest(apk):
@@ -60,12 +58,34 @@ require(f'commit: v{version}' in text,'Recipe tag mismatch')
 require('https://github.com/CamjamPNG/Nightfall.git' in text,'Missing verified source repository')
 require('scanignore:' not in text,'Broad scanner exclusions must not be introduced')
 require('License: MIT' in text,'Code license must match the selected MIT license')
-# Releases after the two-channel split must build the flavour without an updater.
+def selects_fdroid(block):
+    """True when an F-Droid build block asks for the flavour without an updater."""
+    selected = re.search(r'(?m)^    gradle:\n((?:      - \S+\n)+)', block)
+    return selected is not None and '      - fdroid\n' in selected[1]
+
+
+def tag_source(tag):
+    """The app build file at a release tag, or None when this checkout does not have the tag."""
+    try:
+        return subprocess.check_output(['git','-C',str(ROOT),'show',tag+':app/build.gradle.kts'],
+                                       stderr=subprocess.DEVNULL,text=True)
+    except Exception:
+        return None
+
+# A block may select the fdroid flavour only if the tag it pins defines the flavours; a block
+# pinned to a tag from before the split must keep the default build, which has no flavor task.
+# Tags missing from this checkout are left to the release-tool tests, which pin the template.
 for block in re.split(r'(?m)^  - versionName:', text)[1:]:
-    entry = re.search(r'versionCode:\s*(\d+)', block)
-    code = int(entry[1]) if entry else 0
-    if code > CHANNEL_SPLIT_CODE:
-        require('gradle:\n      - fdroid\n' in block,'F-Droid build ' + str(code) + ' must select the fdroid flavour')
+    tag = re.search(r'commit:\s*(\S+)', block)
+    if not tag: continue
+    source = tag_source(tag[1])
+    if source is None: continue
+    flavoured = 'productFlavors' in source
+    fdroid = selects_fdroid(block)
+    if flavoured:
+        require(fdroid, tag[1] + ' defines the flavours, so its block must select the fdroid flavour')
+    else:
+        require(not fdroid, tag[1] + ' predates the flavours, so its block must keep gradle: yes')
 manifest=(ROOT/'app/src/main/AndroidManifest.xml').read_text()
 for permission in ('android.permission.INTERNET','android.permission.RECORD_AUDIO','com.google.android.gms.permission.AD_ID'):
     require(permission not in manifest,'Unexpected permission: '+permission)
