@@ -135,16 +135,26 @@ class AudioHost(private val runtime: NightfallRuntime) {
 
     fun updateRoute() {
         val device = track?.routedDevice
-        val label =
+        val route =
             when (device?.type) {
                 AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
-                AudioDeviceInfo.TYPE_BLE_HEADSET -> "Bluetooth · ${device.productName}"
+                AudioDeviceInfo.TYPE_BLE_HEADSET ->
+                    OutputRoute(
+                        OutputRoute.Kind.BLUETOOTH,
+                        device.productName?.toString().orEmpty(),
+                    )
                 AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
-                AudioDeviceInfo.TYPE_WIRED_HEADSET -> "Wired headphones"
-                AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> "Built-in speaker"
-                else -> device?.productName?.toString() ?: "System audio output"
+                AudioDeviceInfo.TYPE_WIRED_HEADSET -> OutputRoute(OutputRoute.Kind.WIRED)
+                AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> OutputRoute(OutputRoute.Kind.SPEAKER)
+                else ->
+                    if (device == null) OutputRoute()
+                    else
+                        OutputRoute(
+                            OutputRoute.Kind.DEVICE,
+                            device.productName?.toString().orEmpty(),
+                        )
             }
-        runtime.status.value = runtime.status.value.copy(output = label)
+        runtime.status.value = runtime.status.value.copy(output = route)
     }
 
     private val worker =

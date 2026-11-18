@@ -50,11 +50,13 @@ private fun LayerCount(r: NightfallRuntime, soundId: String) {
 
 @Composable
 fun SoundLibrary(r: NightfallRuntime) {
-    var category by rememberSaveable { mutableStateOf("All") }
+    // null is "every category": the chip said "All" and was also the filter sentinel, which is an
+    // English word deciding behaviour. The label is a label, the value is a value.
+    var category by rememberSaveable { mutableStateOf<String?>(null) }
     var query by rememberSaveable { mutableStateOf("") }
     val sounds =
         Library.all.filter {
-            (category == "All" || it.category == category) &&
+            (category == null || it.category == category) &&
                 (it.name.contains(query, true) || it.category.contains(query, true))
         }
     LazyColumn(
@@ -76,18 +78,18 @@ fun SoundLibrary(r: NightfallRuntime) {
         }
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(listOf("All") + Library.all.map { it.category }.distinct()) { c ->
+                items(listOf<String?>(null) + Library.all.map { it.category }.distinct()) { c ->
                     FilterChip(
                         selected = category == c,
                         onClick = { category = c },
-                        label = { Text(c) },
+                        label = { Text(c ?: "All") },
                     )
                 }
             }
         }
         item {
             SectionLabel(
-                if (category == "All") "Explore sounds" else category,
+                category ?: "Explore sounds",
                 "${sounds.count {it.available}} available",
             )
         }
@@ -640,7 +642,7 @@ fun SettingsScreen(
     onCredits: () -> Unit,
 ) {
     val s by selectSaved(r, r.savedNow().settings) { it.settings }
-    val output by selectStatus(r, r.statusNow().output) { it.output }
+    val output by selectStatus(r, OutputRoute()) { it.output }
     val load by selectStatus(r, 0) { (it.load * 100).roundToInt() }
     val underruns by selectStatus(r, 0) { it.underruns }
     val context = LocalContext.current
@@ -722,7 +724,7 @@ fun SettingsScreen(
         item { SectionLabel("On this device") }
         item {
             Text(
-                "Output: $output\nAudio render load: $load% of buffer time\nAudioTrack underruns: $underruns\n48 kHz · stereo · floating-point PCM",
+                "Output: ${outputLabel(output)}\nAudio render load: $load% of buffer time\nAudioTrack underruns: $underruns\n48 kHz · stereo · floating-point PCM",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 22.sp,
