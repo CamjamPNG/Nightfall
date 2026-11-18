@@ -129,6 +129,40 @@ Existing published assets are not silently replaced. Branch protection must
 permit the release bot to push version commits; otherwise the workflow fails
 without overwriting source. PR validation remains read-only and uses no key.
 
+## Minified release builds
+
+Both channels are built with R8 and the resource shrinker (`isMinifyEnabled` and
+`isShrinkResources` on the release build type), so a published APK carries only
+code and resources the app can reach. The dex is a small fraction of the
+download; bundled audio dominates it.
+
+Keep rules live in `app/proguard-rules.pro`, and each one names what it protects
+and why. Most of what a minified build needs comes with the artifacts rather than
+from that file: Android Gradle Plugin generates keeps from `AndroidManifest.xml`
+for the activity, service and receiver the framework instantiates by name, and
+`kotlinx-serialization-core` 1.8.1 ships the rules that keep `@Serializable`
+classes and the `Companion.serializer()` the JSON path resolves through.
+
+R8 renames release classes, so a stack trace from a published APK has to be read
+against the mapping file that build produced:
+
+```sh
+app/build/outputs/mapping/githubRelease/mapping.txt
+app/build/outputs/mapping/fdroidRelease/mapping.txt
+```
+
+Those files are build outputs, not release assets, and are not published. Save
+them beside the tag's build log if a published APK needs to be read later.
+
+What verification covers: the Robolectric playback suite runs on the debug
+variant, which is not minified, so it exercises behaviour and not the effect of
+shrinking. Nothing here executes the minified dex — these machines have no
+`/dev/kvm` and there is no device test — so a class a keep rule fails to protect
+would surface on a device, not on the runner. `tools/check_release.py` does read
+the minified APKs: it asserts the GitHub APK still contains the updater's class
+names and the F-Droid APK contains none of them, which is why those names are
+kept. That is a check on symbols, not on the updater running.
+
 ## Signing setup
 
 A persistent RSA release key has been generated **outside the repository**.

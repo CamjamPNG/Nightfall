@@ -27,8 +27,21 @@ android {
         create("fdroid") { dimension = "channel" }
     }
     buildFeatures { compose = true }
-    // Keep release bytes independent of Git checkout/export state.
-    buildTypes { release { vcsInfo { include = false } } }
+    buildTypes {
+        release {
+            // R8 shrinks and renames the release dex; resource shrinking then drops the resources no
+            // code or manifest entry reaches (bundled audio is in assets, which it leaves alone).
+            // Keep rules and their reasons live in proguard-rules.pro.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            // Keep release bytes independent of Git checkout/export state.
+            vcsInfo { include = false }
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
