@@ -88,7 +88,9 @@ fun NightfallScreen(vm: NightfallViewModel) {
     BackHandler(enabled = tab != 0) { tab = 0 }
     var dialog by rememberSaveable { mutableStateOf<String?>(null) }
     var name by rememberSaveable { mutableStateOf("") }
-    var exportMix by remember { mutableStateOf<Mix?>(null) }
+    // The encoded snapshot, so recreation while the document picker is open still writes the mix the
+    // user asked to export. A missing snapshot is reported rather than replaced with an empty mix.
+    var exportJson by rememberSaveable { mutableStateOf<String?>(null) }
     var editingPreset by remember { mutableStateOf<Mix?>(null) }
     var studioLayer by rememberSaveable { mutableStateOf<String?>(null) }
     val context = LocalContext.current
@@ -101,9 +103,10 @@ fun NightfallScreen(vm: NightfallViewModel) {
             if (uri != null)
                 scope.launch {
                     try {
+                        val json = exportJson ?: error("The mix to export is no longer available")
                         withContext(Dispatchers.IO) {
                             context.contentResolver.openOutputStream(uri)?.use {
-                                it.write(PresetJson.encode(exportMix ?: Mix()).toByteArray())
+                                it.write(json.toByteArray())
                             } ?: error("Cannot open export file")
                         }
                         snackbar.showSnackbar("Mix exported")
@@ -138,7 +141,9 @@ fun NightfallScreen(vm: NightfallViewModel) {
             .collect { error ->
                 if (error != null) {
                     snackbar.showSnackbar(error)
-                    runtime.status.value = runtime.status.value.copy(error = null)
+                    // A newer failure may have replaced this one while the snackbar was up.
+                    if (runtime.status.value.error == error)
+                        runtime.status.value = runtime.status.value.copy(error = null)
                 }
             }
     }
@@ -229,7 +234,7 @@ fun NightfallScreen(vm: NightfallViewModel) {
                                             )
                                         },
                                         onExport = {
-                                            exportMix = it
+                                            exportJson = PresetJson.json.encodeToString(it)
                                             export.launch("${Library.slug(it.name)}.json")
                                         },
                                         onRename = {
@@ -251,7 +256,10 @@ fun NightfallScreen(vm: NightfallViewModel) {
                                     SettingsScreen(
                                         runtime,
                                         onExport = {
-                                            exportMix = runtime.savedNow().current
+                                            exportJson =
+                                                PresetJson.json.encodeToString(
+                                                    runtime.savedNow().current
+                                                )
                                             export.launch("nightfall-mix.json")
                                         },
                                         onCredits = { dialog = "credits" },
@@ -322,8 +330,10 @@ fun NightfallScreen(vm: NightfallViewModel) {
                         }
                     },
                     confirmButton = {
+                        val playing by
+                            selectStatus(runtime, runtime.statusNow().playing) { it.playing }
                         TextButton(
-                            enabled = runtime.statusNow().playing,
+                            enabled = playing,
                             onClick = {
                                 runtime.timer.start(
                                     android.os.SystemClock.elapsedRealtime(),
