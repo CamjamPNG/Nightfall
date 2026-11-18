@@ -1,0 +1,59 @@
+{
+  "subject": "F-Droid recipe validation and release-build reproduction",
+  "date": "2026-11-18",
+  "commit": "43fbb9c07d0baf33a5aaf22ecb2dd731be3371ce",
+  "tag": "v1.0.1.2",
+  "versionName": "1.0.1.2",
+  "versionCode": 4,
+  "toolchain": "Ubuntu OpenJDK 21.0.13.0.3, Gradle 8.11.1 (wrapper), Android SDK 35, Build Tools 35.0.0, AGP 8.9.2",
+  "recipeChecks": {
+    "fdroidserver": "2.4.5",
+    "readmeta": "pass",
+    "rewritemeta": "no changes (recipe already in canonical form)",
+    "lint": "pass, no findings",
+    "scanner": "wrapper removals only (gradlew, gradlew.bat, gradle-wrapper.jar) at v1.0, v1.0.1, v1.0.1.1, v1.0.1.2; no warnings, no errors",
+    "checkupdates": "from CurrentVersion 1.0.1.1 / CurrentVersionCode 3 it updated to 1.0.1.2 (4), reading versionCode from app/build.gradle.kts at the tags"
+  },
+  "releaseBuilds": {
+    "command": "./gradlew --no-daemon :app:assembleRelease (twice on machine A), then assembleRelease from app/ (machine A, the subdir fdroidserver uses), then twice on machine B with build outputs deleted between runs",
+    "sha256": "e2c1d44469b984ef8ae7ec29325f136e8b6422fbc7b0b7e8de964235e55ed431",
+    "bytes": 91167049,
+    "builds": 5,
+    "machines": 2,
+    "identical": true,
+    "comparedWith": "sha256sum and cmp (byte-identical files)",
+    "wallClockSeconds": [
+      158,
+      52,
+      53,
+      217,
+      86
+    ]
+  },
+  "projectChecks": {
+    "tools/check_release.py": "pass on the rebuilt unsigned APK",
+    "tools/tests": "10 tests pass"
+  },
+  "publishedComparison": {
+    "asset": "Nightfall-1.0.1.2-universal.apk",
+    "sha256": "e17b315213b61e8cf977569c8743450dcbb2f455ff1384462be3acb4b6d2e180",
+    "bytes": 91195916,
+    "entries": 270,
+    "entriesIdenticalByCrcSizeAndCompression": 270,
+    "extraEntriesInPublished": [
+      "META-INF/MANIFEST.MF",
+      "META-INF/NIGHTFAL.RSA",
+      "META-INF/NIGHTFAL.SF"
+    ],
+    "entriesWithDifferentCompressedSize": 16,
+    "explanation": "tools/package_release.py re-zips the APK before aligning and signing it, so Python zlib re-deflates 16 entries. Replaying that filter plus zipalign -P 16 reproduced the published compressed size and CRC for all 270 entries.",
+    "apksigcopier": "1.1.1 with apksigner 0.9: DOES NOT VERIFY (APK Signature Scheme v3, CHUNKED_SHA256 digest mismatch), because the chunked digest covers the recompressed entries. Upstream-signature reproduction is therefore not claimed; the recipe sets no Binaries and no AllowedAPKSigningKeys."
+  },
+  "secondMachine": {
+    "attempted": true,
+    "result": "verified",
+    "detail": "A second cloud machine installed the Android SDK from Google's commandlinetools archive during the run and built the same tag twice; both builds match the reference hash and size exactly, and cmp reports the files byte-identical.",
+    "sharedInputs": "Repository contents, the Gradle wrapper and its pinned checksum, and public Maven artifacts; the SDK was downloaded independently on each machine.",
+    "unverified": "F-Droid's buildserver: it uses Debian-packaged JDK and build tools and replaces the Gradle wrapper, and no F-Droid build has been compared to these bytes. Nothing was exercised on hardware."
+  }
+}
