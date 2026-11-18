@@ -20,12 +20,14 @@ Never commit private signing material or generate a new signing key per update.
 The pinned public certificate identifies the GitHub update channel. Automatic
 signed publishing requires the existing key in repository Actions secrets;
 report missing access honestly. Changes are published by GitHub Actions after
-pushes. Two channels are built from one source. The `github` channel checks the
-release manifest automatically at most once every six hours, a check the user
-starts is rate-limited to one every fifteen minutes, and a failed attempt never
-spends the six-hour window; it may download the APK for this device and install it
-through `PackageInstaller` on its own, which is on by default in the `github`
-channel and can be turned off, and it always waits for playback to stop before it
-installs so an update never silences a night's audio. The `fdroid` channel carries
-no updater, no network code and no network permission at all. Both stay fully
-usable with no connection.
+pushes. Two channels are built from one source. Two pacing rules govern the
+`github` channel's requests: every one, including a check the user starts,
+waits at least fifteen minutes since the previous attempt, which is recorded
+before the request so a failure counts too, and the app's own check
+additionally waits six hours since the last successful answer, so a failed
+attempt never spends that window. It may download the APK for this device and
+install it through `PackageInstaller` on its own, which is on by default in
+the `github` channel and can be turned off, and it always waits for playback
+to stop before it installs so an update never silences a night's audio. The
+`fdroid` channel carries no updater, no network code and no network permission
+at all. Both stay fully usable with no connection.
