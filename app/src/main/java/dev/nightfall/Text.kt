@@ -25,3 +25,20 @@ internal fun elapsedLabel(milliseconds: Long): String {
 @Suppress("DEPRECATION")
 internal fun installedVersion(context: Context): String =
     context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: ""
+
+/** The route as Settings shows it, device name included. */
+internal fun outputLabel(route: OutputRoute): String =
+    when (route.kind) {
+        OutputRoute.Kind.BLUETOOTH ->
+            if (route.deviceName.isEmpty()) "Bluetooth" else "Bluetooth · ${route.deviceName}"
+        OutputRoute.Kind.WIRED -> "Wired headphones"
+        OutputRoute.Kind.SPEAKER -> "Built-in speaker"
+        OutputRoute.Kind.DEVICE -> route.deviceName.ifEmpty { SYSTEM_OUTPUT }
+        OutputRoute.Kind.SYSTEM -> SYSTEM_OUTPUT
+    }
+
+/** The route as the now-playing card has room for: the transport, not which earbuds. */
+internal fun outputShortLabel(route: OutputRoute): String =
+    if (route.kind == OutputRoute.Kind.BLUETOOTH) "Bluetooth" else outputLabel(route)
+
+private const val SYSTEM_OUTPUT = "System audio output"

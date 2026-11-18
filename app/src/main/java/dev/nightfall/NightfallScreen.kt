@@ -518,7 +518,7 @@ private fun NowPlayingCard(
     onTimer: () -> Unit,
 ) {
     val playing by selectStatus(r, false) { it.playing }
-    val output by selectStatus(r, "System audio output") { it.output }
+    val output by selectStatus(r, OutputRoute()) { it.output }
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(20.dp),
@@ -559,7 +559,7 @@ private fun NowPlayingCard(
                 ActiveLayerLabel(r)
                 Spacer(Modifier.width(12.dp))
                 Icon(
-                    if (output.startsWith("Bluetooth")) Icons.Outlined.BluetoothAudio
+                    if (output.kind == OutputRoute.Kind.BLUETOOTH) Icons.Outlined.BluetoothAudio
                     else Icons.Outlined.Headphones,
                     null,
                     Modifier.size(13.dp),
@@ -567,7 +567,7 @@ private fun NowPlayingCard(
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    output.substringBefore(" · "),
+                    outputShortLabel(output),
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

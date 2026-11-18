@@ -26,9 +26,26 @@ class NightfallApp : Application() {
     }
 }
 
+/**
+ * How audio is leaving the device. Typed, so the card's icon and the Settings line never depend on
+ * the wording of a label: the previous string forced a `startsWith("Bluetooth")` test for the icon
+ * and a `substringBefore(" · ")` for the short form, recovering facts this class now holds.
+ */
+data class OutputRoute(val kind: Kind = Kind.SYSTEM, val deviceName: String = "") {
+    enum class Kind {
+        /** No device reported, or one with no name. */
+        SYSTEM,
+        /** A named device of a type this app does not recognise: its name is the whole label. */
+        DEVICE,
+        BLUETOOTH,
+        WIRED,
+        SPEAKER,
+    }
+}
+
 data class PlaybackStatus(
     val playing: Boolean = false,
-    val output: String = "System audio output",
+    val output: OutputRoute = OutputRoute(),
     val remainingMs: Long = 0,
     val timerActive: Boolean = false,
     val timerPaused: Boolean = false,
