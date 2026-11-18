@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5 — 2026-11-18
+
+- feat(release): publish the F-Droid flavour APK beside the update options (#13)
+
 ## 1.4 — 2026-11-18
 
 - sounds: level-match the catalogue and presets, distinguish names, fill preset gaps (#11)

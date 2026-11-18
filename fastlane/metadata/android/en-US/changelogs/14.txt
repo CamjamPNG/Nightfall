@@ -1,0 +1,1 @@
+- feat(release): publish the F-Droid flavour APK beside the update options (#13)
