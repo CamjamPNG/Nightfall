@@ -3,8 +3,9 @@
 """Pack ffmpeg's Opus output into the NFOP container the app reads.
 
 `NFOP`: magic, version, channel count, sample rate (u16), total samples (u32), packet count (u32),
-table length in bytes (u32), then one `(start sample, byte length)` pair of u32 per packet, then the
-Opus packets back to back. Sample counts are in the file's own rate, which is 24 kHz, so the mixer
+table length in bytes (u32), codec configuration length (u32), then the codec configuration (the Opus
+identification header, which `MediaFormat` wants as `csd-0`), then one `(start sample, byte length)`
+pair of u32 per packet, then the Opus packets back to back. Sample counts are in the file's own rate, which is 24 kHz, so the mixer
 does not have to resample or guess. Opus itself decodes packets at 48 kHz; `OpusPackets.outputRate`
 carries that, and a cursor averages the pairs back down to the container's rate.
 
@@ -60,6 +61,7 @@ def ogg_packets(path: pathlib.Path):
 
 
 def encode(pcm: pathlib.Path, target: pathlib.Path) -> dict:
+    head = b""
     with tempfile.TemporaryDirectory() as work:
         ogg = pathlib.Path(work) / "encoded.ogg"
         subprocess.run(
@@ -68,7 +70,8 @@ def encode(pcm: pathlib.Path, target: pathlib.Path) -> dict:
              "-ar", str(RATE), "-ac", "1", "-application", "audio", str(ogg)],
             check=True,
         )
-        packets = list(ogg_packets(ogg))[2:]  # drop OpusHead and OpusTags
+        stream = list(ogg_packets(ogg))
+        head, packets = stream[0], stream[2:]  # OpusHead is the decoder's configuration
     starts, lengths, offset = [], [], 0
     for packet in packets:
         starts.append(offset)
@@ -76,10 +79,11 @@ def encode(pcm: pathlib.Path, target: pathlib.Path) -> dict:
         offset += packet_samples(packet)
     total = offset
     table = b"".join(struct.pack("<II", s, n) for s, n in zip(starts, lengths))
-    header = struct.pack("<IBBHIII", 0x50464F4E, 1, 1, RATE, total, len(packets), len(table))
+    header = struct.pack("<IBBHIIII", 0x50464F4E, 1, 1, RATE, total, len(packets), len(table), len(head))
     target.parent.mkdir(parents=True, exist_ok=True)
     with target.open("wb") as out:
         out.write(header)
+        out.write(head)
         out.write(table)
         for packet in packets:
             out.write(packet)
@@ -88,29 +92,42 @@ def encode(pcm: pathlib.Path, target: pathlib.Path) -> dict:
     return {"packets": len(packets), "samples": total, "seconds": seconds, "bytes": target.stat().st_size}
 
 
-def read(path: pathlib.Path) -> dict:
-    data = path.read_bytes()
-    magic, version, channels, rate, total, count, table_bytes = struct.unpack("<IBBHIII", data[:20])
+def parse(data: bytes) -> dict:
+    magic, version, channels, rate, total, count, table_bytes, head_bytes = struct.unpack(
+        "<IBBHIIII", data[:24]
+    )
     assert magic == 0x50464F4E, "not an NFOP file"
     assert version == 1 and channels == 1 and rate == RATE, "unexpected NFOP header"
-    packets, offset = [], 20 + table_bytes
+    head = data[24:24 + head_bytes]
+    assert head.startswith(b"OpusHead"), "NFOP has no Opus identification header"
+    packets, offset = [], 24 + head_bytes + table_bytes
     for i in range(count):
-        start, length = struct.unpack("<II", data[20 + i * 8: 28 + i * 8])
+        start, length = struct.unpack(
+            "<II", data[24 + head_bytes + i * 8: 32 + head_bytes + i * 8]
+        )
         packets.append((start, data[offset:offset + length]))
         offset += length
     assert offset == len(data), "NFOP length disagrees with its table"
-    return {"total": total, "packets": packets}
+    return {"total": total, "packets": packets, "head": head}
 
 
-def verify(path: pathlib.Path) -> dict:
-    parsed = read(path)
+def read(path: pathlib.Path) -> dict:
+    return parse(path.read_bytes())
+
+
+def verify_bytes(data: bytes) -> dict:
+    parsed = parse(data)
     position = 0
     for start, packet in parsed["packets"]:
         assert start == position, f"packet at sample {start} but {position} was expected"
         position += packet_samples(packet)
     assert position == parsed["total"], "samples in packets disagree with the header"
     assert position >= MIN_SECONDS * RATE, "NFOP file is shorter than three minutes"
-    return {"seconds": position / RATE, "packets": len(parsed["packets"])}
+    return {"seconds": position / RATE, "packets": len(parsed["packets"]), "head": parsed["head"]}
+
+
+def verify(path: pathlib.Path) -> dict:
+    return verify_bytes(path.read_bytes())
 
 
 def main() -> int:

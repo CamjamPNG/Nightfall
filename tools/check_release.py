@@ -113,6 +113,13 @@ for a in assets:
                 with z.open(entry) as f:
                     while chunk:=f.read(1024*1024):h.update(chunk)
                 require(h.hexdigest()==a['sha256'],'APK recording mismatch: '+a['id'])
+            else:
+                # Validate the container that is actually in the APK, not the one in the checkout:
+                # a stale or truncated entry must fail here rather than at playback.
+                payload=z.read(pack)
+                seconds=nfop.verify_bytes(payload)['seconds']
+                require(seconds-1>=180,'APK encoded recording repeats before three minutes: '+a['id'])
+                require(hashlib.sha256(payload).hexdigest()==digest(encoded),'APK encoded recording differs from its source: '+a['id'])
 require('not a license condition' in (ROOT/'COMMERCIAL_COURTESY.md').read_text(),'Commercial request must remain voluntary')
 if args.fdroid_apk:
     violation=fdroid_violation(args.fdroid_apk)

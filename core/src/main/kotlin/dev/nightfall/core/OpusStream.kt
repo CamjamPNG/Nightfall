@@ -14,8 +14,9 @@ import kotlin.math.min
  * it to `MediaCodec`, a host test binds it to a fake.
  *
  * Container: `NFOP` magic, version 1, one byte of channel count, then the sample rate, the total sample
- * count at that rate, the packet count, a packet table of `(start sample, byte length)` pairs, and the
- * packets themselves. Every sample count in the header and table is in the file's own rate, which is
+ * count at that rate, the packet count, the table length, the codec configuration length, the Opus
+ * identification header the decoder needs as `csd-0`, a packet table of `(start sample, byte length)`
+ * pairs, and the packets themselves. Every sample count in the header and table is in the file's own rate, which is
  * the rate [RecordingSource] expects (24 kHz).
  */
 class OpusFile private constructor(
@@ -25,6 +26,8 @@ class OpusFile private constructor(
     private val packetLengths: IntArray,
     val sampleRate: Int,
     val totalSamples: Int,
+    /** The Opus identification header, which a decoder wants as codec-specific data before any packet. */
+    val codecConfig: ByteArray,
 ) {
     val packetCount = packetStarts.size
 
@@ -54,7 +57,7 @@ class OpusFile private constructor(
     companion object {
         private const val MAGIC = 0x50464F4E // "NFOP" little-endian
         private const val VERSION = 1
-        private const val HEADER = 20
+        private const val HEADER = 24
         const val MIN_SAMPLES = 180 * 24000
 
         fun parse(bytes: ByteArray): OpusFile {
@@ -66,21 +69,27 @@ class OpusFile private constructor(
             val totalSamples = readInt(bytes, 8)
             val packetCount = readInt(bytes, 12)
             val tableBytes = readInt(bytes, 16)
+            val configBytes = readInt(bytes, 20)
             require(packetCount > 0 && sampleRate > 0) { "empty NFOP file" }
-            require(HEADER + tableBytes <= bytes.size) { "truncated NFOP table" }
+            require(HEADER + configBytes + tableBytes <= bytes.size) { "truncated NFOP header" }
+            val config = bytes.copyOfRange(HEADER, HEADER + configBytes)
+            require(config.size >= 8 && String(config, 0, 8, Charsets.US_ASCII) == "OpusHead") {
+                "NFOP has no Opus identification header"
+            }
+            val table = HEADER + configBytes
             val starts = IntArray(packetCount)
             val offsets = IntArray(packetCount)
             val lengths = IntArray(packetCount)
-            var offset = HEADER + tableBytes
+            var offset = table + tableBytes
             for (i in 0 until packetCount) {
-                starts[i] = readInt(bytes, HEADER + i * 8)
-                lengths[i] = readInt(bytes, HEADER + i * 8 + 4)
+                starts[i] = readInt(bytes, table + i * 8)
+                lengths[i] = readInt(bytes, table + i * 8 + 4)
                 offsets[i] = offset
                 offset += lengths[i]
             }
             require(offset <= bytes.size) { "truncated NFOP packets" }
             require(totalSamples >= MIN_SAMPLES) { "NFOP file is only $totalSamples samples" }
-            return OpusFile(bytes, starts, offsets, lengths, sampleRate, totalSamples)
+            return OpusFile(bytes, starts, offsets, lengths, sampleRate, totalSamples, config)
         }
 
         private fun readInt(b: ByteArray, at: Int): Int =
@@ -104,16 +113,22 @@ interface OpusPackets {
 /**
  * One recording decoded on demand, handing out an independent forward cursor per read head.
  *
- * [RecordingSource] reads two heads at unrelated offsets, so one sequential decode cannot serve it:
- * each cursor owns a decoder and a ring buffer covering [seconds] of audio, decodes ahead of its head
- * on a worker thread, and restarts its decoder at the packet holding the head when the head wraps. The
- * audio thread only waits when its ring has run dry, which is at most one packet after a wrap; it is
- * never handed a buffer it has to allocate.
+ * [RecordingSource] reads two heads at unrelated offsets and each head also reads the file's first
+ * second for its wrap crossfade, so it takes four cursors. Each owns a decoder and a ring buffer of
+ * [seconds] of audio, decodes ahead of its head on a worker thread, and restarts its decoder at the
+ * packet holding the head when the head wraps. A cursor that nobody reads for [idleMillis] releases its
+ * decoder, its ring and its thread, so a removed layer cannot leave codecs behind; [close] does it at
+ * once. Nothing here allocates on the audio thread's behalf beyond the ring a parked cursor restores.
+ *
+ * [onUnavailable] is called from the worker the moment a decoder cannot be created or a packet decodes
+ * to nothing, so the host can report it immediately rather than at the next mix change.
  */
 class OpusRecording(
     private val file: OpusFile,
-    private val decoder: () -> OpusPackets?,
+    private val decoder: (ByteArray) -> OpusPackets?,
     private val seconds: Double = 4.0,
+    private val idleMillis: Long = 30_000,
+    private val onUnavailable: ((String) -> Unit)? = null,
 ) : DecodedSampleData {
     private val cursors = ArrayList<OpusCursor>()
 
@@ -121,7 +136,7 @@ class OpusRecording(
 
     override val size = file.totalSamples
 
-    /** Samples the decoder could not deliver in time, summed over cursors. Reported, never hidden. */
+    /** Reads that ran dry, summed over cursors. Counted, never hidden. */
     val stalls: Int
         get() {
             var total = 0
@@ -132,45 +147,56 @@ class OpusRecording(
     override fun get(index: Int): Float = cursor()[index]
 
     override fun cursor(seconds: Double): SampleData {
-        val cursor = OpusCursor(file, decoder, if (seconds > 0) seconds else this.seconds, this)
+        val cursor = OpusCursor(file, decoder, if (seconds > 0) seconds else this.seconds, this, idleMillis)
         synchronized(cursors) { cursors += cursor }
         unavailable?.let { cursor.fail(it) }
         return cursor
     }
 
+    internal fun report(reason: String) {
+        if (unavailable == null) unavailable = reason
+        onUnavailable?.invoke(reason)
+    }
+
     fun close() {
-        synchronized(cursors) { cursors.forEach { it.close() } }
+        val open = synchronized(cursors) { cursors.toList() }
+        open.forEach { it.close() }
+        synchronized(cursors) { cursors.clear() }
     }
 }
 
 /** One read head's view of an [OpusRecording]: random reads, one decoder, one ring. */
 class OpusCursor(
     private val file: OpusFile,
-    private val factory: () -> OpusPackets?,
+    private val factory: (ByteArray) -> OpusPackets?,
     seconds: Double,
     private val owner: OpusRecording?,
+    private val idleMillis: Long,
 ) : SampleData {
     override val size = file.totalSamples
 
-    private val ring = FloatArray(max(1, (seconds * file.sampleRate).toInt()))
+    private val window = max(1, (seconds * file.sampleRate).toInt())
     private val packet = ByteArray(max(1, file.longestPacket))
     private val decoded = FloatArray(5760)
     private val lock = Object()
+    private var ring: FloatArray? = null
     private var decoder: OpusPackets? = null
     private var start = 0
     private var next = 0
     private var nextPacket = 0
     private var restart = -1
+    private var seeking = -1
     private var running = true
+    private var lastRead = System.currentTimeMillis()
+    private var started = false
+    private var parked = false
 
-    @Volatile
-    var stalls = 0
+    @Volatile var stalls = 0
         private set
 
     @Volatile private var failure: String? = null
 
     private val worker = Thread({ loop() }, "Nightfall opus").apply { isDaemon = true }
-    private var started = false
 
     @Synchronized private fun begin() {
         if (started) return
@@ -179,27 +205,36 @@ class OpusCursor(
     }
 
     fun fail(reason: String) {
+        if (failure != null) return
         synchronized(lock) {
             failure = reason
-            owner?.let { if (it.unavailable == null) it.unavailable = reason }
             lock.notifyAll()
         }
+        owner?.report(reason)
     }
 
     override fun get(index: Int): Float {
         begin()
         val target = index.coerceIn(0, size - 1)
         synchronized(lock) {
-            val deadline = System.nanoTime() + 500_000_000L
-            while (true) {
-                failure?.let { return 0f }
-                if (target >= next - ring.size && target < next) {
-                    start = max(start, target - ring.size / 2)
-                    return ring[target % ring.size]
+            lastRead = System.currentTimeMillis()
+            val buffer =
+                ring ?: FloatArray(window).also {
+                    ring = it
+                    parked = false
+                    lock.notifyAll()
                 }
-                // A miss — the head wrapped backwards, or it is further ahead than the ring reaches —
-                // restarts the decoder at the packet holding it, which is a table lookup.
-                if (restart != target) {
+            val deadline = System.nanoTime() + WAIT_NANOS
+            while (true) {
+                if (failure != null) return 0f
+                if (target >= next - buffer.size && target < next) {
+                    start = max(start, target - buffer.size / 2)
+                    return buffer[target % buffer.size]
+                }
+                // A miss restarts the decoder at the packet holding the head — a table lookup — unless
+                // that exact restart is already in flight, which keeps a waiting read from queueing the
+                // same seek again while a slow decoder is being built.
+                if (restart != target && seeking != target) {
                     restart = target
                     start = target
                 }
@@ -219,25 +254,58 @@ class OpusCursor(
             lock.notifyAll()
         }
         worker.join(500)
+        synchronized(lock) {
+            decoder?.close()
+            decoder = null
+            ring = null
+        }
+    }
+
+    private fun full() = next - start >= (ring?.size ?: 1)
+
+    private fun idle() = System.currentTimeMillis() - lastRead >= idleMillis
+
+    /** Releases everything a parked cursor can give back; the next read rebuilds it. */
+    private fun park() {
         decoder?.close()
         decoder = null
+        ring = null
+        parked = true
+        start = 0
+        next = 0
+        nextPacket = 0
+        lock.notifyAll()
+    }
+
+    private fun open(): OpusPackets? {
+        synchronized(lock) {
+            decoder?.let { return it }
+            if (parked) return null
+        }
+        val fresh = factory(file.codecConfig)
+        if (fresh == null) {
+            fail("this device has no Opus decoder")
+            return null
+        }
+        synchronized(lock) {
+            decoder = fresh
+            return fresh
+        }
     }
 
     private fun loop() {
-        val first = factory()
-        if (first == null) {
-            fail("this device has no Opus decoder")
-            return
-        }
-        synchronized(lock) { decoder = first }
+        if (open() == null) return
         while (true) {
             var seek = -1
             synchronized(lock) {
-                while (running && restart < 0 && next - start >= ring.size) lock.wait(50)
+                while (running && restart < 0 && (parked || full())) {
+                    if (!parked && idle() && full()) park() else lock.wait(20)
+                }
                 if (!running) return
                 if (restart >= 0) {
                     seek = restart
                     restart = -1
+                    seeking = seek
                 }
             }
             if (seek >= 0) reseek(seek) else step()
@@ -245,7 +313,7 @@ class OpusCursor(
     }
 
     private fun reseek(target: Int) {
-        val fresh = factory()
+        val fresh = factory(file.codecConfig)
         if (fresh == null) {
             fail("this device has no Opus decoder")
             return
@@ -256,14 +324,16 @@ class OpusCursor(
             nextPacket = file.packetAt(target)
             next = file.packetStart(nextPacket)
             start = target
+            seeking = -1
+            lastRead = System.currentTimeMillis()
             lock.notifyAll()
         }
     }
 
     private fun step() {
-        var index = 0
-        var length = 0
-        var source: OpusPackets? = null
+        val source = open() ?: return
+        var index: Int
+        var length: Int
         synchronized(lock) {
             if (nextPacket >= file.packetCount) {
                 next = size
@@ -272,9 +342,7 @@ class OpusCursor(
             }
             index = nextPacket
             length = file.packet(index, packet)
-            source = decoder
         }
-        if (source == null) return
         val produced = source.decode(packet, length, decoded)
         if (produced <= 0) {
             fail("an Opus packet decoded to nothing")
@@ -283,6 +351,12 @@ class OpusCursor(
         val step = source.outputRate / file.sampleRate
         val out = if (step <= 1) produced else produced / step
         synchronized(lock) {
+            val buffer =
+                ring ?: FloatArray(window).also {
+                    ring = it
+                    parked = false
+                    lock.notifyAll()
+                }
             for (i in 0 until out) {
                 var value = decoded[i * step]
                 if (step > 1) {
@@ -290,11 +364,15 @@ class OpusCursor(
                     for (j in 0 until step) sum += decoded[i * step + j]
                     value = sum / step
                 }
-                if (next < size) ring[next % ring.size] = value
+                if (next < size) buffer[next % buffer.size] = value
                 next++
             }
             nextPacket = index + 1
             lock.notifyAll()
         }
+    }
+
+    private companion object {
+        const val WAIT_NANOS = 500_000_000L
     }
 }

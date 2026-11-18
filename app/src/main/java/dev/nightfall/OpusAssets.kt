@@ -17,7 +17,7 @@ import java.nio.ByteOrder
  * `core` where a host test covers them; nothing here is exercised by a unit test, because only a
  * device has `MediaCodec`.
  */
-private class MediaCodecOpus : OpusPackets {
+private class MediaCodecOpus(private val config: ByteArray) : OpusPackets {
     override var outputRate = 48000
         private set
 
@@ -30,6 +30,10 @@ private class MediaCodecOpus : OpusPackets {
         val format =
             MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_OPUS, SOURCE_RATE, 1).apply {
                 setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 1500)
+                // The Opus identification header is the codec-specific data the platform decoder
+                // requires before it will accept a packet; without it configuration or input is
+                // rejected, which sounds exactly like silence.
+                setByteBuffer("csd-0", ByteBuffer.wrap(config))
             }
         codec.configure(format, null, null, 0)
         codec.start()
@@ -102,13 +106,21 @@ object OpusAssets {
      * Opus decoder still gets a recording object: its cursor reports why it cannot sound, so the app
      * can say the layer is unavailable instead of playing silence.
      */
-    fun open(context: Context, asset: String): SampleData? {
+    fun open(
+        context: Context,
+        asset: String,
+        onUnavailable: (String) -> Unit = {},
+    ): SampleData? {
         val bytes =
             runCatching { context.assets.open("audio/$asset.nfop").use { it.readBytes() } }
                 .getOrNull() ?: return null
         val file = runCatching { OpusFile.parse(bytes) }.getOrNull() ?: return null
         val recording =
-            OpusRecording(file, { runCatching { MediaCodecOpus() as OpusPackets }.getOrNull() })
+            OpusRecording(
+                file,
+                { config -> runCatching { MediaCodecOpus(config) as OpusPackets }.getOrNull() },
+                onUnavailable = onUnavailable,
+            )
         return recording
     }
 }

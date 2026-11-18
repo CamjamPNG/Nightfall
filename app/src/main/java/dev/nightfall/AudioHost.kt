@@ -264,6 +264,7 @@ class AudioHost(private val runtime: NightfallRuntime) {
                             mixer.settings = snapshot.settings
                             val now = SystemClock.elapsedRealtime()
                             mixer.render(pcm, frames, runtime.timer.gain(now) * focusGain)
+                            if (blocks % 8 == 0) reportDecodeFailure(cache.values)
                             val time = (System.nanoTime() - start) / 1e9f
                             average =
                                 .98f * average + .02f * (time / (frames.toFloat() / sampleRate))
@@ -322,7 +323,8 @@ class AudioHost(private val runtime: NightfallRuntime) {
      * never both.
      */
     private fun loadRecording(asset: String): SampleData? =
-        if (BuildConfig.OPUS_ASSETS) OpusAssets.open(context, asset)
+        if (BuildConfig.OPUS_ASSETS)
+            OpusAssets.open(context, asset) { reason -> reportDecodeFailure(reason) }
         else
             context.assets.openFd("audio/$asset.pcm").use { fd ->
                 fd.createInputStream().use { input ->
@@ -340,13 +342,18 @@ class AudioHost(private val runtime: NightfallRuntime) {
      * A recording this device cannot decode must be reported: a layer that contributes silence without
      * saying so is the worst failure a mixer can have.
      */
+    private fun reportDecodeFailure(reason: String) {
+        val message = "A bundled recording cannot be decoded on this device ($reason)."
+        if (runtime.status.value.error != message)
+            runtime.status.value = runtime.status.value.copy(error = message)
+    }
+
+    /** A decoder that fails after the mix was built still has to reach the user. */
     private fun reportDecodeFailure(recordings: Collection<SampleData>) {
         val reason =
             recordings.filterIsInstance<DecodedSampleData>().firstNotNullOfOrNull { it.unavailable }
                 ?: return
-        val message = "A bundled recording cannot be decoded on this device ($reason)."
-        if (runtime.status.value.error != message)
-            runtime.status.value = runtime.status.value.copy(error = message)
+        reportDecodeFailure(reason)
     }
 
     fun release() {

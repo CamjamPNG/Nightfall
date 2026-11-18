@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package dev.nightfall.core
 
+import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -14,7 +15,8 @@ class OpusStreamTest {
     /** A container whose packet `i` decodes to 480 samples of `i * 480 + j`, so a read is checkable. */
     private fun container(packets: Int = 9000): OpusFile {
         val table = packets * 8
-        val bytes = ByteArray(20 + table + packets * 4)
+        val head = "OpusHead".toByteArray(Charsets.US_ASCII) + ByteArray(3)
+        val bytes = ByteArray(24 + head.size + table + packets * 4)
         fun put(at: Int, value: Int) {
             bytes[at] = value.toByte()
             bytes[at + 1] = (value shr 8).toByte()
@@ -29,10 +31,12 @@ class OpusStreamTest {
         put(8, packets * packetSamples)
         put(12, packets)
         put(16, table)
+        put(20, head.size)
+        head.copyInto(bytes, 24)
         for (i in 0 until packets) {
-            put(20 + i * 8, i * packetSamples)
-            put(20 + i * 8 + 4, 4)
-            put(20 + table + i * 4, i)
+            put(24 + head.size + i * 8, i * packetSamples)
+            put(24 + head.size + i * 8 + 4, 4)
+            put(24 + head.size + table + i * 4, i)
         }
         return OpusFile.parse(bytes)
     }
@@ -40,6 +44,10 @@ class OpusStreamTest {
     /** Packet `i` carries its own index in four bytes, so a restarted decoder still knows where it is. */
     private class Fake : OpusPackets {
         override val outputRate = 24000
+
+        init {
+            open.addAndGet(1)
+        }
 
         override fun decode(packet: ByteArray, length: Int, out: FloatArray): Int {
             val index =
@@ -50,7 +58,27 @@ class OpusStreamTest {
             for (j in 0 until 480) out[j] = index * 480f + j
             return 480
         }
+
+        override fun close() {
+            open.addAndGet(-1)
+        }
+
+        companion object {
+            val open = AtomicInteger()
+        }
     }
+
+    /** A decoder factory that refuses a configuration without the Opus identification header. */
+    private fun decoder(config: ByteArray): OpusPackets? {
+        val magic = String(config, 0, minOf(8, config.size), Charsets.US_ASCII)
+        if (magic != "OpusHead") {
+            refused.addAndGet(1)
+            return null
+        }
+        return Fake()
+    }
+
+    private val refused = AtomicInteger()
 
     @Test
     fun containerReportsItsOwnLengthAndPacketTable() {
@@ -75,7 +103,7 @@ class OpusStreamTest {
     @Test
     fun readsReturnTheDecodedSampleForThatPosition() {
         val file = container()
-        val recording = OpusRecording(file, { Fake() })
+        val recording = OpusRecording(file, ::decoder)
         val cursor = recording.cursor()
         for (index in listOf(0, 1, 479, 480, 5000, 100_000)) {
             assertEquals("sample $index", index.toFloat(), cursor[index], 0.001f)
@@ -86,7 +114,7 @@ class OpusStreamTest {
     @Test
     fun aWrapRestartsTheDecoderAtTheHeldPacket() {
         val file = container()
-        val recording = OpusRecording(file, { Fake() })
+        val recording = OpusRecording(file, ::decoder)
         val cursor = recording.cursor()
         assertEquals(0f, cursor[0], 0.001f)
         assertEquals(480f, cursor[480], 0.001f)
@@ -101,7 +129,7 @@ class OpusStreamTest {
     @Test
     fun twoCursorsReadIndependently() {
         val file = container()
-        val recording = OpusRecording(file, { Fake() })
+        val recording = OpusRecording(file, ::decoder)
         val a = recording.cursor()
         val b = recording.cursor()
         assertEquals(1000f, a[1000], 0.001f)
@@ -134,7 +162,7 @@ class OpusStreamTest {
         val runtime = Runtime.getRuntime()
         System.gc()
         val before = runtime.totalMemory() - runtime.freeMemory()
-        val recordings = List(2) { OpusRecording(file, { Fake() }) }
+        val recordings = List(2) { OpusRecording(file, ::decoder) }
         val cursors =
             recordings.flatMap {
                 listOf(it.cursor(4.0), it.cursor(4.0), it.cursor(1.0), it.cursor(1.0))
@@ -148,8 +176,47 @@ class OpusStreamTest {
     }
 
     @Test
+    fun aDecoderIsOnlyAskedToStartWithTheIdentificationHeader() {
+        val refusedBefore = refused.get()
+        val file = container()
+        val recording = OpusRecording(file, ::decoder)
+        assertEquals(0f, recording.cursor()[0], 0.001f)
+        assertEquals("the container must hand the decoder its identification header", refusedBefore, refused.get())
+        assertTrue(file.codecConfig.size >= 8)
+        recording.close()
+    }
+
+    @Test
+    fun closingAReleasesEveryDecoderItOpened() {
+        val file = container()
+        val before = Fake.open.get()
+        val recording = OpusRecording(file, ::decoder)
+        val cursors =
+            listOf(recording.cursor(4.0), recording.cursor(4.0), recording.cursor(1.0), recording.cursor(1.0))
+        cursors.forEach { it[0] }
+        assertTrue("cursors opened decoders", Fake.open.get() > before)
+        recording.close()
+        Thread.sleep(200)
+        assertEquals("every decoder is released", before, Fake.open.get())
+    }
+
+    @Test
+    fun anIdleCursorReleasesItsDecoderAndRing() {
+        val file = container()
+        val before = Fake.open.get()
+        val recording = OpusRecording(file, ::decoder, idleMillis = 50)
+        val cursor = recording.cursor(4.0)
+        assertEquals(0f, cursor[0], 0.001f)
+        assertTrue(Fake.open.get() > before)
+        Thread.sleep(400)
+        assertEquals("an idle cursor parks its decoder", before, Fake.open.get())
+        assertEquals("and wakes up again on the next read", 0f, cursor[0], 0.001f)
+        recording.close()
+    }
+
+    @Test
     fun anUndecodableRecordingSaysSoInsteadOfSounding() {
-        val recording = OpusRecording(container(), { null })
+        val recording = OpusRecording(container(), { _ -> null })
         val cursor = recording.cursor()
         assertEquals(0f, cursor[0], 0.0f)
         assertNotNull(recording.unavailable)
@@ -159,7 +226,7 @@ class OpusStreamTest {
     @Test
     fun aRecordingHoldsABoundedAmountOfMemory() {
         val file = container()
-        val recording = OpusRecording(file, { Fake() }, seconds = 4.0)
+        val recording = OpusRecording(file, ::decoder, seconds = 4.0)
         val cursors = listOf(recording.cursor(4.0), recording.cursor(4.0), recording.cursor(1.0), recording.cursor(1.0))
         cursors.forEach { it[0] }
         val bytes = (2 * 4.0 + 2 * 1.0) * 24000 * 4 + 4 * (file.longestPacket + 5760 * 4)
