@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7 — 2026-11-18
+
+- sounds: stop the music repeating one four-chord phrase all night (#18)
+
 ## 1.6 — 2026-11-18
 
 - feat(update): install new releases on their own, and show what changed (#15)

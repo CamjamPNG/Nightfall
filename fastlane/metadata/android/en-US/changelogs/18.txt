@@ -1,0 +1,1 @@
+- sounds: stop the music repeating one four-chord phrase all night (#18)
