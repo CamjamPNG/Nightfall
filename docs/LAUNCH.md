@@ -56,9 +56,11 @@ hours, measured from the last successful answer (`CheckThrottle.INTERVAL_MS`); a
 press of *Check for updates* may ask at any time but never twice within fifteen
 minutes (`CheckThrottle.FLOOR_MS`); tapping *Update* downloads that one APK from the
 release asset, so GitHub sees that request too; GitHub sees the request IP and the
-`Nightfall-Updater` user agent; nothing installs without a tap; and it stores two
-things locally, when it last checked and what the installer reported. There is no
-background worker, alarm or wake-up. The `fdroid` build contains no updater, no
+`Nightfall-Updater` user agent; nothing installs without a tap; and it keeps four
+things in one private preferences file (`UpdatePrefs`): when it last attempted a
+check, when it last succeeded, what the installer reported about the last attempt,
+and which release's banner you dismissed. There is no background worker, alarm or
+wake-up. The `fdroid` build contains no updater, no
 network code and no network permission, and "cannot open a socket" (`PRIVACY.md`).
 Playback, generation, presets and timers never touch the network in either build.
 
