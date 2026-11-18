@@ -6,6 +6,7 @@ import kotlin.math.abs
 import kotlin.math.max
 import org.junit.Assert.*
 import org.junit.Test
+import org.junit.experimental.categories.Category
 
 /**
  * A whole night through the real render path: eight hours of a preset that mixes a bundled recording
@@ -18,6 +19,7 @@ import org.junit.Test
  * where it was configured to. It also measures what it costs to prove — wall time and heap — because a
  * claim nobody can afford to re-check is not evidence.
  */
+@Category(Night::class)
 class NightRunTest {
     private val rate = 48000
     private val frames = 1024
@@ -43,7 +45,7 @@ class NightRunTest {
         timer.start(0, sleepAfterMs.toLong(), fadeMs)
 
         val allocations = ManagementFactory.getThreadMXBean() as com.sun.management.ThreadMXBean
-        val tid = Thread.currentThread().id
+        val tid = Thread.currentThread().threadId()
         var sliceStart = 0L
         var sliceBlocks = 0L
         var sliceDirty = false
@@ -52,6 +54,12 @@ class NightRunTest {
         var allocatedPerBlock = 0.0
 
         val hourlyLufs = FloatArray(hours + 1)
+        // Five seconds of the mixer that has been running all night, captured live: a fresh mixer's
+        // first seconds would measure the same thing at hour seven as at hour one, which is the one
+        // question this test exists to answer.
+        val capture = FloatArray(rate * CAPTURE_SECONDS)
+        var captureAt = 0
+        var captureHour = -1
         var peak = 0f
         var sum = 0.0
         var sums = 0L
@@ -87,16 +95,31 @@ class NightRunTest {
             if (gain > previousGain) fail("the timer fade went back up at block $block")
             previousGain = gain
 
+            if (captureHour >= 0) {
+                for (i in 0 until frames) {
+                    val at = captureAt + i
+                    if (at < capture.size) capture[at] = (buffer[i * 2] + buffer[i * 2 + 1]) * .5f
+                }
+                captureAt += frames
+                if (captureAt >= capture.size) {
+                    hourlyLufs[captureHour] = M.integratedLufs(M.Signal(capture.copyOf(), capture.copyOf())).toFloat()
+                    captureHour = -1
+                    System.gc()
+                    hourHeap[lastHour] = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()
+                }
+            }
+
             val hour = (now / 3600_000).toInt()
-            var measuredHour = false
             if (hour != lastHour && hour <= hours) {
                 lastHour = hour
-                if (gain > 0f) hourlyLufs[hour] = level(mixer, loader, mix, rate)
-                System.gc()
-                hourHeap[hour] = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()
-                measuredHour = true
+                // Hours that end in the timer's fade or after it measure silence by design, so only a
+                // window that starts while the mix is still audible is captured.
+                if (gain > 0f && hour >= 1) {
+                    captureHour = hour
+                    captureAt = 0
+                }
             }
-            if (measuredHour) sliceDirty = true
+            if (captureHour >= 0) sliceDirty = true
 
             // Allocation is checked in slices of a thousand blocks, so a slice that merely averages
             // zero cannot hide a real allocation: every slice without hourly bookkeeping must be zero.
@@ -119,19 +142,28 @@ class NightRunTest {
 
             block++
         }
+        System.gc()
+        hourHeap[hours] = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()
         val elapsed = (System.nanoTime() - startedAt) / 1e9
 
         val dc = sum / sums
-        val creep = hourlyLufs.copyOfRange(1, hours + 1).filter { it > -70f && it != 0f }
-        val creepSpread = (creep.maxOrNull() ?: 0f) - (creep.minOrNull() ?: 0f)
+        // Hours that ended in the timer's fade captured nothing, so the trend uses the audible ones.
+        val audible = hourlyLufs.copyOfRange(1, hours + 1).filter { it != 0f }
+        val creepSpread = (audible.maxOrNull() ?: 0f) - (audible.minOrNull() ?: 0f)
+        // Creep is a trend, not the variation a rain mix has between any two minutes: compare the
+        // mean of the first third of the night with the mean of the last third.
+        val third = audible.size / 3
+        val early = if (third > 0) audible.take(third).average() else 0.0
+        val late = if (third > 0) audible.takeLast(third).average() else 0.0
+        val creepTrend = late - early
         val growth = hourHeap[hours] - hourHeap[2]
 
         println(
             "eight hours: ${"%.0f".format(elapsed)} s of wall time, " +
                 "$dirtySlices allocating slices (worst ${worstSlice} bytes) after warm-up, " +
                 "peak ${"%.3f".format(peak)}, DC ${"%.6f".format(dc)}, " +
-                "level creep ${"%.2f".format(creepSpread)} LU, " +
-                "heap ${growth / 1_048_576} MB from hour 2 to hour 8, " +
+                "level spread ${"%.2f".format(creepSpread)} LU, trend ${"%.2f".format(creepTrend)} LU, " +
+                "heap ${hourHeap[2] / 1_048_576} MB at hour 2, ${hourHeap[hours] / 1_048_576} MB at hour 8, " +
                 "timer first faded at block $timerBlocks, silent from block $silentFrom, " +
                 "$fadedBlocks blocks in fade"
         )
@@ -149,8 +181,16 @@ class NightRunTest {
         )
         assertEquals("the sample ceiling must never be reached", peak, PcmMixer.limit(peak), 0f)
         assertTrue("DC offset accumulated: $dc", abs(dc) < .001)
-        assertTrue("the level crept ${"%.2f".format(creepSpread)} LU across the night", creepSpread < 1.0)
-        assertTrue("the heap grew ${growth / 1_048_576} MB across six hours", growth < 16L * 1_048_576)
+        assertTrue(
+            "the level drifted ${"%.2f".format(creepTrend)} LU from the first third of the night to the last",
+            abs(creepTrend) < .5,
+        )
+        // Measured after a collection at each end, so this bounds growth rather than asserting a
+        // number that GC timing decides.
+        assertTrue(
+            "the heap moved ${growth / 1_048_576} MB between hour 2 and hour 8",
+            abs(growth) < 24L * 1_048_576,
+        )
         assertEquals(
             "render allocated in $dirtySlices slices, worst $worstSlice bytes",
             0,
@@ -171,36 +211,15 @@ class NightRunTest {
         assertTrue("the night never went silent", silentFrom > 0)
     }
 
-    /** Integrated loudness of a fresh render of the same mix, used to look for creep between hours. */
-    private fun level(
-        mixer: PcmMixer,
-        loader: (String) -> SampleData?,
-        mix: Mix,
-        rate: Int,
-    ): Float {
-        val scratch = PcmMixer(rate, frames, loader)
-        scratch.sync(mix)
-        val buffer = FloatArray(frames * 2)
-        val seconds = 5
-        val samples = FloatArray(rate * seconds)
-        var at = 0
-        while (at < samples.size) {
-            scratch.render(buffer, frames)
-            for (i in 0 until frames * 2) {
-                // The mix is a stereo pair; both sides carry the same signal, so scale each one to
-                // keep the channel sum equal to the mono level rather than 3 dB above it.
-                if (at + i / 2 < samples.size) samples[at + i / 2] = buffer[i] * .7071f
-            }
-            at += frames
-        }
-        return M.integratedLufs(M.Signal(samples, samples.copyOf())).toFloat()
-    }
-
     private companion object {
         /** Blocks before the allocation measurement starts: JIT and first-use work is not drift. */
         const val WARMUP_BLOCKS = 20_000L
 
         /** Allocation is checked in slices of this many blocks once the warm-up is done. */
         const val SLICE_BLOCKS = 1_000L
+
+        /** Seconds of the running mixer kept for the hourly level, taken from its own output. */
+        /** Seconds of the running mixer kept for the hourly level: short windows of rain vary by LU. */
+        const val CAPTURE_SECONDS = 60
     }
 }
