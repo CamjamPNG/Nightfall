@@ -14,10 +14,12 @@ though it is the least fun.
 Shipping today: a working offline mixer with no `INTERNET` permission, no layer
 cap, 21 built-in presets, local preset storage and JSON exchange, sleep timers
 with per-layer stop schedules, a Media3 foreground media session with lock-screen
-and Bluetooth controls, 69 deterministic core tests and 53 release-tooling tests that
-pass on any machine with a JVM and a Python 3, and 10 playback-lifecycle scenarios under
-Robolectric that need the Android SDK but no device. Signed GitHub releases with a pinned
-certificate. `docs/TESTING.md` records exactly what was executed and what was not.
+and Bluetooth controls, 69 deterministic core tests, 53 release-tooling tests and 10
+playback-lifecycle scenarios. None of them needs a phone or an emulator: the tooling suite
+is Python 3, and the Gradle suites need the Android SDK installed because Gradle
+configures both modules before running any task, even `:core:test`. Signed GitHub releases
+with a pinned certificate. `docs/TESTING.md` records exactly what was executed and what
+was not.
 
 The gap between "shipping" and "proven" is the whole roadmap.
 
