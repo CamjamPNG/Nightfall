@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1 — 2026-11-18
+
+- fix: type the output route and the library filter so wording decides nothing (#9)
+
 ## 1.2 — 2026-11-18
 
 - sounds: loudness-matched levels, a measured true-peak ceiling and an allocation-free render path (#5)
