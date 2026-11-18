@@ -2,7 +2,7 @@
 
 ## Executed checks
 
-- 32 JVM tests in `app/src/testGithub` cover the update channel: release-manifest
+- 34 JVM tests in `app/src/testGithub` cover the update channel: release-manifest
   parsing (untrusted documents, wrong types, unknown and duplicate architectures,
   addresses that are not this repository's release assets, oversized input),
   every trust refusal (`UpdatePolicy`), version-name ordering, and the downloader

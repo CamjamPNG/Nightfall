@@ -33,15 +33,36 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.util.Locale
 import kotlin.math.roundToInt
 
-/** The one updater instance for this process, provided by whichever channel is built. */
+/** One updater per process; the flaky part of remembering it belongs in one place. */
 @Composable
-fun rememberUpdateApi(): UpdateApi {
+private fun rememberUpdateApi(): UpdateApi {
     val context = LocalContext.current
     return remember(context) { UpdateSupport.of(context.applicationContext) }
+}
+
+/** Hosts the update row over the app. Called from the activity, not from any screen. */
+@Composable
+fun UpdateOverlay(modifier: Modifier = Modifier) {
+    UpdateBanner(rememberUpdateApi(), modifier)
+}
+
+/** Tells the channel the app is in the foreground, which is when it may check on its own. */
+@Composable
+fun UpdateForegroundEffect() {
+    val api = rememberUpdateApi()
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { api.onForeground() }
+}
+
+/** The Settings section: installed version, one action, and what happened. */
+@Composable
+fun UpdateSettingsSection() {
+    UpdateSettings(rememberUpdateApi())
 }
 
 /**
@@ -49,7 +70,7 @@ fun rememberUpdateApi(): UpdateApi {
  * dialog over playback and the user can dismiss it at any time.
  */
 @Composable
-fun UpdateBanner(api: UpdateApi, modifier: Modifier = Modifier) {
+private fun UpdateBanner(api: UpdateApi, modifier: Modifier = Modifier) {
     if (!api.supported) return
     val state by api.state.collectAsStateWithLifecycle()
     val hidden by api.hiddenBannerVersion.collectAsStateWithLifecycle()
@@ -115,9 +136,8 @@ fun UpdateBanner(api: UpdateApi, modifier: Modifier = Modifier) {
     }
 }
 
-/** The Settings section: installed version, one action, and what happened. */
 @Composable
-fun UpdateSettings(api: UpdateApi) {
+private fun UpdateSettings(api: UpdateApi) {
     val state by api.state.collectAsStateWithLifecycle()
     val current = state
     Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
@@ -189,15 +209,17 @@ private fun detail(state: UpdateState): String =
 
 private fun statusLine(state: UpdateState): String =
     when (state) {
-        is UpdateState.Idle -> "Nightfall asks GitHub at most once every six hours, and only while it is open."
+        is UpdateState.Idle ->
+            "Nightfall checks on its own at most once every six hours, only while it is open. " +
+                "A check you start is limited to one every fifteen minutes."
         is UpdateState.Checking -> "Checking…"
         is UpdateState.UpToDate -> "Nightfall ${state.versionName} is the latest release."
         is UpdateState.Available -> "Nightfall ${state.versionName} is available (${megabytes(state.bytes)} MB)."
         is UpdateState.Downloading -> "Downloading… ${(state.fraction * 100).roundToInt()}%"
         is UpdateState.Installing -> "Installing. Nightfall restarts when Android finishes."
         is UpdateState.RecentCheck ->
-            "Nightfall asked GitHub ${state.minutesAgo} minute(s) ago. It checks at most once " +
-                "every six hours; the next request is allowed after that."
+            "Nightfall asked GitHub ${state.minutesAgo} minute(s) ago. A check you start is limited " +
+                "to one every fifteen minutes; you can try again in ${state.retryInMinutes} minute(s)."
         is UpdateState.Failed -> state.reason
     }
 

@@ -44,6 +44,9 @@ class GithubUpdater(context: Context) : UpdateApi {
         scope.launch {
             InstallResults.results.collect { result ->
                 if (result.awaitingConfirmation) return@collect
+                // The verdict this process just applied must not be replayed as a stale failure
+                // on the next foreground; the preferences copy exists for a killed process only.
+                UpdatePrefs.takeFailure(app)
                 _state.value =
                     if (result.succeeded) UpdateState.Idle
                     else UpdateState.Failed(result.reason ?: "The update did not finish installing")
@@ -52,14 +55,18 @@ class GithubUpdater(context: Context) : UpdateApi {
     }
 
     override fun onForeground() {
+        val current = _state.value
+        if (current is UpdateState.Checking || current is UpdateState.Downloading || current is UpdateState.Installing)
+            return
         val failure = UpdatePrefs.takeFailure(app)
-        if (failure != null && _state.value !is UpdateState.Installing) {
-            _state.value = UpdateState.Failed(failure)
+        if (failure != null) {
+            // A verdict that outlived the process is only news when it is not already on screen.
+            if (current !is UpdateState.Failed && current !is UpdateState.Available)
+                _state.value = UpdateState.Failed(failure)
             return
         }
-        val current = _state.value
-        if (current is UpdateState.Installing || current is UpdateState.Downloading || current is UpdateState.Checking)
-            return
+        // Only a state without an answer of its own may be replaced by a check nobody asked for.
+        if (current !is UpdateState.Idle && current !is UpdateState.UpToDate) return
         check(manual = false)
     }
 
@@ -69,22 +76,31 @@ class GithubUpdater(context: Context) : UpdateApi {
             return
         val now = System.currentTimeMillis()
         val lastAttempt = UpdatePrefs.lastAttempt(app)
-        if (!CheckThrottle.allows(now, lastAttempt)) {
+        if (!CheckThrottle.allowsRequest(now, lastAttempt)) {
             if (manual) {
                 val known = pending
                 _state.value =
                     if (known != null)
                         UpdateState.Available(known.versionName, known.versionCode, known.apk.bytes)
-                    else UpdateState.RecentCheck(CheckThrottle.minutesSince(now, lastAttempt))
+                    else
+                        UpdateState.RecentCheck(
+                            CheckThrottle.minutesSince(now, lastAttempt),
+                            CheckThrottle.minutesUntilRequest(now, lastAttempt),
+                        )
             }
             return
         }
-        if (!manual && !online()) return
+        if (!manual) {
+            if (!online()) return
+            // The app's own check waits for the six-hour interval; a failed attempt never starts it.
+            if (!CheckThrottle.allowsAutomatic(now, UpdatePrefs.lastSuccess(app))) return
+        }
         UpdatePrefs.recordAttempt(app, now)
         _state.value = UpdateState.Checking
         scope.launch {
             try {
                 val manifest = ReleaseManifestParser.parse(ReleaseFetch.manifestText())
+                UpdatePrefs.recordSuccess(app)
                 if (manifest.versionCode <= installed.versionCode) {
                     pending = null
                     _state.value = UpdateState.UpToDate(installed.versionName)

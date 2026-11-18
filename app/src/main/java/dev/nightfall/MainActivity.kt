@@ -17,7 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import dev.nightfall.update.UpdateBanner
+import dev.nightfall.update.UpdateForegroundEffect
+import dev.nightfall.update.UpdateOverlay
 
 class MainActivity : ComponentActivity() {
     private val requestNotifications =
@@ -35,17 +36,12 @@ class MainActivity : ComponentActivity() {
             NightfallTheme(saved.settings.light) {
                 Box(Modifier.fillMaxSize()) {
                     NightfallScreen(vm)
-                    UpdateBanner(vm.updates, Modifier.align(Alignment.TopCenter).statusBarsPadding())
+                    UpdateOverlay(Modifier.align(Alignment.TopCenter).statusBarsPadding())
+                    UpdateForegroundEffect()
                 }
             }
         }
         if (Build.VERSION.SDK_INT >= 33)
             requestNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
-    }
-
-    override fun onStart() {
-        super.onStart()
-        // Throttled inside the updater: at most one manifest read per six hours, and only online.
-        (application as NightfallApp).updates.onForeground()
     }
 }

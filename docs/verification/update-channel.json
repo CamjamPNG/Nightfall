@@ -20,7 +20,7 @@
       "note": "unchanged MixerTest and AudioAcceptanceTest"
     },
     "app_unit_github": {
-      "count": 32,
+      "count": 34,
       "failures": 0,
       "classes": [
         "ReleaseManifestParserTest",
@@ -58,7 +58,7 @@
       "file": "app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk",
       "network_permissions": [],
       "source_urls": "none",
-      "updater_code": "absent (no GithubUpdater, ReleaseFetch, ReleaseManifestParser, PackageInstalls or UpdateInstallReceiver in any dex)"
+      "updater_code": "absent (no updater class of any kind in its dex; UpdateSurfaces only shows the installed version and where updates come from)"
     }
   },
   "not_verified": [
@@ -73,5 +73,6 @@
     "a manual check obeys the same six-hour interval as the foreground hint and an attempt is recorded before the request, so a failed fetch or parse spends it too",
     "dismissing a release hides only its banner; the update stays available in Settings and a manual check surfaces it again",
     "installer verdicts reach the live row through a process-local flow, and the preferences copy is reconciled on foreground entry for a process that was killed mid-install"
-  ]
+  ],
+  "structure": "every updater source file lives in app/src/github; app/src/main names no update type; INTERNET appears only in app/src/github/AndroidManifest.xml"
 }

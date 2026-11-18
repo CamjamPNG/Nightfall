@@ -34,13 +34,16 @@ JSON imports validate known sound IDs, unique layer IDs, finite numeric values, 
 
 ## Update channel
 
-`app` builds two flavours from one source set. `github` compiles
-`app/src/github` and declares `INTERNET`, `ACCESS_NETWORK_STATE`,
-`REQUEST_INSTALL_PACKAGES` and `UPDATE_PACKAGES_WITHOUT_USER_ACTION`;
-`fdroid` compiles `app/src/fdroid`, which strips all four and provides an inert
-`UpdateSupport` that reports `supported = false`. Shared code in
-`dev.nightfall.update` holds only the state contract and Compose surfaces, so the
-F-Droid APK contains no manifest parser, no downloader and no installer.
+`app` builds two flavours from one source set. Every updater source file lives in
+`app/src/github`, which declares `INTERNET`, `ACCESS_NETWORK_STATE`,
+`REQUEST_INSTALL_PACKAGES` and `UPDATE_PACKAGES_WITHOUT_USER_ACTION`. `app/src/main`
+names no update type at all: it calls three flavour-provided composables —
+`UpdateOverlay`, `UpdateForegroundEffect` and `UpdateSettingsSection` — and
+`app/src/fdroid` answers them in `UpdateSurfaces.kt` with no updater, stripping the
+four permissions and showing only the installed version and where updates come
+from. The F-Droid APK therefore contains no manifest parser, no fetcher, no
+installer, no state machine and no network code; `tools/check_release.py` asserts
+that from the built APK's dex and permissions, not from the source tree.
 
 The `github` channel reads the `release-manifest.json` asset that
 `tools/package_release.py` publishes with every release: version name and code,
@@ -77,12 +80,15 @@ here is reachable from the audio thread, no work is scheduled when the app is no
 in the foreground, and there is no worker, alarm or service, so checking never
 wakes the radio behind the user's back.
 
-One throttle governs every caller: `CheckThrottle` allows a manifest request only
-after six hours have passed since the previous attempt, the foreground hint and the
-Settings button take the same path, and the attempt is recorded before the request
-so a fetch or parse that fails spends the interval too. A button press inside the
-interval either re-shows the update already known or reports how long ago the last
-check was; it does not make a request.
+`CheckThrottle` keeps two rules because they are two different promises. Every
+request — the foreground hint and the Settings button take the same path — waits at
+least fifteen minutes since the previous attempt, and the attempt is recorded before
+the request, so a fetch or parse that fails counts too and nothing can be hammered.
+The app's own check additionally requires six hours since the last *successful*
+answer, so a failed attempt never spends that window. A press inside the floor makes
+no request: it re-shows the update already known or says how long until the next one
+is allowed. A stored timestamp in the future means the device clock moved and is
+treated as expired rather than locking the channel.
 
 Installer verdicts reach the live row through `InstallResults`, a process-local
 flow the receiver publishes to, so a rejection or a cancelled confirmation is shown

@@ -14,6 +14,7 @@ object UpdatePrefs {
     private const val KEY_STATUS = "install_status"
     private const val KEY_MESSAGE = "install_message"
     private const val KEY_LAST_ATTEMPT = "last_attempt"
+    private const val KEY_LAST_SUCCESS = "last_success"
     private const val KEY_HIDDEN_BANNER = "hidden_banner_version"
 
     fun record(context: Context, status: Int, message: String) {
@@ -34,9 +35,16 @@ object UpdatePrefs {
 
     fun lastAttempt(context: Context): Long = prefs(context).getLong(KEY_LAST_ATTEMPT, 0L)
 
-    /** Recorded before the request, so a fetch or parse that fails also spends the interval. */
+    /** Recorded before the request, so a fetch or parse that fails also spends the rate floor. */
     fun recordAttempt(context: Context, now: Long = System.currentTimeMillis()) {
         prefs(context).edit().putLong(KEY_LAST_ATTEMPT, now).apply()
+    }
+
+    /** The last answer that actually arrived: only this starts the six-hour interval. */
+    fun lastSuccess(context: Context): Long = prefs(context).getLong(KEY_LAST_SUCCESS, 0L)
+
+    fun recordSuccess(context: Context, now: Long = System.currentTimeMillis()) {
+        prefs(context).edit().putLong(KEY_LAST_SUCCESS, now).apply()
     }
 
     fun hideBanner(context: Context, versionName: String) {

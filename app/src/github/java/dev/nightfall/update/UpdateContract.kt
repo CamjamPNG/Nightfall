@@ -25,8 +25,8 @@ sealed interface UpdateState {
 
     data class Installing(val versionName: String) : UpdateState
 
-    /** A check was asked for inside the channel's interval, so nothing was requested. */
-    data class RecentCheck(val minutesAgo: Int) : UpdateState
+    /** A check was asked for inside the channel's rate floor, so nothing was requested. */
+    data class RecentCheck(val minutesAgo: Int, val retryInMinutes: Int) : UpdateState
 
     data class Failed(val reason: String, val action: FailureAction = FailureAction.NONE) :
         UpdateState

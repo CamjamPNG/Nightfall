@@ -10,6 +10,8 @@ p.add_argument('--github-apk',type=pathlib.Path,help='GitHub-channel APK whose u
 args=p.parse_args()
 def require(condition,message):
     if not condition:raise ValueError(message)
+# The last release published before the flavours existed; earlier recipe entries keep their own build.
+CHANNEL_SPLIT_CODE=4
 NETWORK_PERMISSIONS=('android.permission.INTERNET','android.permission.ACCESS_NETWORK_STATE','android.permission.REQUEST_INSTALL_PACKAGES','android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION')
 UPDATER_ENTRY_POINTS=('dev/nightfall/update/GithubUpdater','dev/nightfall/update/ReleaseFetch','dev/nightfall/update/ReleaseManifestParser','dev/nightfall/update/PackageInstalls','dev/nightfall/update/UpdateInstallReceiver')
 def apk_manifest(apk):
@@ -58,9 +60,16 @@ require(f'commit: v{version}' in text,'Recipe tag mismatch')
 require('https://github.com/CamjamPNG/Nightfall.git' in text,'Missing verified source repository')
 require('scanignore:' not in text,'Broad scanner exclusions must not be introduced')
 require('License: MIT' in text,'Code license must match the selected MIT license')
+# Releases after the two-channel split must build the flavour without an updater.
+for block in re.split(r'(?m)^  - versionName:', text)[1:]:
+    entry = re.search(r'versionCode:\s*(\d+)', block)
+    code = int(entry[1]) if entry else 0
+    if code > CHANNEL_SPLIT_CODE:
+        require('gradle:\n      - fdroid\n' in block,'F-Droid build ' + str(code) + ' must select the fdroid flavour')
 manifest=(ROOT/'app/src/main/AndroidManifest.xml').read_text()
-for permission in ('android.permission.INTERNET','android.permission.ACCESS_NETWORK_STATE','android.permission.RECORD_AUDIO','com.google.android.gms.permission.AD_ID'):
-    require(permission not in manifest,'Unexpected shared permission: '+permission)
+for permission in ('android.permission.INTERNET','android.permission.RECORD_AUDIO','com.google.android.gms.permission.AD_ID'):
+    require(permission not in manifest,'Unexpected permission: '+permission)
+require('android.permission.ACCESS_NETWORK_STATE' not in manifest,'Unexpected permission: android.permission.ACCESS_NETWORK_STATE')
 github_flavor=(ROOT/'app/src/github/AndroidManifest.xml').read_text()
 fdroid_flavor=(ROOT/'app/src/fdroid/AndroidManifest.xml').read_text()
 for permission in NETWORK_PERMISSIONS:

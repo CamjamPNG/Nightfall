@@ -60,12 +60,12 @@ What happens after the tap:
    Nightfall opens for you. Nightfall restarts afterwards and playback stops
    during the restart.
 
-It asks GitHub at most **once every six hours**, whether the app asks by itself
-when it comes to the foreground or you press the button, and an attempt spends
-that interval even when it fails — so pressing Check twice cannot become a stream
-of requests, and Settings says when the next one is allowed. There is no
-background worker, alarm or periodic wake-up, so an idle Nightfall never touches
-the radio. Nothing is sent anywhere: the check is a plain download of a public file.
+It asks GitHub at most **once every six hours** on its own, and a check you start
+is rate-limited to **one every fifteen minutes**; a failed attempt never spends the
+six-hour window, so a dropped connection costs you fifteen minutes, not an
+afternoon. Settings says when the next check is allowed. There is no background
+worker, alarm or periodic wake-up, so an idle Nightfall never touches the radio.
+Nothing is sent anywhere: the check is a plain download of a public file.
 
 Hiding the row stops it nagging; it never hides the update, which stays available
 in Settings until it is installed. If Android refuses or you cancel its
