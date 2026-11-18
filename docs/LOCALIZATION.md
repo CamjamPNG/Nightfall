@@ -7,8 +7,11 @@ There is no `res/values/strings.xml`, no `res/values-<language>/`, no `plurals.x
 judgement calls, and the extraction plan. Nothing here changes behaviour; it is what a future
 extraction is built from.
 
-The inventory was taken against `main` at `0df94ac` (v1.1, versionCode 5). Line numbers are that
-commit's.
+The inventory was taken against `main` at `0df94ac` (v1.1, versionCode 5), and the line column is
+valid at that commit and nowhere else. Both UI files change often and this list will drift within a
+release or two. Keys and file names are the stable reference: locate a string by its key, or by
+searching its file for the quoted text, and read the line as a hint that was true once. Anyone acting
+on a stage in §5 works from the key, never from the number.
 
 ## 1. What counts as a user-visible string
 
