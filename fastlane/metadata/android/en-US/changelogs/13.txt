@@ -1,0 +1,2 @@
+- sounds: level-match the catalogue and presets, distinguish names, fill preset gaps (#11)
+- test: run the playback lifecycle scenarios on Robolectric, ready for CI (#8)

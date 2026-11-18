@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4 — 2026-11-18
+
+- sounds: level-match the catalogue and presets, distinguish names, fill preset gaps (#11)
+- test: run the playback lifecycle scenarios on Robolectric, ready for CI (#8)
+
 ## 1.3.1 — 2026-11-18
 
 - docs: launch kit with verified channel rules, an IzzyOnDroid request, and a no-JS landing page (#12)
