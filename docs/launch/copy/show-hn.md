@@ -45,33 +45,38 @@ evaluate is the engine and the testing record, with the APK as an optional extra
 - **A DSP core with no Android dependency.** `core/` is plain Kotlin/JVM: one 48 kHz
   stereo float mix, 1024-frame blocks, soft limiter, deterministic sources, timers.
   It runs as ordinary JUnit — `./gradlew :core:test` — so a reader can clone it and
-  watch 42 tests pass without an emulator or a device.
+  watch 68 tests pass without an emulator or a device, one of them rendering an
+  eight-hour night through the real render path.
 - **The render path is treated as a hard real-time constraint.** Zero allocations per
   block is asserted by a test, not a comment; click size at layer add/remove, loop
   seams on every bundled recording, spectral slope, DC offset and tuning in cents all
   have measured thresholds. `docs/ARCHITECTURE.md` explains the deadline.
 - **The testing record includes the failure.** `docs/TESTING.md` records that the
   instrumentation suite terminated with `Process crashed` and a startup ANR on a
-  software-emulated Pixel 7 profile, and that `docs/TESTING.md`'s hardware pass is
-  still pending. That is the unusual part: the repo publishes what did not work.
+  software-emulated Pixel 7 profile, and that the hardware pass is still pending.
+  Playback lifecycle is covered instead by ten Robolectric scenarios that run under
+  both builds in CI. That is the unusual part: the repo publishes what did not work
+  and what replaced it.
 - **Two local builds are byte-identical** at tag `v1.0.1.2`
   (`docs/verification/reproducibility.json`), and the same document states plainly
   that this is not an independent rebuild, and that `apksigcopier compare` fails
   against the published APK because the packaging step recompresses entries. If a
   commenter asks about reproducible builds, that is the honest answer including the
   part that doesn't flatter the project.
-- **The size trade-off is real and discussable.** 87 MB, of which 74 MB is
-  uncompressed 16-bit mono 24 kHz PCM memory-mapped by the mixer, and the release
-  build does not enable R8, so 47 MB of the download is unshrunk dex. HN will find
-  this interesting rather than disqualifying, if it is stated before someone
-  discovers it in the download.
+- **The size trade-off is real and discussable.** 79 MB, of which 77.4 MB is
+  uncompressed 16-bit mono 24 kHz PCM memory-mapped by the mixer. R8 and resource
+  shrinking landed in 1.5.2 and took the dex from 47 MB to 2.9 MB, so what is left is
+  the recordings, and the Opus path that would shrink them is in the repo behind a
+  build flag that is off until someone hears it on a device. HN will find this
+  interesting rather than disqualifying, if it is stated before someone discovers it
+  in the download.
 - **The network decision is a design argument, not a slogan.** Two product flavours
   (`app/src/github`, `app/src/fdroid`): the F-Droid build removes `INTERNET`,
   `ACCESS_NETWORK_STATE`, `REQUEST_INSTALL_PACKAGES` and
   `UPDATE_PACKAGES_WITHOUT_USER_ACTION` and compiles a stub instead of the updater;
-  the GitHub build carries a ten-file updater that verifies SHA-256, package id,
-  version code and the installed app's signing certificate before handing an APK to
-  Android's installer. "Remove the capability from the build that does not need it"
+  the GitHub build carries a thirteen-file updater that verifies SHA-256, package
+  id, version code and the installed app's signing certificate before handing an APK
+  to Android's installer, and refuses to install while audio is playing. "Remove the capability from the build that does not need it"
   is the sort of thing this audience argues about productively, and the honest
   caveat is that the GitHub APK does declare `INTERNET`.
 

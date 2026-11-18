@@ -47,67 +47,113 @@
       <li><strong>Timers that fade.</strong> Sleep timers fade out rather than cut, and single
       layers can stop on their own schedules.</li>
       <li><strong>A testable engine.</strong> The mixer is a Kotlin module with no Android
-      dependency and 42 JVM tests, including zero per-block allocation inside the render path.</li>
+      dependency and 68 JVM tests, including zero per-block allocation inside the render path and
+      one that renders a whole eight-hour night through the real path.</li>
       <li><strong>Two builds.</strong> The F-Droid build has no updater, no network code and no
-      network permission — it cannot open a socket. The GitHub build adds an opt-in updater that
-      reads this repository's release manifest and installs a newer APK when you tap Update;
-      that is its only network use, and it never uploads anything.</li>
+      network permission — it cannot open a socket. The GitHub build adds an updater that reads
+      this repository's release manifest and, by default, installs a newer APK on its own when
+      nothing is playing; that is its only network use, and it never uploads anything.</li>
     </ul>
   </section>
 
   <section id="screenshot">
     <h2>What it looks like</h2>
-    <figure class="shot">
-      <div class="shot-placeholder" role="img" aria-label="Screenshot placeholder: capture pending">
-        <span>Screenshot pending</span>
-      </div>
-      <figcaption>No screenshot is shown here yet on purpose. The six frames in the
-      repository (<code>fastlane/metadata/android/en-US/images/phoneScreenshots/</code>) are the
-      shipped interface rendered on a JVM by the build's own renderer, at 1078×2399 — see
-      <code>docs/TESTING.md</code> for how they are produced and what a still render cannot show.
-      No device is available to these builds, so this space holds a capture from a real device as
-      soon as one exists.</figcaption>
-    </figure>
+    <ul class="shots">
+      <li>
+        <figure>
+          <img src="shots/01-home-playing.png" width="540" height="1201" loading="lazy"
+               decoding="async" alt="Home while a nine-layer mix plays: waveform, transport controls and the layer columns.">
+          <figcaption>Home, nine layers playing.</figcaption>
+        </figure>
+      </li>
+      <li>
+        <figure>
+          <img src="shots/02-home-layers.png" width="540" height="1201" loading="lazy"
+               decoding="async" alt="Home scrolled to the layer list, each layer with its own gain, mute and solo.">
+          <figcaption>Every layer is its own instrument.</figcaption>
+        </figure>
+      </li>
+      <li>
+        <figure>
+          <img src="shots/03-layer-options.png" width="540" height="1201" loading="lazy"
+               decoding="async" alt="One layer's options: gain, pan, width, filters, equalizer and its own stop time.">
+          <figcaption>One layer's gain, filters, EQ and stop time.</figcaption>
+        </figure>
+      </li>
+      <li>
+        <figure>
+          <img src="shots/04-library.png" width="540" height="1201" loading="lazy"
+               decoding="async" alt="The library, grouped into noise colours, weather, water, fire and field recordings.">
+          <figcaption>The library, labeled by how each sound is made.</figcaption>
+        </figure>
+      </li>
+      <li>
+        <figure>
+          <img src="shots/05-presets.png" width="540" height="1201" loading="lazy"
+               decoding="async" alt="The built-in mixes, with Nine-Layer Dream among them.">
+          <figcaption>The built-in mixes, all ordinary and editable.</figcaption>
+        </figure>
+      </li>
+      <li>
+        <figure>
+          <img src="shots/06-settings.png" width="540" height="1201" loading="lazy"
+               decoding="async" alt="Settings: version, update channel, audio credits and the render-load figures.">
+          <figcaption>Settings, including the update channel and its counter.</figcaption>
+        </figure>
+      </li>
+    </ul>
+    <p>The six frames above are the shipped Compose interface, rendered on a JVM by the build's own
+    renderer at 1078×2399 — the same six files the store listing uses. They are not mockups and
+    nothing was composited by hand, but they are also not device captures: no status bar, no
+    animation, and the render-load figures in Settings are the test harness's rather than a phone's.
+    <code>docs/TESTING.md</code> records how they are produced and what a still render cannot show.</p>
   </section>
 
   <section id="install">
     <h2>Install</h2>
     <p>Signed APKs are attached to <a href="https://github.com/CamjamPNG/Nightfall/releases">GitHub
-    Releases</a>. Every file there is the <strong>GitHub build</strong>: it can update itself, and
-    that is why it asks for <code>INTERNET</code>. The <strong>F-Droid build</strong> — no updater,
-    no network code, no network permission, updates arrive by installing a new APK yourself — is
-    built from the same source and is not attached to a release yet, so there is nothing to
-    download for it today.</p>
+    Releases</a>. Six APKs are attached to the current release. Five are the
+    <strong>GitHub build</strong>: it can update itself, and that is why it asks for
+    <code>INTERNET</code>. The sixth, <code>fdroid-universal</code>, is the <strong>F-Droid
+    build</strong> — no updater, no network code, no network permission, and updates arrive by
+    installing a new APK yourself. Both are built from the same source and signed with the same
+    release certificate, so one installs over the other without uninstalling.</p>
 
     <p>Nightfall is not on Google Play. It is not in F-Droid or IzzyOnDroid either: nothing has
     been submitted to either, so treat any listing you find elsewhere with suspicion.</p>
 
     <table>
-      <caption>Options in the current release (1.2), with what each one costs you.</caption>
+      <caption>Options in the current release (1.8.2), with what each one costs you.</caption>
       <thead>
         <tr><th scope="col">Option</th><th scope="col">Download</th><th scope="col">Choose it when</th></tr>
       </thead>
       <tbody>
         <tr>
           <th scope="row"><code>arm64-v8a</code></th>
-          <td>~87&nbsp;MB</td>
+          <td>79.2&nbsp;MB</td>
           <td>You have a 64-bit phone — the last several years of devices, Pixel&nbsp;7 included.</td>
         </tr>
         <tr>
           <th scope="row"><code>armeabi-v7a</code></th>
-          <td>~87&nbsp;MB</td>
+          <td>79.2&nbsp;MB</td>
           <td>You have an older or 32-bit-only device.</td>
         </tr>
         <tr>
+          <th scope="row"><code>x86</code>, <code>x86_64</code></th>
+          <td>79.2&nbsp;MB</td>
+          <td>You are installing into an emulator or an Intel-based device.</td>
+        </tr>
+        <tr>
           <th scope="row"><code>universal</code></th>
-          <td>~87&nbsp;MB</td>
+          <td>79.3&nbsp;MB</td>
           <td>You do not know which one you need. It contains every architecture.</td>
         </tr>
         <tr>
-          <th scope="row">F-Droid build</th>
-          <td>~87&nbsp;MB</td>
-          <td>Not attached to a release yet. When it is, choose it if you want the app with no
-          network permission at all; you will update it by installing newer APKs yourself.</td>
+          <th scope="row"><code>fdroid-universal</code></th>
+          <td>79.2&nbsp;MB</td>
+          <td>The same app with no network permission at all, and no updater — you update it by
+          installing the next APK yourself. It installs over the GitHub build without
+          uninstalling, because both are signed with the same key.</td>
         </tr>
         <tr>
           <th scope="row">F-Droid / IzzyOnDroid store</th>
@@ -118,16 +164,19 @@
       </tbody>
     </table>
 
-    <p class="note"><strong>The size.</strong> Every architecture is about 87&nbsp;MB, because the
-    download is mostly the sound library: roughly 74&nbsp;MB of 16-bit mono PCM that the mixer
-    memory-maps, so it can loop without gaps or decoding cost. The per-architecture split saves
-    about 100&nbsp;KB, not hundreds of megabytes. If 87&nbsp;MB is too much, this app is not the
-    right tool for you yet — the honest alternatives are smaller and stream their audio.</p>
+    <p class="note"><strong>The size.</strong> Every APK is about 79&nbsp;MB, and almost all of it
+    is the sound library: 77.4&nbsp;MB of 16-bit mono PCM that the mixer memory-maps, so it can
+    loop without gaps or decoding cost. Code is the smaller half now — the release build is
+    minified, and its dex is 2.8&nbsp;MB rather than the 47&nbsp;MB it was before minification was
+    turned on. The per-architecture split saves about 100&nbsp;KB, not hundreds of megabytes. If
+    79&nbsp;MB is too much, this app is not the right tool for you yet — the honest alternatives are
+    smaller and stream their audio.</p>
 
     <p class="note"><strong>Signatures.</strong> The APKs are signed with one release certificate,
     published with each release as <code>nightfall-release-certificate.pem</code>. A store that
-    <em>mirrors</em> that APK — as IzzyOnDroid does — keeps the same signature, and Android will
-    update happily between the two. A store that <em>rebuilds and re-signs</em> the app, as F-Droid
+    <em>mirrors</em> that APK, as IzzyOnDroid would, keeps the same signature, and Android will
+    update happily between the two — Nightfall does none of this yet, because nothing has been
+    submitted to such a store. A store that <em>rebuilds and re-signs</em> the app, as F-Droid
     does, produces a differently signed install; Android refuses to update across that boundary,
     so installing one over the other means uninstalling first, and uninstalling deletes your
     presets. Export them as JSON before switching, and only then if you ever need to.</p>
@@ -135,6 +184,11 @@
     <p class="note"><strong>Releases are verified, not guaranteed.</strong> Each release ships
     <code>SHA256SUMS.txt</code>; compare it if you want to. Publishing is automated and refuses to
     overwrite a published asset.</p>
+
+    <p class="note"><strong>What's new.</strong> The GitHub build's Settings → Updates lists the
+    recent releases and their notes, taken from the same manifest the update check already read, so
+    reading it asks the network for nothing. After it replaces itself, the version it installed
+    shows those notes once.</p>
   </section>
 
   <section id="verified">
@@ -149,20 +203,24 @@
       </thead>
       <tbody>
         <tr>
-          <td>42 deterministic JVM tests on the audio engine</td>
-          <td><code>core/src/test</code>, runs in seconds with <code>./gradlew :core:test</code></td>
+          <td>68 deterministic JVM tests on the audio engine</td>
+          <td><code>core/src/test</code>, with <code>./gradlew :core:test</code>; 67 run every
+          time and the opt-in level-calibration generator is skipped unless
+          <code>NIGHTFALL_CALIBRATE=1</code></td>
         </tr>
         <tr>
           <td>The F-Droid build declares no network or install permission</td>
           <td><code>app/src/fdroid/AndroidManifest.xml</code> removes <code>INTERNET</code>,
           <code>ACCESS_NETWORK_STATE</code>, <code>REQUEST_INSTALL_PACKAGES</code> and
           <code>UPDATE_PACKAGES_WITHOUT_USER_ACTION</code>, and the release script fails the build
-          if either build's permissions drift</td>
+          if either build's permissions drift or if a class from the updater package survives in
+          the F-Droid APK</td>
         </tr>
         <tr>
           <td>The GitHub build's updater verifies before installing</td>
-          <td>size and SHA-256 against the published manifest, package id, version code, and the
-          same signing certificate as the installed app; nothing installs without a tap</td>
+          <td>size and SHA-256 against the published manifest, package id, version code, signing
+          certificate and download address, and a self-started install is refused while audio is
+          playing or while playback state is unknown</td>
         </tr>
         <tr>
           <td>Every bundled recording cycles for at least 180&nbsp;seconds</td>
@@ -189,6 +247,13 @@
           <td>Long sessions and Bluetooth behaviour are unmeasured. All-night playback is not
           guaranteed on any phone. The render load and underrun counters in Settings are how you
           find out on yours.</td>
+        </tr>
+        <tr>
+          <td>No update has actually been installed on a phone, by us or unattended</td>
+          <td>Android's installer sessions are described from Android's documentation and driven
+          against a local server speaking the same protocol. If the automatic install misbehaves on
+          your device, the settings switch turns it off, and an issue with a logcat excerpt is the
+          most useful thing you can send.</td>
         </tr>
         <tr>
           <td>No acoustic or perceptual quality certification</td>
@@ -220,13 +285,15 @@
     never an upload. It reads one public file, <code>release-manifest.json</code>, from this
     repository's latest release: on its own at most once every six hours while the app is open and
     the device is online — measured from the last successful answer — and when you press
-    <em>Check for updates</em>, never more than once per 15 minutes for any reason. When you tap
-    <em>Update</em> it downloads that one APK, checks its size, SHA-256 and signing certificate
-    against the manifest, and hands it to Android's installer. As with any download, GitHub sees the
-    request's IP address and the user agent <code>Nightfall-Updater</code>; nothing else is sent —
-    no identifier, account, device name, app list, listening history or mix data — and there is no
-    background worker, alarm or wake-up, so an app that is not in the foreground asks nothing. The
-    F-Droid build contains none of this. The
+    <em>Check for updates</em>, never more than once per 15 minutes for any reason. A newer release
+    is downloaded and checked against the manifest — size, SHA-256, package id, version code and
+    signing certificate — and, because <em>Update automatically</em> is on by default in this build,
+    installed without a tap once playback has stopped; an install restarts the app, so it is never
+    started while audio is playing. Turn the switch off and nothing downloads until you press
+    <em>Update</em>. As with any download, GitHub sees the request's IP address and the user agent
+    <code>Nightfall-Updater</code>; nothing else is sent — no identifier, account, device name, app
+    list, listening history or mix data — and there is no background worker, alarm or wake-up, so
+    an app that is not in the foreground asks nothing. The F-Droid build contains none of this. The
     <a href="https://github.com/CamjamPNG/Nightfall/blob/main/PRIVACY.md">privacy note</a> is the
     full statement.</p>
   </section>

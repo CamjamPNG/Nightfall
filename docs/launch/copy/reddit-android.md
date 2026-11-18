@@ -51,14 +51,15 @@ Body:
 > shipping something that phones home — account walls, streaming, an analytics SDK, a
 > subscription for a rain loop. Nightfall ships no accounts, no ads and no tracking, and
 > it ships in two builds: the F-Droid one has no updater, no network code and no network
-> permission at all, so it cannot open a socket; the GitHub one adds an opt-in updater
-> that reads the release manifest and installs a newer APK when you tap Update, and that
-> is its only network use. Playback and music generation run entirely on the phone.
+> permission at all, so it cannot open a socket; the GitHub one adds an updater that
+> reads the release manifest and, by default, installs a newer APK on its own once
+> nothing is playing — it never interrupts a mix — and that is its only network use.
+> Playback and music generation run entirely on the phone.
 >
 > **How it's built.** A single 48 kHz stereo float mix feeds one `AudioTrack` from one
 > audio-priority thread, in 1024-frame blocks, with a soft limiter at the end. The
 > engine lives in a pure Kotlin module with no Android dependency, so it runs under
-> plain JUnit: 42 tests covering nine simultaneous sources, 512 allocated layers,
+> plain JUnit: 68 tests covering nine simultaneous sources, 512 allocated layers,
 > phase continuity across unrelated sources, limiters, seeded music generation, timer
 > fades, loop seams, spectral slope and click size at layer add/remove.
 >
@@ -76,10 +77,12 @@ Body:
 > noise.
 >
 > **What I haven't proven.** A physical Pixel 7 pass, Bluetooth behaviour, acoustic
-> loudness and overnight battery are all pending, and the README says so. The
-> instrumentation suite that was supposed to cover playback lifecycle has not gone
-> green on this setup. And two local builds of tag v1.0.1.2 are byte-identical, which
-> is weaker than an independent rebuild and is documented as such.
+> loudness, overnight battery and an update actually installing on a phone are all
+> pending, and the README says so. Playback lifecycle is covered by ten Robolectric
+> scenarios that run under both builds in CI; the emulator instrumentation attempt
+> before that never passed, and the failure is written down in `docs/TESTING.md`
+> instead of being dropped. And two local builds of tag v1.0.1.2 are byte-identical,
+> which is weaker than an independent rebuild and is documented as such.
 >
 > **What I'd like from this thread:** anyone who runs it overnight on a device I don't
 > have. The app shows render-load and underrun counters in Settings, and a logcat
