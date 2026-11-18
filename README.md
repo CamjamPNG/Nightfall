@@ -96,7 +96,7 @@ GitHub at most once every six hours on its own, a check you start is rate-limite
 one every fifteen minutes, and **nothing downloads or installs without your tap**. The
 APK it accepts must match the manifest's size, SHA-256, package id, version code and
 the certificate of the app already installed. No background worker, alarm or periodic
-wake-up exists, so an idle Nightfall never touches the radio. Details in
+wake-up exists, so an app that is not in the foreground never checks anything. Details in
 [`docs/RELEASING.md`](docs/RELEASING.md) and [`PRIVACY.md`](PRIVACY.md).
 
 ### The F-Droid build — buildable from source today
@@ -169,9 +169,11 @@ difference the copy anywhere in this project is allowed to blur.
 | Settings → Updates | installed version, **Check for updates**, next check time | installed version and where updates come from |
 
 So "Nightfall has no `INTERNET` permission" is true of the F-Droid channel and false of
-every file on the Releases page. If that distinction matters to you — and for some
-people it is the whole reason to install this — the honest answer is that the updater
-build must be told not to check, while the F-Droid build has nothing to tell.
+every file on the Releases page. There is also no switch that turns the check off: the
+`github` build asks GitHub once every six hours while it is open for as long as it is
+installed, and dismissing the update row hides the notice and nothing else. If a build
+that cannot open a socket at all is the point for you, that build is the `fdroid` one —
+which today means building it yourself.
 
 Both channels declare what a background music player needs and nothing more:
 foreground service, the media-playback foreground type, notifications, and a wake
