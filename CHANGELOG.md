@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.2 — 2026-11-18
+
+- docs: add contributor, security, roadmap and launch surface (#4)
+
+## 1.1.1 — 2026-11-18
+
+- Audit F-Droid metadata and record two-machine release reproduction (#3)
+
 ## 1.1 — 2026-11-18
 
 - ui: rebuild the mixer layer list for per-row state and visible options (#1)
