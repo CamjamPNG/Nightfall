@@ -338,12 +338,14 @@ status bar and a 96 px gesture bar: the header moves from 16 px to 148 px and th
 navigation bar's bottom from 463 px to 367 px, so the screens consume the window's
 own non-zero insets on a platform that no longer allows the edge-to-edge opt-out.
 
-`Android16RuntimeTest` fails on its first assertion if the run is not the API 36
-sandbox, so a mis-set job cannot pass it vacuously; on the 35 runtime the two
-tests are reported skipped rather than passed. Breaking the app's `BackHandler`
-turns the predictive-back assertion red ("back reported through
-OnBackInvokedDispatcher closed the screen instead of returning to Home"), which is
-what makes it an assertion rather than a re-run.
+On the 35 runtime the two scenarios are reported skipped rather than passed, so
+the `api36` job checks its own result: a step after Gradle fails the job unless
+both flavours' `TEST-dev.nightfall.Android16RuntimeTest.xml` reports
+`tests="2" skipped="0"`, which is what stops a job that lost the sandbox property
+from staying green while measuring nothing. Breaking the app's `BackHandler` turns
+the predictive-back assertion red ("back reported through OnBackInvokedDispatcher
+closed the screen instead of returning to Home"), which is what makes it an
+assertion rather than a re-run.
 
 What this still does not prove: a phone. No gesture is generated, no system bar is
 real, and `SystemClock` is virtual. Predictive back and the insets above are
