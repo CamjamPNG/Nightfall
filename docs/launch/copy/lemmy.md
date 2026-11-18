@@ -41,15 +41,15 @@ Body:
 >
 > **The network is an opt-in, not a feature.** It ships in two builds. The F-Droid
 > build has no updater, no network code and no network permission at all — it cannot
-> open a socket. The build on the Releases page adds an opt-in updater that reads this
-> repository's release manifest and installs a newer APK when you tap Update; that is
-> its only network use, and it never uploads anything. Playback and music generation
-> use no network in either build. No account, no analytics, no ads. The whole sound
-> library ships in the APK.
+> open a socket. The build on the Releases page adds an updater that reads this
+> repository's release manifest and, by default, installs a newer APK on its own once
+> nothing is playing; that is its only network use, it never interrupts a mix, and it
+> never uploads anything. Playback and music generation use no network in either
+> build. No account, no analytics, no ads. The whole sound library ships in the APK.
 >
 > **The engine is a plain Kotlin module.** One 48 kHz stereo float mix, 1024-frame
 > blocks, one audio-priority thread, a soft limiter at the end. It has no Android
-> dependency, so it runs as plain JUnit: 42 tests, including zero per-block allocation
+> dependency, so it runs as plain JUnit: 68 tests, including zero per-block allocation
 > inside the render path, click size at layer add/remove, loop seams on every bundled
 > recording, and a measured loudness table that calibrates every sound in the library
 > to the same reference level. The DSP being boring and testable was the point.
@@ -62,7 +62,7 @@ Body:
 > and layers can stop on their own schedules.
 >
 > Honest limits: a physical-device pass (Pixel 7, Bluetooth, overnight battery) is
-> still pending and the README says so; the APK is about 87 MB because 74 MB of it is
+> still pending and the README says so; the APK is about 79 MB because 77 MB of it is
 > the uncompressed recordings the mixer memory-maps.
 >
 > MIT licensed, no CLA, issues and PRs welcome:

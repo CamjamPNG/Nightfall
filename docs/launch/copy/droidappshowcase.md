@@ -57,10 +57,11 @@ Body:
 >   run on the phone.
 >
 > - **Two builds, and the difference is the network.** The F-Droid build has no updater, no
-  network code and no network permission at all — it cannot open a socket. The build on
-  the Releases page adds an opt-in updater: it reads this repository's release manifest
-  and installs a newer APK when you tap Update, and that is its only network use. It
-  never uploads anything. Playback and music generation use no network in either build.
+>   network code and no network permission at all — it cannot open a socket. The build on
+>   the Releases page adds an updater that reads this repository's release manifest and,
+>   by default, installs a newer APK on its own once nothing is playing; it never
+>   interrupts a mix and never uploads anything. Playback and music generation use no
+>   network in either build.
 > - **No layer cap.** It measures its own render load and warns you when the device is
 >   struggling, rather than refusing a tenth layer.
 > - **Recordings loop for at least three minutes** before repeating, so the loop isn't
@@ -69,13 +70,13 @@ Body:
 > - **Sleep timers fade out** rather than cut, and individual layers can stop on their
 >   own schedules.
 > - **MIT licensed**, source is readable, and the audio engine is a Kotlin module with
->   no Android dependency and 42 tests, so the DSP is inspectable rather than hidden.
+>   no Android dependency and 68 tests, so the DSP is inspectable rather than hidden.
 >
 > What it isn't: there is no iOS version, no cloud sync, no widgets, no Android Auto.
 > A physical-device pass (Pixel 7, Bluetooth mask, overnight battery) is still pending
 > — I've documented that honestly in the README's limitations section instead of
 > claiming all-night reliability I haven't measured. And it's a large download: about
-> 87 MB, because 74 MB of it is the bundled uncompressed recordings.
+> 79 MB, because 77 MB of it is the bundled uncompressed recordings.
 >
 > Free, no account, no strings.
 >
