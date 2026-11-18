@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.media3.session.MediaSession
 import androidx.test.core.app.ApplicationProvider
+import dev.nightfall.core.PresetJson
 import dev.nightfall.core.Presets
 import java.time.Duration
 import org.junit.After
@@ -70,6 +71,19 @@ abstract class PlaybackHarness {
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(50))
             condition()
         }
+
+    /**
+     * Waits until the state on disk is the state the runtime holds, so an assertion about saving
+     * follows a finished write instead of racing a debounced one. The Preferences file is a
+     * protobuf whose one string value is the saved state's JSON, so the exact document the runtime
+     * would write is what the file has to contain.
+     */
+    protected fun awaitSaved() = await {
+        val file = app.filesDir.walkTopDown().firstOrNull { it.name == "nightfall.preferences_pb" }
+        file != null &&
+            String(file.readBytes(), Charsets.ISO_8859_1)
+                .contains(PresetJson.json.encodeToString(runtime.saved.value))
+    }
 
     /** Waits until the audio thread has written more samples than it had. */
     protected fun awaitSamples() {

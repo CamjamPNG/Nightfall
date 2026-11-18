@@ -97,12 +97,18 @@ class NightfallRuntime(val context: Context) {
         persist?.cancel()
         persist =
             scope.launch {
+                // Only the debounce is cancellable. Once it expires the next edit supersedes the
+                // value written here, not the write: tearing a write out mid-save on a slow device
+                // reported the app's own cancellation as a "Saving failed" banner.
                 delay(250)
-                val snapshot = _saved.value
-                try {
-                    context.dataStore.edit { it[key] = PresetJson.json.encodeToString(snapshot) }
-                } catch (e: Exception) {
-                    status.value = status.value.copy(error = "Saving failed: ${e.message}")
+                withContext(NonCancellable) {
+                    try {
+                        context.dataStore.edit { it[key] = PresetJson.json.encodeToString(_saved.value) }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        status.value = status.value.copy(error = "Saving failed: ${e.message}")
+                    }
                 }
             }
     }

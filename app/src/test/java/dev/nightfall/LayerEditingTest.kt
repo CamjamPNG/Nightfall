@@ -44,6 +44,9 @@ class LayerEditingTest : PlaybackHarness() {
         assertTrue("playback stopped when layers were removed", runtime.status.value.playing)
         assertTrue(FloatSinkAudioTrack.peakWritten > 0f)
         assertEquals(0, FloatSinkAudioTrack.nonFiniteWrites.get())
+        // The error is the app's word on the last save, so read it after the edits are on disk
+        // rather than at whatever moment this test happens to reach the assertion.
+        awaitSaved()
         assertNull(runtime.status.value.error)
     }
 
