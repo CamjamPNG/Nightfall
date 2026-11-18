@@ -13,11 +13,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import dev.nightfall.core.*
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 private fun PageHeading(title: String, subtitle: String) {
@@ -215,7 +218,7 @@ private fun PresetCard(
                 Column(Modifier.weight(1f)) {
                     Text(p.name, fontSize = 17.sp, fontWeight = FontWeight.Medium)
                     Text(
-                        "${p.layers.size} layers",
+                        "${p.layers.size} ${plural(p.layers.size, "layer", "layers")}",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp),
@@ -563,7 +566,7 @@ fun Studio(
         }
         item {
             Text(
-                "Adjust midrange, filters and independent fade timing in the layer’s Effects controls on Home. Save the whole mix as a preset at any time.",
+                "Adjust midrange, filters and independent fade timing in the layer’s Options on Home. Save the whole mix as a preset at any time.",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -640,6 +643,11 @@ fun SettingsScreen(
     val output by selectStatus(r, r.statusNow().output) { it.output }
     val load by selectStatus(r, 0) { (it.load * 100).roundToInt() }
     val underruns by selectStatus(r, 0) { it.underruns }
+    val context = LocalContext.current
+    // The installed package, not a build constant: a literal here drifted two releases behind.
+    val version by
+        produceState("") { value = withContext(Dispatchers.IO) { installedVersion(context) } }
+    val appTitle = if (version.isEmpty()) "Nightfall" else "Nightfall $version"
     LazyColumn(
         contentPadding = PaddingValues(22.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -708,7 +716,7 @@ fun SettingsScreen(
                 s.fadeSeconds,
                 { v -> r.change { it.copy(settings = it.settings.copy(fadeSeconds = v)) } },
                 5f..120f,
-                "${s.fadeSeconds.roundToInt()} seconds",
+                "${s.fadeSeconds.roundToInt()} ${plural(s.fadeSeconds.roundToInt(), "second", "seconds")}",
             )
         }
         item { SectionLabel("On this device") }
@@ -747,7 +755,7 @@ fun SettingsScreen(
         }
         item {
             Text(
-                "Nightfall 1.0\nFree forever. A small space for a quieter night.",
+                "$appTitle\nFree forever. A small space for a quieter night.",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(vertical = 20.dp),

@@ -325,7 +325,7 @@ fun NightfallScreen(vm: NightfallViewModel) {
                                     }
                                 },
                                 5f..120f,
-                                "${fadeSeconds.roundToInt()} seconds",
+                                "${fadeSeconds.roundToInt()} ${plural(fadeSeconds.roundToInt(), "second", "seconds")}",
                             )
                         }
                     },
@@ -470,7 +470,7 @@ private fun Home(
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        "${layerIds.size} layers · hold the grip to reorder",
+                        "${layerIds.size} ${plural(layerIds.size, "layer", "layers")} · hold the grip to reorder",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -584,7 +584,7 @@ private fun NowPlayingCard(
 private fun ActiveLayerLabel(r: NightfallRuntime) {
     val active by selectSaved(r, r.savedNow().activeLayers()) { it.activeLayers() }
     Text(
-        "$active layers",
+        "$active ${plural(active, "layer", "layers")}",
         fontSize = 11.sp,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -594,7 +594,7 @@ private fun ActiveLayerLabel(r: NightfallRuntime) {
 private fun TimerButton(r: NightfallRuntime, onTimer: () -> Unit) {
     val label by
         selectStatus(r, "All night") { s ->
-            if (s.timerActive) if (s.timerFading) "Fading" else formatTime(s.remainingMs)
+            if (s.timerActive) if (s.timerFading) "Fading" else elapsedLabel(s.remainingMs)
             else "All night"
         }
     TextButton(
@@ -658,7 +658,7 @@ private fun PresetStrip(r: NightfallRuntime, onPresets: () -> Unit) {
 private fun CapacityWarning(r: NightfallRuntime) {
     val stats by selectStatus(r, 0 to 0) { (it.load * 100).roundToInt() to it.underruns }
     Text(
-        "This mix is approaching the device’s audio capacity. Reduce music effects or layers if you hear gaps. Render load ${stats.first}% · ${stats.second} underruns",
+        "This mix is approaching the device’s audio capacity. Reduce music effects or layers if you hear gaps. Render load ${stats.first}% · ${stats.second} ${plural(stats.second, "underrun", "underruns")}",
         color = MaterialTheme.colorScheme.primary,
         fontSize = 12.sp,
     )
@@ -1060,11 +1060,6 @@ private fun layerSubtitle(sound: Sound?): String =
         null -> ""
         else -> "${sound.kind.replaceFirstChar { it.uppercase() }} texture"
     }
-
-private fun formatTime(ms: Long): String {
-    val s = ms / 1000
-    return "${s/60}:${(s%60).toString().padStart(2,'0')}"
-}
 
 @Composable
 private fun TimerDialog(r: NightfallRuntime, onDismiss: () -> Unit) {

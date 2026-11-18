@@ -131,7 +131,7 @@ private class MixerPlayer(private val runtime: NightfallRuntime) :
             if (s.timerActive)
                 if (s.timerFading) " · Fading out"
                 else
-                    " · ${s.remainingMs/60000}:${((s.remainingMs/1000)%60).toString().padStart(2,'0')} remaining"
+                    " · ${elapsedLabel(s.remainingMs)} remaining"
             else " · All night"
         val item =
             MediaItem.Builder()
@@ -139,7 +139,7 @@ private class MixerPlayer(private val runtime: NightfallRuntime) :
                 .setMediaMetadata(
                     MediaMetadata.Builder()
                         .setTitle(mix.name)
-                        .setArtist("$count layers$timer")
+                        .setArtist("$count ${plural(count, "layer", "layers")}$timer")
                         .setIsPlayable(true)
                         .build()
                 )
