@@ -12,6 +12,9 @@ import org.junit.Test
 class OpusStreamTest {
     private val packetSamples = 480
 
+    /** How long a "nothing more happens" assertion watches before it believes it. */
+    private val QUIET_SECONDS = 2L
+
     /** A container whose packet `i` decodes to 480 samples of `i * 480 + j`, so a read is checkable. */
     private fun container(packets: Int = 9200): OpusFile {
         val table = packets * 8
@@ -79,6 +82,39 @@ class OpusStreamTest {
     }
 
     private val refused = AtomicInteger()
+
+    /**
+     * Waits up to [seconds] for the open decoder count to reach [count], then fails with what it saw.
+     * A fixed sleep would be an assumption about how fast four daemon workers tear down on a loaded
+     * runner; this is an assertion about the result.
+     */
+    private fun awaitDecoders(count: Int, seconds: Long = 15, what: String = "decoders") {
+        val deadline = System.nanoTime() + seconds * 1_000_000_000L
+        while (Fake.open.get() != count) {
+            if (System.nanoTime() > deadline)
+                fail("$what: ${Fake.open.get()} decoders open after ${seconds}s, expected $count")
+            Thread.sleep(20)
+        }
+    }
+
+    /** Waits for a decoder count to fall below [limit], which is what pruning must achieve. */
+    private fun awaitDecodersBelow(limit: Int, seconds: Long = 15, what: String = "decoders") {
+        val deadline = System.nanoTime() + seconds * 1_000_000_000L
+        while (Fake.open.get() >= limit) {
+            if (System.nanoTime() > deadline)
+                fail("$what: ${Fake.open.get()} decoders open after ${seconds}s, expected under $limit")
+            Thread.sleep(20)
+        }
+    }
+
+    /** Waits for a failure to be recorded, rather than assuming it happens within a sleep. */
+    private fun awaitUnavailable(recording: OpusRecording, seconds: Long = 15) {
+        val deadline = System.nanoTime() + seconds * 1_000_000_000L
+        while (recording.unavailable == null) {
+            if (System.nanoTime() > deadline) fail("no failure reported after ${seconds}s")
+            Thread.sleep(20)
+        }
+    }
 
     @Test
     fun containerReportsItsOwnLengthAndPacketTable() {
@@ -198,8 +234,7 @@ class OpusStreamTest {
         cursors.forEach { it[0] }
         assertTrue("cursors opened decoders", Fake.open.get() > before)
         recording.close()
-        Thread.sleep(200)
-        assertEquals("every decoder is released", before, Fake.open.get())
+        awaitDecoders(before, what = "every decoder is released")
     }
 
     @Test
@@ -223,12 +258,10 @@ class OpusStreamTest {
         assertTrue("two layers opened cursors", open >= 2)
         mixer.sync(mix.copy(layers = mix.layers.take(1)))
         repeat(200) { mixer.render(out, 1024) }
-        Thread.sleep(300)
-        assertTrue("a pruned layer releases its decoders", Fake.open.get() - before < open)
+        awaitDecodersBelow(before + open, what = "a pruned layer releases its decoders")
         mixer.sync(Mix())
         repeat(200) { mixer.render(out, 1024) }
-        Thread.sleep(300)
-        assertEquals("an empty mix releases the rest", before, Fake.open.get())
+        awaitDecoders(before, what = "an empty mix releases the rest")
         recording.close()
     }
 
@@ -242,9 +275,11 @@ class OpusStreamTest {
         assertEquals(0f, cursor[0], 0.001f)
         val built = builds.get()
         cursor.close()
-        Thread.sleep(200)
+        // A closed cursor rebuilds nothing: the count is checked after a quiet period, because the
+        // claim is about what does not happen.
         assertEquals("a closed cursor says nothing", 0f, cursor[0], 0.0f)
-        assertEquals("and rebuilds nothing", built, builds.get())
+        Thread.sleep(QUIET_SECONDS * 1_000)
+        assertEquals("and rebuilds nothing in ${QUIET_SECONDS}s", built, builds.get())
         recording.close()
     }
 
@@ -262,11 +297,10 @@ class OpusStreamTest {
         val cursor = recording.cursor(4.0)
         assertEquals(0f, cursor[0], 0.001f)
         cursor[2_000_000]
-        Thread.sleep(250)
+        awaitUnavailable(recording)
         val attempts = builds.get()
-        Thread.sleep(250)
-        assertEquals("the worker stops after the failure", attempts, builds.get())
-        assertNotNull(recording.unavailable)
+        Thread.sleep(QUIET_SECONDS * 1_000)
+        assertEquals("the worker stops after the failure, not within ${QUIET_SECONDS}s", attempts, builds.get())
         recording.close()
     }
 
@@ -275,6 +309,7 @@ class OpusStreamTest {
         val recording = OpusRecording(container(), { _ -> null })
         val cursor = recording.cursor()
         assertEquals(0f, cursor[0], 0.0f)
+        awaitUnavailable(recording)
         assertNotNull(recording.unavailable)
         println("unavailable: ${recording.unavailable}")
     }
