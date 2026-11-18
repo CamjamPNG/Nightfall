@@ -23,7 +23,8 @@ class MusicSource(private val rate: Int, seed: Long, private val style: Int) : S
     private var nextChord = 0L
     private var nextNote = 0L
     private var nextBeat = 0L
-    private var progression = 0
+    private var phrase = (seed.ushr(2) % PROGRESSIONS.size).toInt()
+    private var slot = -1
     private val delayL = FloatArray((rate * .397).toInt())
     private val delayR = FloatArray((rate * .531).toInt())
     private val reverbs =
@@ -89,13 +90,17 @@ class MusicSource(private val rate: Int, seed: Long, private val style: Int) : S
         val c = layer.music
         val beat = 60.0 / c.tempo
         val scale = if (c.minor) MINOR else MAJOR
-        val progressionNotes = PROGRESSIONS[(c.seed.ushr(2) % 3).toInt()]
-        var degree = progressionNotes[(progression - 1).mod(4)]
+        var degree = PROGRESSIONS[phrase][max(slot, 0)]
         for (i in 0 until frames) {
             if (frame >= nextChord) {
-                degree = progressionNotes[progression.mod(4)]
-                progression++
-                val duration = beat * 8
+                // A finished four-chord phrase is followed by another one entered at a random slot, so
+                // the phrasing keeps its material while the sequence never returns on a fixed period.
+                if (slot == 3) {
+                    phrase = random.index(PROGRESSIONS.size)
+                    slot = random.index(4)
+                } else slot++
+                degree = PROGRESSIONS[phrase][slot]
+                val duration = beat * if (random.unit() < .25) 16 else 8
                 for (j in 0 until (3 + (c.complexity * 3).toInt())) {
                     val d = degree + j * 2
                     val midi = 48 + c.key + scale[d % 7] + (d / 7) * 12
