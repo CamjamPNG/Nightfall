@@ -367,14 +367,16 @@ class AudioHost(private val runtime: NightfallRuntime) {
 
     fun release() {
         pause(true)
-        decoded.forEach { it.close() }
-        decoded.clear()
         running = false
         synchronized(monitor) { monitor.notifyAll() }
         track?.pause()
         track?.flush()
         worker.interrupt()
         worker.join(1500)
+        // Only once the mixing worker has stopped: closing a recording under a block in flight would
+        // hand the mixer a cursor with no decoder.
+        decoded.forEach { it.close() }
+        decoded.clear()
         manager.unregisterAudioDeviceCallback(devices)
         context.unregisterReceiver(noisy)
     }

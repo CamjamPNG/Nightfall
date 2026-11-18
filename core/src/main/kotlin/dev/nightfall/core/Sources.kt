@@ -24,6 +24,12 @@ interface Source {
     var eventEnergy: Float
 
     fun render(left: FloatArray, right: FloatArray, frames: Int, layer: Layer, settings: Settings)
+
+    /**
+     * Called once when the mixer prunes this source. It must not wait: it runs on the mixing thread, so
+     * anything a decoded source owns releases itself on that source's own worker.
+     */
+    fun close() {}
 }
 
 object Wave {
@@ -349,6 +355,9 @@ class RecordingSource(private val rate: Int, private val samples: SampleData, se
     val unavailable: String?
         get() = (samples as? DecodedSampleData)?.unavailable
 
+    /** The cursors this source opened, so a pruned layer releases its decoders with it. */
+    private val opened = ArrayList<SampleData>()
+
     private val rng = RandomStream(seed or 1L)
 
     /**
@@ -369,8 +378,12 @@ class RecordingSource(private val rate: Int, private val samples: SampleData, se
         // A decoded recording hands out one forward cursor per head; PCM serves both heads itself.
         if (samples is DecodedSampleData)
             heads.forEach {
-                it.reader = samples.cursor()
-                it.origin = samples.cursor(1.0)
+                val reader = samples.cursor()
+                val origin = samples.cursor(1.0)
+                opened += reader
+                opened += origin
+                it.reader = reader
+                it.origin = origin
             }
         val start = (seed.ushr(1) % max(1, samples.size / 3)).toInt()
         heads[0].position = start.toDouble()
@@ -379,6 +392,11 @@ class RecordingSource(private val rate: Int, private val samples: SampleData, se
                 .toDouble()
         heads.forEach { it.wrap = samples.size - OVERLAP - rng.index(max(1, wrapJitter)) }
         balanceCountdown = rate * (6 + rng.index(18))
+    }
+
+    override fun close() {
+        opened.forEach { (it as? CloseableSample)?.close() }
+        opened.clear()
     }
 
     companion object {

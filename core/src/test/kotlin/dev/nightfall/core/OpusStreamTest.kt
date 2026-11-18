@@ -13,7 +13,7 @@ class OpusStreamTest {
     private val packetSamples = 480
 
     /** A container whose packet `i` decodes to 480 samples of `i * 480 + j`, so a read is checkable. */
-    private fun container(packets: Int = 9000): OpusFile {
+    private fun container(packets: Int = 9200): OpusFile {
         val table = packets * 8
         val head = "OpusHead".toByteArray(Charsets.US_ASCII) + ByteArray(3)
         val bytes = ByteArray(24 + head.size + table + packets * 4)
@@ -84,14 +84,14 @@ class OpusStreamTest {
     fun containerReportsItsOwnLengthAndPacketTable() {
         val file = container()
         assertEquals(24000, file.sampleRate)
-        assertEquals(9000 * 480, file.totalSamples)
-        assertEquals(9000, file.packetCount)
+        assertEquals(9200 * 480, file.totalSamples)
+        assertEquals(9200, file.packetCount)
         assertEquals(0, file.packetAt(0))
         assertEquals(1, file.packetAt(480))
         assertEquals(4320, file.packetAt(4320 * 480 + 479))
         val into = ByteArray(4)
         assertEquals(4, file.packet(4320, into))
-        assertEquals(4320, (into[0].toInt() and 0xFF) or ((into[1].toInt() and 0xFF) shl 8))
+        assertEquals(4320 - 4096, (into[0].toInt() and 0xFF) or ((into[1].toInt() and 0x0F) shl 8))
     }
 
     @Test
@@ -201,25 +201,49 @@ class OpusStreamTest {
     }
 
     @Test
-    fun aRetiredLayerReleasesItsDecodersWithoutTouchingTheLiveOne() {
+    fun pruningALayerReleasesItsDecodersAndTheMixKeepsRunning() {
         val file = container()
         val before = Fake.open.get()
         val recording = OpusRecording(file, ::decoder)
-        val live = recording.cursor(4.0)
-        assertEquals(0f, live[0], 0.001f)
-        // Two layers come and go, four cursors each, which is what add-and-remove does. A retired
-        // layer's cursors stop being read, so they are the ones a new layer displaces.
-        repeat(2) {
-            val gone = List(4) { recording.cursor(4.0) }
-            gone.forEach { it[0] }
-            Thread.sleep(1_200)
-            assertEquals(480f, live[480], 0.001f)
-        }
-        assertTrue("decoders are capped rather than accumulated", Fake.open.get() - before <= 8)
-        assertEquals("the live cursor still reads", 480f, live[480], 0.001f)
+        val mix =
+            Mix(
+                layers =
+                    listOf(
+                        Layer("one", "crickets", "Crickets", .5f, music = MusicConfig(seed = 1)),
+                        Layer("two", "frogs", "Frogs", .5f, music = MusicConfig(seed = 2)),
+                    )
+            )
+        val mixer = PcmMixer(48000, 1024) { recording }
+        val out = FloatArray(2048)
+        mixer.sync(mix)
+        mixer.render(out, 1024)
+        val open = Fake.open.get() - before
+        assertTrue("two layers opened cursors", open >= 2)
+        mixer.sync(mix.copy(layers = mix.layers.take(1)))
+        repeat(200) { mixer.render(out, 1024) }
+        Thread.sleep(300)
+        assertTrue("a pruned layer releases its decoders", Fake.open.get() - before < open)
+        mixer.sync(Mix())
+        repeat(200) { mixer.render(out, 1024) }
+        Thread.sleep(300)
+        assertEquals("an empty mix releases the rest", before, Fake.open.get())
         recording.close()
+    }
+
+    @Test
+    fun aClosedCursorStaysSilentInsteadOfRebuilding() {
+        val file = container()
+        val builds = AtomicInteger()
+        val recording =
+            OpusRecording(file, { config -> builds.incrementAndGet(); decoder(config) })
+        val cursor = recording.cursor(4.0) as CloseableSample
+        assertEquals(0f, cursor[0], 0.001f)
+        val built = builds.get()
+        cursor.close()
         Thread.sleep(200)
-        assertEquals("close releases everything", before, Fake.open.get())
+        assertEquals("a closed cursor says nothing", 0f, cursor[0], 0.0f)
+        assertEquals("and rebuilds nothing", built, builds.get())
+        recording.close()
     }
 
     @Test

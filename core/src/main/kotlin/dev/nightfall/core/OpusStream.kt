@@ -116,10 +116,9 @@ interface OpusPackets {
  * [RecordingSource] reads two heads at unrelated offsets and each head also reads the file's first
  * second for its wrap crossfade, so it takes four cursors. Each owns a decoder and a ring buffer of
  * [seconds] of audio, decodes ahead of its head on a worker thread, and restarts its decoder at the
- * packet holding the head when the head wraps. A removed layer must not leave decoders behind, and a
- * playing cursor must never be the one that pays for it: when cursors exceed [MAX_CURSORS] the one read
- * longest ago — a retired layer's, since a live one is read every block — is closed, and [close] closes
- * the rest.
+ * packet holding the head when the head wraps. Decoders are released when a layer goes away, not on a
+ * timer: a timer cannot tell a retired cursor from an origin cursor, which is only read during the
+ * one-second crossfade before a wrap. `RecordingSource` closes its cursors when the mixer prunes it.
  *
  * [onUnavailable] is called from the worker the moment a decoder cannot be created or a packet decodes
  * to nothing, so the host can report it immediately rather than at the next mix change.
@@ -148,30 +147,9 @@ class OpusRecording(
 
     override fun cursor(seconds: Double): SampleData {
         val cursor = OpusCursor(file, decoder, if (seconds > 0) seconds else this.seconds, this)
-        synchronized(cursors) {
-            // Only a cursor nobody has read for a while can be a retired layer's: a playing one is read
-            // every block, so it is never the victim and never pays for the release.
-            val now = System.currentTimeMillis()
-            while (cursors.size >= MAX_CURSORS) {
-                val stale =
-                    cursors
-                        .filter { now - it.lastReadAt() >= STALE_MILLIS }
-                        .minByOrNull { it.lastReadAt() } ?: break
-                cursors.remove(stale)
-                stale.close()
-            }
-            cursors += cursor
-        }
+        synchronized(cursors) { cursors += cursor }
         unavailable?.let { cursor.fail(it) }
         return cursor
-    }
-
-    companion object {
-        /** Four cursors per layer, so this holds the current layer and its replacement at once. */
-        const val MAX_CURSORS = 8
-
-        /** How long a cursor must go unread before it can be retired for its decoder. */
-        const val STALE_MILLIS = 1_000L
     }
 
     internal fun report(reason: String) {
@@ -187,12 +165,17 @@ class OpusRecording(
 }
 
 /** One read head's view of an [OpusRecording]: random reads, one decoder, one ring. */
+/** A decoded cursor the mixer can release without waiting for its worker. */
+interface CloseableSample : SampleData {
+    fun close()
+}
+
 class OpusCursor(
     private val file: OpusFile,
     private val factory: (ByteArray) -> OpusPackets?,
     seconds: Double,
     private val owner: OpusRecording?,
-) : SampleData {
+) : CloseableSample {
     override val size = file.totalSamples
 
     private val window = max(1, (seconds * file.sampleRate).toInt())
@@ -207,6 +190,7 @@ class OpusCursor(
     private var restart = -1
     private var seeking = -1
     private var running = true
+    private var closing = false
     private var lastRead = System.currentTimeMillis()
     private var started = false
 
@@ -218,7 +202,7 @@ class OpusCursor(
     private val worker = Thread({ loop() }, "Nightfall opus").apply { isDaemon = true }
 
     @Synchronized private fun begin() {
-        if (started) return
+        if (started || closing) return
         started = true
         worker.start()
     }
@@ -262,23 +246,20 @@ class OpusCursor(
         }
     }
 
-    fun close() {
+    /**
+     * Stops this cursor. The worker releases the decoder and the ring on its way out, so this is only a
+     * flag and a wake — a mixer pruning a layer on the audio thread does not wait for a codec teardown.
+     * A read after this returns silence rather than rebuilding anything.
+     */
+    override fun close() {
         synchronized(lock) {
+            closing = true
             running = false
             lock.notifyAll()
-        }
-        worker.join(500)
-        synchronized(lock) {
-            decoder?.close()
-            decoder = null
-            ring = null
         }
     }
 
     private fun full() = next - start >= (ring?.size ?: 1)
-
-    /** When this cursor was last read, so a recording can retire the least recently used one. */
-    fun lastReadAt(): Long = synchronized(lock) { lastRead }
 
     private fun open(): OpusPackets? {
         synchronized(lock) {
@@ -298,6 +279,7 @@ class OpusCursor(
 
     private fun loop() {
         if (open() == null) return
+        try {
         while (true) {
             var seek = -1
             synchronized(lock) {
@@ -313,6 +295,14 @@ class OpusCursor(
                 }
             }
             if (seek >= 0) reseek(seek) else step()
+        }
+        } finally {
+            // Closing here rather than in close() keeps a codec teardown off the mixing thread.
+            synchronized(lock) {
+                decoder?.close()
+                decoder = null
+                ring = null
+            }
         }
     }
 
