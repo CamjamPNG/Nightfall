@@ -35,6 +35,14 @@ object UpdateAutomation {
         automatic && playback == Playback.STOPPED
 
     /**
+     * The commit-time re-read of the same rule. Copying the APK takes seconds with Play still live,
+     * so the window is sampled again immediately before Android commits: playback that resumed
+     * during the copy defers the install. [guarded] is false only for a tap the owner made.
+     */
+    fun mayCommitNow(guarded: Boolean, automatic: Boolean, playback: Playback): Boolean =
+        !guarded || mayInstallNow(automatic, playback)
+
+    /**
      * May the app ask GitHub on its own? The setting gates it, a connection is required, and both
      * pacing rules apply: the fifteen-minute floor shared by every request, and six hours since the
      * last successful answer. A failed attempt is recorded as an attempt only, so it never starts

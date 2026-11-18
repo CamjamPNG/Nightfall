@@ -2,7 +2,7 @@
 
 ## Executed checks
 
-- 45 JVM tests in `app/src/testGithub` cover the update channel: release-manifest
+- 51 JVM tests in `app/src/testGithub` cover the update channel: release-manifest
   parsing (untrusted documents, wrong types, unknown and duplicate architectures,
   addresses that are not this repository's release assets, oversized input),
   every trust refusal (`UpdatePolicy`), version-name ordering, and the downloader
@@ -32,6 +32,15 @@
   six hours, that a corrected clock is expired rather than a lock, and that a
   download from an earlier session resumes only while it is still newer and its file
   is still on disk.
+- `InstallWindowTest` pins the second, commit-time half of the guard. Writing a
+  ninety-megabyte APK into an installer session takes seconds while Play and the
+  media-session controls stay live, so the window is read again immediately before
+  the commit: playback that starts during the copy abandons the session and never
+  reaches the commit, playback that starts and stops again during the copy still
+  commits, and a tap the owner made is not vetoed by the copy-time fact. The test
+  drives the real `InstallWindow.copyThenCommit` with a copy that moves the
+  playback fact, so it asserts the ordering — copy, then window, then commit or
+  abandon — rather than a copy of it.
 - `UpdateChannelStateTest` pins the channel's two pacing rules (a fifteen-minute
   floor for every request, a six-hour interval only for the app's own check, a
   failed attempt never starting that interval, a corrected clock treated as
@@ -121,9 +130,10 @@ The automatic download of a published release, the waiting state that follows it
 while audio plays, the install that a play-to-pause transition triggers, the
 resumption of a verified download after the process was killed, and the once-only
 changelog on the next launch are all covered as rules and state transitions in JVM
-tests (45 in `app/src/testGithub`) and not as observed device behaviour. The Compose
+tests (51 in `app/src/testGithub`) and not as observed device behaviour. The Compose
 surfaces — the Settings toggle, the waiting row and the changelog dialog — were
-compiled and linted, never rendered on a screen.
+compiled and linted, never rendered on a screen. The commit-time re-check is
+tested as an ordering over a fake session, not against Android's installer.
 
 Also unverified: a real download of a published release from GitHub (the tests use
 a local server with the same protocol), behaviour behind a captive portal or a

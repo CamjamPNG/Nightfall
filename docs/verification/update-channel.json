@@ -19,14 +19,15 @@
       "note": "unchanged MixerTest and AudioAcceptanceTest"
     },
     "app_unit_github": {
-      "count": 45,
+      "count": 51,
       "failures": 0,
       "classes": [
         "ReleaseManifestParserTest",
         "UpdatePolicyTest",
         "ReleaseFetchTest",
         "UpdateChannelStateTest",
-        "UpdateAutomationTest"
+        "UpdateAutomationTest",
+        "InstallWindowTest"
       ],
       "covers": [
         "manifest parsing of untrusted documents: wrong types, unknown and duplicate ABIs, non-repository download addresses, oversized input",
@@ -37,6 +38,7 @@
         "the two pacing rules (fifteen-minute floor for every request, six-hour interval for the app's own check, failed attempts never starting the interval, a corrected clock treated as expired), the minutes reported to the user, and banner dismissal hiding only the notice for that release, including the notice that an update waits for playback",
         "the playback guard as a truth table: with automatic updates on, an install the app starts is refused while playing and refused on an unknown playback fact, and allowed only when stopped; with the setting off nothing installs unattended",
         "the sequence the guard exists for: a night that begins in playback and ends when audio stops produces exactly one install, at the stop",
+        "the commit-time re-read of the playback guard: playback that starts during the APK copy abandons the installer session and never reaches the commit; a tap the owner made is not vetoed",
         "the automatic request rule composed from the setting, the connection and both pacing intervals, including that a failed attempt never spends the six hours",
         "resumption of a verified download after a process restart: only while that version is still newer and its file is still on disk",
         "release notes present, absent (a schema-1 document with no log parses with an empty log and identical trust fields), and hostile (log that is not a list, entries and versions that are malformed, notes that are not strings, a newline in a date, repeated versions, 200 entries, a 2000-character line of control characters), each leaving the version, code, certificate and APK list identical to the clean parse and bounding what the view may draw",
@@ -81,7 +83,7 @@
   "not_verified": [
     "PackageInstaller install path on a device or emulator: this machine has no /dev/kvm",
     "an unattended install: no install, no automatic restart and no post-install release-log view was observed",
-    "the waiting state and the install a play-to-pause transition triggers; covered as rules and state transitions in JVM tests, not observed",
+    "the waiting state, the install a play-to-pause transition triggers and the commit-time deferral; covered as rules, state transitions and an ordering test over a fake session, not observed",
     "STATUS_PENDING_USER_ACTION confirmation dialog and the post-install restart",
     "the 'install unknown apps' screen",
     "a download of a real published release from GitHub (tests use a local HTTP server)",
@@ -93,7 +95,8 @@
     "default": "on in the github channel, stored in private preferences, switchable in Settings \u2192 Updates",
     "install_window": "a downloaded, verified update becomes a ready-to-install state and is handed to PackageInstaller only when the setting is on and playback is known to be stopped; an unknown playback fact refuses, so a race postpones an install rather than interrupting audio",
     "user_initiated": "a tap on Update installs without waiting, because the user asked",
-    "pacing": "unchanged: the fifteen-minute floor and the six-hour interval below still decide every request"
+    "pacing": "unchanged: the fifteen-minute floor and the six-hour interval below still decide every request",
+    "commit_time": "the window is read once more immediately before the installer session commits, because copying the APK takes seconds with Play still live"
   },
   "release_log": {
     "manifest_schema": 2,

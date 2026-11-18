@@ -99,7 +99,11 @@ the setting, and a playback fact of *stopped*, and nothing else. A foreground en
 that arrives before the app has reported playback is `UNKNOWN`, which refuses, so a
 race between the updater loading and the status flow can only postpone an install
 and never interrupt audio. The window opens on a play-to-pause transition or on the
-next launch, and the banner and Settings row say which one it is waiting for. A tap
+next launch, and the banner and Settings row say which one it is waiting for. It is
+also read a second time immediately before the installer session commits
+(`InstallWindow`): writing the APK into that session takes seconds with Play and the
+media-session controls still live, so playback that resumed during the copy abandons
+the session and puts the update back to waiting instead of killing the audio. A tap
 on Update is the user asking, and the guard does not hold that back.
 
 `CheckThrottle` keeps two rules because they are two different promises. Every

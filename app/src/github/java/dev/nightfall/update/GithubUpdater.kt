@@ -106,6 +106,10 @@ class GithubUpdater(context: Context) : UpdateApi {
             return
         }
         _log.value = logView(UpdatePrefs.log(app))
+        // A failure the owner has seen is theirs to retry: keeping the download is what makes that
+        // cheap, not a licence to start another unattended attempt. Otherwise cancelling Android's
+        // confirmation would only postpone the next prompt to the next foreground.
+        if (current is UpdateState.Failed) return
         val resumed = resumeVerified()
         if (resumed != null) {
             // Downloaded in an earlier session and still newer than what is running: the window the
@@ -167,13 +171,14 @@ class GithubUpdater(context: Context) : UpdateApi {
             try {
                 val manifest = ReleaseManifestParser.parse(ReleaseFetch.manifestText())
                 UpdatePrefs.recordSuccess(app)
+                // Every successful answer carries the log, and the log is what the app shows on a day
+                // when nothing needs installing: it is kept whatever the version decision is.
+                saveLog(manifest.log)
                 if (manifest.versionCode <= installed.versionCode) {
                     pending = null
-                    _log.value = logView(UpdatePrefs.log(app))
                     _state.value = UpdateState.UpToDate(installed.versionName)
                     return@launch
                 }
-                saveLog(manifest.log)
                 val update =
                     UpdatePolicy.nextUpdate(
                         manifest,
@@ -205,8 +210,9 @@ class GithubUpdater(context: Context) : UpdateApi {
         }
         val resumed = resumeVerified()
         if (resumed != null) {
-            // Already downloaded and verified: a retry costs nothing but the install.
-            handToAndroid(resumed)
+            // Already downloaded and verified: a retry costs nothing but the install, and this is
+            // the tap, so the install does not wait for playback.
+            handToAndroid(resumed, guarded = false)
             return
         }
         val update = pending ?: return
@@ -222,6 +228,13 @@ class GithubUpdater(context: Context) : UpdateApi {
         if (resumed != null) {
             _state.value = UpdateState.ReadyToInstall(resumed.versionName, resumed.versionCode)
             installIfWindowOpen()
+            return
+        }
+        // Turning the setting on applies to the release this session already found. Asking GitHub
+        // again would spend both pacing windows to learn what is already on screen.
+        val known = pending
+        if (known != null && !_state.value.isBusy()) {
+            download(known)
             return
         }
         check(manual = false)
@@ -300,10 +313,10 @@ class GithubUpdater(context: Context) : UpdateApi {
             _state.value = UpdateState.Idle
             return
         }
-        handToAndroid(ready)
+        handToAndroid(ready, guarded = true)
     }
 
-    private fun handToAndroid(ready: PendingInstall) {
+    private fun handToAndroid(ready: PendingInstall, guarded: Boolean) {
         val file = File(app.cacheDir, "updates/${ready.file}")
         if (!file.isFile) {
             forgetPending()
@@ -318,7 +331,16 @@ class GithubUpdater(context: Context) : UpdateApi {
         _state.value = UpdateState.Installing(ready.versionName)
         scope.launch {
             try {
-                PackageInstalls.install(app, file, ready.versionName)
+                val outcome =
+                    PackageInstalls.install(app, file, ready.versionName) {
+                        UpdateAutomation.mayCommitNow(guarded, _automatic.value, playback)
+                    }
+                if (outcome == InstallWindow.Outcome.DEFERRED) {
+                    // Playback resumed while the APK was being copied. The session is abandoned, so
+                    // the update goes back to waiting instead of killing the audio it waited for.
+                    handedOverAt = 0L
+                    _state.value = UpdateState.ReadyToInstall(ready.versionName, ready.versionCode)
+                }
             } catch (e: Exception) {
                 _state.value =
                     UpdateState.Failed("The update could not be installed: ${e.message ?: e.javaClass.simpleName}")
