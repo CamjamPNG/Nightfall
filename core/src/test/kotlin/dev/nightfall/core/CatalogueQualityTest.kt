@@ -11,6 +11,9 @@ import org.junit.Test
  * `LoudnessTargetTest`; nothing here re-tests it.
  */
 class CatalogueQualityTest {
+    /** Seed draws averaged per preset: the stochastic layers make one draw a lottery, not a level. */
+    private val presetDraws = 4
+
     private val loader = M.assetLoader()
 
     /**
@@ -146,9 +149,35 @@ class CatalogueQualityTest {
     fun presetsShareOneOutputLevel() {
         val levels = LinkedHashMap<String, Double>()
         for (p in Presets.all) {
-            levels[p.id] = M.shortTermLufs(M.render(p, 20.0, loader), 3.0)
+            // Wind, snow and the event sources run on randomised schedules, so one window of one
+            // seed is a single draw of that schedule: measured spread between 20 s draws reaches
+            // 3 LU on the weather-heavy presets. A minute per draw, averaged over four seeds, is
+            // the preset's expectation rather than one roll of its weather.
+            val taken = DoubleArray(presetDraws) { n ->
+                M.integratedLufs(
+                    M.render(
+                        if (n == 0) p
+                        else
+                            p.copy(
+                                layers =
+                                    p.layers.mapIndexed { i, l ->
+                                        l.copy(
+                                            id = "${l.id}-$n",
+                                            music = l.music.copy(seed = l.music.seed + 101 * i * n),
+                                        )
+                                    }
+                            ),
+                        60.0,
+                        loader,
+                    )
+                )
+            }
+            println(
+                "  %-22s %5.1f LUFS, draws %5.1f..%5.1f"
+                    .format(p.id, taken.average(), taken.min(), taken.max())
+            )
+            levels[p.id] = taken.average()
         }
-        levels.forEach { (id, lufs) -> println(String.format("  %-22s %.1f LUFS", id, lufs)) }
         val min = levels.minBy { it.value }
         val max = levels.maxBy { it.value }
         println(
@@ -174,6 +203,43 @@ class CatalogueQualityTest {
         }
         println("loudest preset peak ${CatalogueMetrics.fmt(peak)} dBTP ($name)")
         assertTrue("$name peaks at ${CatalogueMetrics.fmt(peak)} dBTP", peak <= -6.0)
+    }
+
+    @Test
+    fun bundledRecordingsDoNotReplayOnAFixedPeriod() {
+        val report = StringBuilder()
+        for (s in Library.all.filter { it.kind == "recording" }) {
+            val samples = (java.io.File("../app/src/main/assets/audio/${s.asset}.pcm").length() / 2).toInt()
+            val cycle = RecordingSource.cycleSeconds(samples)
+            val shortest = RecordingSource.shortestCycleSeconds(samples)
+            println("%s shortest cycle %.1fs of %.1fs".format(s.id, shortest, cycle))
+            assertTrue("${s.id} can repeat after only %.1fs".format(shortest), shortest >= 180.0)
+            val mix = Mix(layers = listOf(Library.layer(s.id, .35f, "loop-probe")))
+            val atCycle = CatalogueMetrics.selfCorrelation(mix, cycle, 12.0, 24000)
+            val control = CatalogueMetrics.selfCorrelation(mix, cycle / 2, 12.0, 24000)
+            report.append(
+                "%s cycle %.1fs corr %.3f control %.3f\n"
+                    .format(s.id, cycle, atCycle, control)
+            )
+            assertTrue("${s.id} still repeats its cycle (correlation $atCycle)", atCycle < .8)
+            assertTrue("${s.id} control lag correlates $control", abs(control) < .2)
+        }
+        println(report)
+    }
+
+    @Test
+    fun windDoesNotBreatheOnAFixedCycle() {
+        // Wind's level used two fixed sinusoids (251 s and 88.5 s), so the gust pattern returned
+        // exactly. Measured as the largest envelope self-similarity anywhere in 60-400 s.
+        for (id in listOf("gentle-breeze", "strong-wind")) {
+            val (lag, correlation) =
+                CatalogueMetrics.envelopeCorrelationMax(
+                    Mix(layers = listOf(Library.layer(id, 1f, "gust-$id"))),
+                    600.0,
+                )
+            println("%s peak envelope correlation %.3f at %.0fs".format(id, correlation, lag))
+            assertTrue("$id breathes on a %.0fs cycle (%.3f)".format(lag, correlation), abs(correlation) < .6)
+        }
     }
 
     @Test

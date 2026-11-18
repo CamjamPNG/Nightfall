@@ -378,52 +378,53 @@ object Presets {
         )
 
     /**
-     * Every preset is trimmed to the same measured loudness — −24 LUFS short-term at 48 kHz — so
-     * switching presets no longer jumps, and every advertised layer sits within 12 LU of the loudest
-     * layer it is mixed with, which is also the widest gain ratio the presets use. The layer gains set balance; `master` is the per-preset level trim, and the one
-     * preset that cannot reach the target through gains alone (ocean-waves would exceed 1.0) carries
-     * the remainder there. Measured by `CatalogueQualityTest`.
+     * Every preset is trimmed to the same measured loudness — −24 LUFS integrated, a minute of audio
+     * averaged over four seed draws — so switching presets no longer jumps, and every advertised
+     * layer sits within 12 LU of the loudest layer it is mixed with, which is also the widest gain
+     * ratio the presets use. The layer gains set balance; `master` is the per-preset level trim, and
+     * the one preset that cannot reach the target through gains alone (ocean-waves would exceed 1.0)
+     * carries the remainder there. Measured by `CatalogueQualityTest`.
      */
     val all =
         listOf(
-            p("Quiet Skies", "432-hz-ambient-music" to .56f, "light-drizzle" to .85f).at(.50f),
+            p("Quiet Skies", "432-hz-ambient-music" to .56f, "light-drizzle" to .85f).at(.49f),
             p("Cozy Cabin", "fireplace" to .80f, "blizzard" to .45f, "gentle-breeze" to .45f)
-                .at(.50f),
+                .at(.49f),
             p("Rainy Lo-fi", "lo-fi-sleep-music" to .68f, "moderate-rain" to .68f, "brown" to .38f)
-                .at(.50f),
-            p("Deep Sleep Noise", "brown" to .60f, "pink" to .25f).at(.74f),
-            p("Ocean Night", "ocean-waves" to 1f, "gentle-breeze" to .44f).at(.62f),
+                .at(.47f),
+            p("Deep Sleep Noise", "brown" to .60f, "pink" to .25f).at(.77f),
+            p("Ocean Night", "ocean-waves" to 1f, "gentle-breeze" to .44f).at(.46f),
             p(
                     "Storm Watch",
                     "moderate-rain" to .87f,
                     "rolling-thunder" to .48f,
                     "strong-wind" to .39f,
                 )
-                .at(.50f),
-            p("Winter Storm", "hail" to .44f, "blizzard" to .62f, "fireplace" to .70f).at(.50f),
+                .at(.43f),
+            p("Winter Storm", "hail" to .44f, "blizzard" to .62f, "fireplace" to .70f).at(.47f),
             p(
                     "Forest Cabin",
                     "wind-through-pine-trees" to .50f,
                     "fireplace" to .67f,
                     "crickets" to .42f,
                 )
-                .at(.50f),
-            p("Space Drift", "440-hz-ambient-music" to .79f, "soft-synth-pads" to .68f).at(.50f),
-            p("Airplane Sleep", "airplane-cabin" to .94f, "brown" to .28f).at(.50f),
-            p("Mountain Stream", "rivers" to .80f, "wind-through-pine-trees" to .60f).at(.50f),
+                .at(.52f),
+            p("Space Drift", "440-hz-ambient-music" to .79f, "soft-synth-pads" to .68f).at(.48f),
+            p("Airplane Sleep", "airplane-cabin" to .94f, "brown" to .28f).at(.49f),
+            p("Mountain Stream", "rivers" to .80f, "wind-through-pine-trees" to .60f).at(.49f),
             p("Piano Rain", "soft-piano" to .64f, "rain-on-window" to .74f).at(.50f),
             p("Night Library", "quiet-library" to .59f, "moderate-rain" to .79f).at(.50f),
-            p("Midnight Fire", "fireplace" to .79f, "minimalist-piano" to .53f).at(.50f),
+            p("Midnight Fire", "fireplace" to .79f, "minimalist-piano" to .53f).at(.51f),
             // Bundled recordings and the binaural tone that no earlier preset reached.
             p("Summer Night", "crickets" to .80f, "frogs" to .66f, "nighttime-forest" to .55f)
-                .at(.50f),
+                .at(.43f),
             p("City Rain", "distant-city-rain" to .71f, "moderate-rain" to .54f, "distant-train" to .42f)
-                .at(.50f),
+                .at(.48f),
             p("Coffee Shop", "soft-coffee-shop-ambience" to .73f, "quiet-library" to .51f, "distant-city-rain" to .37f)
-                .at(.50f),
-            p("Dawn Birds", "forest-birds" to .90f, "wind-in-leaves" to .68f).at(.50f),
-            p("Binaural Drift", "binaural" to .69f, "432-hz-ambient-music" to .79f).at(.50f),
-            p("Piano Only", "soft-piano" to .90f).at(.50f),
+                .at(.48f),
+            p("Dawn Birds", "forest-birds" to .90f, "wind-in-leaves" to .68f).at(.42f),
+            p("Binaural Drift", "binaural" to .69f, "432-hz-ambient-music" to .79f).at(.48f),
+            p("Piano Only", "soft-piano" to .90f).at(.57f),
             p(
                 "Nine-Layer Dream",
                 "lo-fi-sleep-music" to .45f,
@@ -435,6 +436,6 @@ object Presets {
                 "wind-through-pine-trees" to .40f,
                 "fireplace" to .45f,
                 "440-hz-ambient-music" to .30f,
-            ).at(.45f),
+            ).at(.40f),
         )
 }

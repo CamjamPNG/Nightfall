@@ -149,6 +149,10 @@ class EnvironmentSource(
     private var ring = 0f
     private var ringPhase = 0.0
     private var eventDecay = .9999f
+    private var gust = .65f
+    private var gustTarget = .65f
+    private var gustCountdown = 0
+    private val gustSmoothing = (1 - exp(-1.0 / (rate * .8))).toFloat()
     override var eventEnergy = 0f
 
     override fun render(
@@ -176,8 +180,12 @@ class EnvironmentSource(
             low += cutoff * (w - low)
             low2 += cutoff * (w2 - low2)
             val slow = if (settings.dynamicWeather) .8f + .2f * Wave.sin(t * .008 + variant) else 1f
-            val gust =
-                .65f + .22f * Wave.sin(t * (.025 + variant * .003)) + .12f * Wave.sin(t * .071)
+            if (--gustCountdown <= 0) {
+                gustTarget = .45f + rng.unit() * .40f
+                gustCountdown = (rate * (1.5 + rng.unit() * 3.5)).toInt()
+            }
+            gust += (gustTarget - gust) * gustSmoothing
+            val gustLevel = gust * (1f + .06f * Wave.sin(t * .071))
             val intensity = .4f + layer.intensity * .9f
             var l: Float
             var r: Float
@@ -241,15 +249,15 @@ class EnvironmentSource(
                     val hit =
                         ring * Wave.sin(ringPhase) * (if (settings.lowDistraction) .65f else 1f)
                     val amount = if (variant == 1) .18f else .8f
-                    l = (low * gust * 3f + w * .07f) * amount + hit
-                    r = (low2 * gust * 3f + w2 * .07f) * amount + hit * .65f
+                    l = (low * gustLevel * 3f + w * .07f) * amount + hit
+                    r = (low2 * gustLevel * 3f + w2 * .07f) * amount + hit * .65f
                 }
                 "wind" -> {
-                    l = low * gust * 3.2f
-                    r = low2 * gust * 3.2f
+                    l = low * gustLevel * 3.2f
+                    r = low2 * gustLevel * 3.2f
                     if (variant == 7) {
-                        l += Wave.sin(t * (120 + gust * 35)) * .018f * gust
-                        r += Wave.sin(t * (121 + gust * 35)) * .018f * gust
+                        l += Wave.sin(t * (120 + gustLevel * 35)) * .018f * gustLevel
+                        r += Wave.sin(t * (121 + gustLevel * 35)) * .018f * gustLevel
                     }
                 }
                 "water" -> {
@@ -296,7 +304,19 @@ class Pcm16Data(buffer: java.nio.ByteBuffer) : SampleData {
     override fun get(index: Int) = data.get(index) / 32768f
 }
 
-/** Mono 24 kHz recording. Every bundled cycle is longer than three minutes. */
+/**
+ * A bundled recording read by two heads at unrelated offsets.
+ *
+ * Mono 24 kHz, and every bundled cycle is longer than three minutes.
+ *
+ * The recording is longer than three minutes, which is what makes a single loop cycle tolerable, but a
+ * single head still repeated the same three or four minutes at a fixed period: measured
+ * self-correlation at the cycle lag was 1.000, so an eight-hour night replayed the file 120-160 times
+ * in the same order. Two heads read the same samples from different offsets, each wraps at its own
+ * randomised point, and the balance between them drifts between randomised aims on a randomised
+ * schedule. Nothing repeats at a fixed period, and the overlap crossfades stay one second long so the
+ * wraps stay inaudible.
+ */
 class RecordingSource(private val rate: Int, private val samples: SampleData, seed: Long) : Source {
     init {
         require(samples.size > 24000 * 181) {
@@ -304,19 +324,75 @@ class RecordingSource(private val rate: Int, private val samples: SampleData, se
         }
     }
 
-    private var position = (seed.ushr(1) % max(1, samples.size / 3)).toDouble()
+    private class Head {
+        var position = 0.0
+        var wrap = 0
+    }
+
+    private val rng = RandomStream(seed or 1L)
+
+    /**
+     * How far a wrap point may move into the file. Each head still plays at least three minutes of
+     * material between one wrap and the next — the shortest cycle the catalogue promises — so the
+     * draw is bounded by the room a file leaves above that floor, and by a minute for the long files.
+     */
+    private val wrapJitter = wrapJitter(samples.size)
+
+    private val heads = Array(2) { Head() }
+    private var balance = 0.0
+    private var balanceTarget = 0.0
+    private var balanceCountdown = 0
+    private val balanceSmoothing = (1 - exp(-1.0 / (rate * 6.0))).toFloat()
     override var eventEnergy = 0f
+
+    init {
+        val start = (seed.ushr(1) % max(1, samples.size / 3)).toInt()
+        heads[0].position = start.toDouble()
+        heads[1].position =
+            ((start + samples.size / 2 + rng.index(max(1, samples.size / 8))) % (samples.size - 1))
+                .toDouble()
+        heads.forEach { it.wrap = samples.size - OVERLAP - rng.index(max(1, wrapJitter)) }
+        balanceCountdown = rate * (6 + rng.index(18))
+    }
 
     companion object {
         const val OVERLAP = 24000
 
+        /** The catalogue promises three minutes of material before a recording repeats. */
+        const val SHORTEST_CYCLE = 180 * 24000
+
         fun cycleSeconds(samples: Int) = (samples - OVERLAP) / 24000.0
+
+        fun wrapJitter(samples: Int) =
+            minOf(samples / 8, 60 * 24000, samples - OVERLAP - SHORTEST_CYCLE)
+
+        /** The shortest cycle the randomised wrap points allow for a file of this length. */
+        fun shortestCycleSeconds(samples: Int) =
+            (samples - OVERLAP - wrapJitter(samples)) / 24000.0
     }
 
     private fun read(position: Double): Float {
         val p = position.toInt().coerceIn(0, samples.size - 1)
         val fraction = (position - p).toFloat()
         return samples[p] * (1 - fraction) + samples[min(p + 1, samples.size - 1)] * fraction
+    }
+
+    /** One head's sample, crossfading into its own start over the last second before it wraps. */
+    private fun sample(head: Head): Float {
+        var v = read(head.position)
+        if (head.position >= head.wrap) {
+            val x = ((head.position - head.wrap) / OVERLAP).toFloat().coerceAtMost(1f)
+            v = v * (1 - x) + read(head.position - head.wrap) * x
+        }
+        return v
+    }
+
+    private fun advance(head: Head) {
+        head.position += 24000.0 / rate
+        if (head.position >= head.wrap + OVERLAP) {
+            head.position = OVERLAP + (head.position - head.wrap - OVERLAP)
+            head.wrap = samples.size - OVERLAP - rng.index(max(1, wrapJitter))
+        }
     }
 
     override fun render(
@@ -326,17 +402,17 @@ class RecordingSource(private val rate: Int, private val samples: SampleData, se
         layer: Layer,
         settings: Settings,
     ) {
-        val end = samples.size - OVERLAP
         for (i in 0 until frames) {
-            var v = read(position)
-            if (position >= end) {
-                val x = (position - end).toFloat() / OVERLAP
-                v = v * (1 - x) + read(position - end) * x
+            if (--balanceCountdown <= 0) {
+                balanceTarget = rng.unit().toDouble()
+                balanceCountdown = rate * (12 + rng.index(40))
             }
+            balance += (balanceTarget - balance) * balanceSmoothing
+            val v = sample(heads[0]) * (1 - balance).toFloat() + sample(heads[1]) * balance.toFloat()
             left[i] = v * .4f
             right[i] = v * .4f
-            position += 24000.0 / rate
-            if (position >= samples.size) position = OVERLAP + (position - samples.size)
+            advance(heads[0])
+            advance(heads[1])
         }
     }
 }
