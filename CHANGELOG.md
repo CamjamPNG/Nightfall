@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2 — 2026-11-18
+
+- sounds: loudness-matched levels, a measured true-peak ceiling and an allocation-free render path (#5)
+- fix: show the installed version, name the real control, and stop counting wrong (#7)
+
 ## 1.1.3 — 2026-11-18
 
 - docs: inventory every user-visible string and stage the localization extraction (#6)
