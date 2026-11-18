@@ -106,6 +106,15 @@ media-session controls still live, so playback that resumed during the copy aban
 the session and puts the update back to waiting instead of killing the audio. A tap
 on Update is the user asking, and the guard does not hold that back.
 
+The commit window is narrowed, not eliminated. After the guard's last read the
+commit is one binder write away — microseconds — and a play request in that
+instant would still be interrupted by the replacement. The copy is what made the
+defect reachable (seconds, not microseconds) and it is guarded; the residue is
+set against a play path that needs tens of milliseconds to make sound (tap →
+Compose → `runtime.play()` → foreground service → `AudioTrack.play`), so it is
+not reachable by a person. Closing it to zero would mean the audio start path
+blocking on the installer, and the audio path never observes update state.
+
 `CheckThrottle` keeps two rules because they are two different promises. Every
 request — the foreground hint and the Settings button take the same path — waits at
 least fifteen minutes since the previous attempt, and the attempt is recorded before
@@ -136,5 +145,7 @@ notes, the notes must not have been seen, and `dismissLog()` records that they
 were. There is no build flavour or instrumented path behind this beyond Compose.
 
 ## Limits
+
+The update guard's residue: an install re-reads playback immediately before committing and defers if playback resumed, so the interval in which a play request can be overtaken by the commit is one binder write (microseconds) rather than the multi-second APK copy, which is guarded. That interval is not zero, and it is not closed by design: the alternative is the audio start path waiting on the installer, which would put update state in the audio path.
 
 DSP models are interpretations, not high-fidelity recordings of every named environment. Gray noise is an approximate preset. Headphone acoustic levels cannot be derived from gain percentages. Hardware Bluetooth behavior, power management, perceptual audio quality and all-night battery life need physical-device validation. Background execution is supported through Android's media foreground-service model; no manufacturer-independent all-night guarantee is made.
