@@ -9,9 +9,15 @@ Release versions/codes: see `app/build.gradle.kts` and this directory's recipe;
 each build targets its matching annotated `vVERSION` tag.
 License: MIT for original code; separately licensed recordings and dependencies.
 
+The maintainer-side status, requirement checklist, blocker list and
+reproducibility measurements are in [`docs/FDROID.md`](../docs/FDROID.md). This
+file is the review-facing summary of what the recipe asserts.
+
 ## Build and validate
 
 Use a free OpenJDK 17 or later, Android SDK 35, Build Tools 35.0.0 and Gradle 8.11.1.
+The measured toolchain is OpenJDK 21.0.13; nothing in the build requires a JDK
+newer than 17.
 No proprietary IDE, API key, Google Play Services or Firebase is needed. Audio is
 committed in source; the release build never downloads sounds.
 
@@ -26,7 +32,8 @@ For `fdroidserver` checks, copy the recipe into a full `fdroiddata` fork and run
 fdroid readmeta
 fdroid rewritemeta io.github.camjampng.nightfall
 fdroid lint io.github.camjampng.nightfall
-fdroid scanner -e io.github.camjampng.nightfall
+fdroid scanner io.github.camjampng.nightfall
+fdroid checkupdates --auto io.github.camjampng.nightfall
 fdroid build --server io.github.camjampng.nightfall:1
 ```
 
@@ -51,7 +58,10 @@ F-Droid's source preparation handles wrapper files normally.
   use the standard Gradle Plugin Portal. No vendored executable library is
   bundled. AndroidX's native libraries arrive through its free Maven artifacts.
 - The app has no internet, microphone, ad-ID, location or Bluetooth-scanning
-  permission. It uses Android's selected media route.
+  permission. It uses Android's selected media route. This describes the source
+  the recipe builds today. Once the update channel splits the build into
+  `github` and `fdroid` product flavors, only the `fdroid` flavor keeps that
+  property, and the recipe must name it (see below).
 - Source builds produce an unsigned release APK. GitHub releases use a
   persistent production key; its public certificate is in `docs/`. The earlier
   user-test APK was debug signed. `Binaries` and `AllowedAPKSigningKeys` remain
@@ -65,23 +75,40 @@ F-Droid's source preparation handles wrapper files normally.
 
 ## Submission status and remaining work
 
-1. Source is public. Each recipe build targets its matching release tag;
+1. **The recipe must select the `fdroid` build flavor before it is submitted.**
+   Each build block currently asks for no flavor, which fdroidserver runs as
+   `assembleRelease`. When the update channel introduces `github` and `fdroid`
+   product flavors, `assembleRelease` would build the network-capable variant
+   with the updater and `INTERNET`, which is the wrong artifact for F-Droid and
+   changes the anti-feature answer. Each block needs `gradle: [fdroid]`, which
+   fdroidserver runs as `assembleFdroidRelease` and finds at
+   `app/build/outputs/apk/fdroid/release/`. `tools/release_version.py` writes new
+   blocks from a template and needs the same one-line change.
+2. Source is public. Each recipe build targets its matching release tag;
    verify it with `git ls-remote --tags https://github.com/CamjamPNG/Nightfall.git`.
-2. Review the development-age/user-adoption policy: the app is new. F-Droid's
-   current policy requests three months of active development unless a listed
-   exception applies, such as proven users. No exception or age is claimed.
-3. Physical Pixel 7 / Bluetooth-mask / overnight listening and battery tests
+3. Review the development-age/user-adoption policy: the app was first published
+   on 12 November 2026. F-Droid's current policy requests three months of active
+   development unless a listed exception applies, such as proven users. No
+   exception or age is claimed.
+4. Physical Pixel 7 / Bluetooth-mask / overnight listening and battery tests
    are still needed. Software-emulator ANRs must not be reported as passed
    instrumentation tests. See `docs/TESTING.md`.
-4. F-Droid maintainers must independently assess the source, licenses,
+5. F-Droid maintainers must independently assess the source, licenses,
    dependencies, build recipe and applicable Anti-Features.
 
-The source and APK scanner checks passed locally with fdroidserver 2.4.5.
-Two local unsigned release builds were byte-identical; this does not establish
-reproduction on F-Droid's infrastructure. GitLab credentials are not connected
-in this workspace, so no inclusion request or merge request has been posted.
-The prepared request text is in [SUBMISSION.md](SUBMISSION.md). Hardware
-verification remains a product-quality task, separate from policy eligibility.
+Verified locally on 18 November 2026 with fdroidserver 2.4.5: `fdroid readmeta`,
+`fdroid lint` and `fdroid rewritemeta` pass with no changes to the recipe,
+`fdroid scanner` reports wrapper removals only across all four release tags, and
+`fdroid checkupdates --auto` detects 1.0.1.2 (code 4) from the tags. Five clean
+release builds at tag `v1.0.1.2` across two machines produced byte-identical APKs,
+and their payload matches the published universal APK entry for entry;
+`apksigcopier compare` does not verify against the published APK because
+`tools/package_release.py` recompresses 16 entries while packaging. No build has
+run on F-Droid's buildserver, so nothing here demonstrates that F-Droid's own
+toolchain reproduces these bytes. GitLab credentials are not connected in this
+workspace, so no inclusion request or merge request has been posted. The prepared
+request text is in [SUBMISSION.md](SUBMISSION.md). Hardware verification remains
+a product-quality task, separate from policy eligibility.
 
 ## Official references
 
