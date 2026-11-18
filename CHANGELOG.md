@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.1 — 2026-11-18
+
+- fix: target Android 16, and prove what an API 36 target turns on (#29)
+
 ## 1.9 — 2026-11-18
 
 - docs: correct the public copy against v1.8.2, and the counts that moved (#28)
