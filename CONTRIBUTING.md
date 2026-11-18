@@ -44,7 +44,7 @@ Prerequisites, all of them free:
 | Tool | Version | Where |
 | --- | --- | --- |
 | JDK | 17 or newer | Temurin, Corretto, OpenJDK. CI uses Temurin 17. |
-| Android SDK Platform | 35 | `sdkmanager "platforms;android-35"` |
+| Android SDK Platform | 36 | `sdkmanager "platforms;android-36"` |
 | Android Build Tools | 35.0.0 | `sdkmanager "build-tools;35.0.0"` |
 | Gradle | do not install | the wrapper in the repo is 8.11.1 |
 

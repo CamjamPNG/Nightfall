@@ -233,14 +233,14 @@ what no one has ever confirmed. All three columns are kept honest in
 | An install the app starts itself never lands in playing audio — refused while playing, refused on an unknown playback fact, allowed only when stopped, and a night that starts in playback ends with exactly one install, at the stop | `UpdateAutomationTest` |
 | Playback that resumes while the APK is being copied never reaches the installer commit; the session is abandoned and the update goes back to waiting | `InstallWindowTest` |
 | Release notes survive a hostile or missing `log` in the manifest without changing a single trust field | `ReleaseManifestParserTest.hostileNotesNeverChangeTheTrustDecision`, `…aManifestWithNoNotesStillUpdates` |
-| Playback survives navigation, activity recreation, backgrounding, audio-focus loss and service teardown | ten Robolectric scenarios in `app/src/test`, run under both channels in CI |
+| Playback survives navigation, activity recreation, backgrounding, audio-focus loss, a back gesture and service teardown | eleven Robolectric scenarios in `app/src/test`, run under both channels in CI |
 | The F-Droid APK carries no network permission and no class from the updater package, and the GitHub APK carries code from every updater source file | `tools/check_release.py --fdroid-apk` and `--apk`, on every push |
 
 How many tests: **69 in `core`** (68 run, plus the opt-in `NIGHTFALL_CALIBRATE=1`
-calibration generator, which is skipped by design), **10 playback-lifecycle scenarios**
+calibration generator, which is skipped by design), **11 playback-lifecycle scenarios**
 that run twice, once per channel, **51 updater tests** in
 `app/src/testGithub/java/dev/nightfall/update`, and **53 release-tooling tests**. The
-three screenshot renders in `app/src/testGithub/java/dev/nightfall/render` are not
+five render classes in `app/src/testGithub/java/dev/nightfall/render` are not
 updater tests and are not counted there. They all run on a JVM with no device, no
 emulator and no network. Recount them with:
 
