@@ -3,31 +3,16 @@
 """Offline validation of release metadata and bundled audio; no network requests."""
 import argparse, hashlib, json, pathlib, re, struct, subprocess, sys, zipfile
 ROOT=pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'tools'))
+from release_artifact import NETWORK_PERMISSIONS, UPDATER_ENTRY_POINTS, apk_manifest, build_tools, declares, fdroid_asset_name, fdroid_violation, universal_abis, updater_symbols
 p=argparse.ArgumentParser()
 p.add_argument('--apk',type=pathlib.Path,help='GitHub-channel APK, the one published for updates')
 p.add_argument('--fdroid-apk',type=pathlib.Path,help='F-Droid-channel APK, which must carry no network access')
 p.add_argument('--github-apk',type=pathlib.Path,help='GitHub-channel APK whose updater must be present')
+p.add_argument('--fdroid-asset',type=pathlib.Path,help='Published F-Droid-channel asset, signed and named for the repository index')
 args=p.parse_args()
 def require(condition,message):
     if not condition:raise ValueError(message)
-NETWORK_PERMISSIONS=('android.permission.INTERNET','android.permission.ACCESS_NETWORK_STATE','android.permission.REQUEST_INSTALL_PACKAGES','android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION')
-UPDATER_ENTRY_POINTS=('dev/nightfall/update/GithubUpdater','dev/nightfall/update/ReleaseFetch','dev/nightfall/update/ReleaseManifestParser','dev/nightfall/update/PackageInstalls','dev/nightfall/update/UpdateInstallReceiver','dev/nightfall/update/CheckThrottle','dev/nightfall/update/UpdatePrefs','dev/nightfall/update/InstallResults','dev/nightfall/update/Apks','dev/nightfall/update/UpdatePolicy','dev/nightfall/update/ReleaseManifest','dev/nightfall/update/UpdateState','dev/nightfall/update/UpdateApi','dev/nightfall/update/UpdateUi')
-def apk_manifest(apk):
-    with zipfile.ZipFile(apk) as z:
-        return z.read('AndroidManifest.xml')
-def declares(binary_manifest,name):
-    """Binary AXML keeps names in a string pool; aapt2 writes UTF-8, some tools UTF-16."""
-    return name.encode('utf-8') in binary_manifest or name.encode('utf-16-le') in binary_manifest
-def updater_symbols(apk,markers=UPDATER_ENTRY_POINTS):
-    """The updater's own classes, read out of the dex string tables."""
-    found=set()
-    with zipfile.ZipFile(apk) as z:
-        for name in z.namelist():
-            if not name.endswith('.dex'): continue
-            data=z.read(name)
-            for marker in markers:
-                if marker.encode('utf-8') in data: found.add(marker)
-    return sorted(found)
 def digest(path):
     h=hashlib.sha256()
     with path.open('rb') as f:
@@ -116,14 +101,22 @@ for a in assets:
             require(h.hexdigest()==a['sha256'],'APK recording mismatch: '+a['id'])
 require('not a license condition' in (ROOT/'COMMERCIAL_COURTESY.md').read_text(),'Commercial request must remain voluntary')
 if args.fdroid_apk:
-    binary=apk_manifest(args.fdroid_apk)
-    for permission in NETWORK_PERMISSIONS:
-        require(not declares(binary,permission),'F-Droid APK declares network access: '+permission)
-    require(not updater_symbols(args.fdroid_apk),'F-Droid APK contains updater code: '+str(updater_symbols(args.fdroid_apk)))
+    violation=fdroid_violation(args.fdroid_apk)
+    if violation:raise ValueError('F-Droid APK '+violation)
 if args.github_apk or args.apk:
     updater_apk=args.github_apk or args.apk
     binary=apk_manifest(updater_apk)
     for permission in NETWORK_PERMISSIONS:
         require(declares(binary,permission),'GitHub APK is missing the updater permission: '+permission)
     require('dev/nightfall/update/GithubUpdater' in updater_symbols(updater_apk),'GitHub APK has no updater code')
-print(json.dumps({'result':'pass','applicationId':appid,'versionName':version,'versionCode':code,'recordings':len(assets),'screenshots':len(shots),'codeLicense':'MIT','commercialCourtesy':'voluntary','apkChecked':str(args.apk) if args.apk else None,'fdroidApkChecked':str(args.fdroid_apk) if args.fdroid_apk else None,'updaterCode':bool(args.github_apk or args.apk),'recipeTagsChecked':checked_tags},indent=2))
+if args.fdroid_asset:
+    # The published F-Droid asset is what an outside repository index serves, so its name and its
+    # signer are part of the contract, not just its contents.
+    require(args.fdroid_asset.name==fdroid_asset_name(version),'F-Droid asset must be named '+fdroid_asset_name(version))
+    certificate=subprocess.check_output([str(build_tools()/'apksigner'),'verify','--verbose','--print-certs',str(args.fdroid_asset)],text=True)
+    pins=re.findall(r'certificate SHA-256 digest: ([0-9a-f]+)',certificate)
+    require(pins==[(ROOT/'docs/release-signing-certificate.sha256').read_text().strip()],'F-Droid asset is not signed with the pinned certificate')
+    require(universal_abis(args.fdroid_asset)=={'arm64-v8a','armeabi-v7a','x86','x86_64'},'F-Droid asset must carry every architecture')
+    violation=fdroid_violation(args.fdroid_asset)
+    if violation:raise ValueError('F-Droid asset '+violation)
+print(json.dumps({'result':'pass','applicationId':appid,'versionName':version,'versionCode':code,'recordings':len(assets),'screenshots':len(shots),'codeLicense':'MIT','commercialCourtesy':'voluntary','apkChecked':str(args.apk) if args.apk else None,'fdroidApkChecked':str(args.fdroid_apk) if args.fdroid_apk else None,'fdroidAssetChecked':str(args.fdroid_asset) if args.fdroid_asset else None,'updaterCode':bool(args.github_apk or args.apk),'recipeTagsChecked':checked_tags},indent=2))

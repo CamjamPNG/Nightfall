@@ -114,7 +114,9 @@ def main():
         (folder / "release-notes.md").write_text(
             f"Nightfall {version}\n\n{notes}\n\n"
             "**Pixel 7:** choose the arm64-v8a APK. Choose Universal if unsure. "
-            "All APKs include the full offline audio library and require Android 8.0+.\n\n"
+            "All APKs include the full offline audio library and require Android 8.0+. "
+            "The `-fdroid-universal` APK has no updater and no network permission; it is for "
+            "stores and installers that refuse a self-updating build.\n\n"
             "Use the same GitHub signing channel for updates. Export mixes before "
             "switching from the earlier dev.nightfall package or another signing channel.\n\n"
             "Physical Pixel 7 / Bluetooth / overnight validation remains pending. "

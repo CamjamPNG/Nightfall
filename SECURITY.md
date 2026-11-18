@@ -94,8 +94,9 @@ list, not a way to close things.
 
 ## Verifying a release yourself
 
-Every release publishes five signed APKs, a checksum file, a release manifest
-and the public certificate. The verification records this project keeps are in
+Every release publishes six signed APKs — five from the GitHub channel and one
+from the F-Droid channel — a checksum file, a release manifest and the public
+certificate. The verification records this project keeps are in
 `docs/verification/`: `release-checks.json`, `dependency-audit.json`,
 `reproducibility.json`, the F-Droid scanner output, and the resolved dependency
 inventory. `docs/TESTING.md` says which of those results are machine-checked and

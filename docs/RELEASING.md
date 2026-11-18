@@ -1,9 +1,10 @@
 # GitHub releases
 
-Each public release has five **signed, installable APKs**, a checksum file,
+Each public release has six **signed, installable APKs**, a checksum file,
 release manifest and public signing certificate. GitHub also provides source
-archives. All APKs are built from the `github` flavour — the one with the in-app
-updater — and contain the complete offline library; architecture variants only
+archives. Five come from the `github` flavour — the one with the in-app updater —
+and one from the `fdroid` flavour, which has no updater and no network permission.
+All of them contain the complete offline library; architecture variants only
 omit incompatible native libraries. Their size differences are small because
 audio dominates the download. Android 8.0+ is required.
 
@@ -14,6 +15,7 @@ audio dominates the download. Android 8.0+ is required.
 | armeabi-v7a | Older 32-bit ARM phones |
 | x86_64 | 64-bit Intel/AMD Android emulators or compatible devices |
 | x86 | Older 32-bit Intel Android emulators or compatible devices |
+| fdroid-universal | All architectures, no updater and no network permission |
 
 Use Releases → Assets, download one APK and open it on Android. Updates from
 this GitHub channel retain the application ID and signing certificate, allowing
@@ -25,11 +27,34 @@ architecture, verifies size, SHA-256 and signing certificate against the install
 app, and installs it when the user taps Update. On Android 12+ with this target
 SDK the install needs no further prompt; where an OEM image still asks, Android's
 own confirmation is shown. Nothing is downloaded or installed without that tap,
-and nothing is sent to GitHub beyond the request itself. The `fdroid` flavour
-published by F-Droid has no updater and no network permission at all. The earlier `dev.nightfall` development package is separate.
-F-Droid-managed signing is also a separate channel unless a later independent
-reproducible-build/signature configuration is agreed. Export mixes before
-switching packages or signing channels; uninstalling deletes private app data.
+and nothing is sent to GitHub beyond the request itself. The earlier
+`dev.nightfall` development package is separate, and so is a build F-Droid signs
+with its own key unless a later independent reproducible-build/signature
+configuration is agreed. Export mixes before switching packages or signing
+channels; uninstalling deletes private app data.
+
+## The F-Droid channel asset
+
+`Nightfall-<version>-fdroid-universal.apk` is the `fdroid` flavour signed with the
+same pinned key as the update options. It is one universal APK rather than four
+architecture options, because it exists for a repository index, and it is not an
+entry in `release-manifest.json`: the updater will never offer a build that
+cannot update itself. Its name is a contract — `tools/verify_release.py` and
+`tools/check_release.py` refuse a release whose asset is named otherwise, and the
+F-Droid repository workflow selects the index entry by that name and accepts no
+substitute. A release published before the asset existed carries none, so it is
+skipped with a warning naming it; when the whole release window has none, the
+site still deploys with the landing page alone and no `fdroid/repo` under it,
+which the first release carrying the asset fills in.
+
+Publishing it is deliberate about two things. Because it carries the pinned
+signature, it installs over a `github`-channel install with private data intact,
+and it then has no updater: an update must come from whoever serves this asset.
+Because it declares no network permission and contains no updater class, an
+index built from it passes the same offline claim the app makes. Both facts are
+checked on the signed file before it is uploaded, not inferred from the source:
+no `INTERNET` or `ACCESS_NETWORK_STATE`, no updater classes in the dex, and the
+pinned certificate fingerprint.
 
 ## Release manifest
 
@@ -47,7 +72,10 @@ switching packages or signing channels; uninstalling deletes private app data.
 }
 ```
 
-The app reads this asset through `releases/latest/download/release-manifest.json`
+The manifest lists the five `github`-flavour update options only. The
+`fdroid`-flavour asset is published alongside them and deliberately absent here,
+so the updater never downloads a build that has no updater of its own. The app
+reads this asset through `releases/latest/download/release-manifest.json`
 and accepts an APK address only when it is exactly this repository's release
 download for that version and file name. `tools/verify_release.py` re-checks the
 URLs against the tag before anything staged is published, so a manifest that
@@ -87,7 +115,9 @@ Once the two signing secrets below are installed, it:
    flavour split onward keep that selector.
 3. Runs release-tool tests, core audio tests, compilation, lint and asset checks.
 4. Filters the universal APK into real architecture options, aligns to 16 KiB,
-   signs all APKs with the persistent key, and verifies signatures/package/version.
+   signs all six APKs with the persistent key, verifies
+   signatures/package/version, and re-checks the F-Droid asset carries no network
+   permission and no updater code.
 5. Atomically pushes the version commit and annotated tag, then publishes the
    APKs, hashes and public certificate to GitHub Releases.
 
@@ -152,7 +182,10 @@ python3 tools/check_release.py \
 export NIGHTFALL_KEYSTORE_PATH=/secure/path/nightfall-release.p12
 python3 tools/package_release.py \
   --apk app/build/outputs/apk/github/release/app-github-release-unsigned.apk \
+  --fdroid-apk app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk \
   --out artifacts/publish --version NEXT_VERSION --code NEXT_CODE
+python3 tools/check_release.py \
+  --fdroid-asset artifacts/publish/Nightfall-NEXT_VERSION-fdroid-universal.apk
 ```
 
 Only tag and publish the matching tested source commit. A failed release must
@@ -165,7 +198,8 @@ This session's GitHub credentials can push source and create releases, but the
 `uploads.github.com` endpoint returned HTTP 401 for binary uploads. A recovery
 workflow, `publish-staged-release.yml`, accepts locally signed assets through a
 temporary `release-assets/vVERSION` branch. It verifies them against the source
-tag, all five audio payloads, checksums, architecture and pinned signer before
+tag, all five audio payloads, checksums, architecture, pinned signer and the
+F-Droid asset's offline claims before
 the runner uploads and publishes. Only public APKs, public certificate, hashes
 and public notes are transported; private keys never enter that branch. The
 workflow deletes the temporary branch after successful publication. Binary Git
