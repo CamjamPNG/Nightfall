@@ -30,13 +30,13 @@ Excluded, with the reason: §3.
 
 ## 2. Inventory
 
-249 user-visible surface strings and 129 catalogue strings, 378 in total:
+250 user-visible surface strings and 129 catalogue strings, 379 in total:
 
 | Surface | Strings |
 | --- | --- |
 | App shell, dialogs, Home, layer row and options panel (§2.1-§2.12) | 124 |
 | Library, Presets, Studio, Settings (§2.13-§2.16) | 103 |
-| Snackbars, errors, notification, waveform a11y, launcher label (§2.17-§2.21) | 22 |
+| Snackbars, errors, notification, waveform a11y, launcher label (§2.17-§2.21) | 23 |
 | Catalogue: 98 sound names, 10 categories, 6 descriptions, 15 preset names (§2.22) | 129 |
 
 Keys follow `screen.feature.role`. `home`, `library`, `presets`, `studio`, `settings` match the five
@@ -461,6 +461,7 @@ These reach the same snackbar as §2.17, from a `LaunchedEffect` at `NightfallSc
 | `error.save_failed` | `NightfallApp.kt:88` | Saving failed: `{detail}` |
 | `error.playback_start_failed` | `NightfallApp.kt:165` | Playback could not start: `{detail}` |
 | `error.background_failed` | `AudioHost.kt:96` | Background playback could not start: `{detail}` |
+| `error.audio_stopped` | `AudioHost.kt:269` | Audio stopped: `{detail}` |
 | `error.audio_focus_unavailable` | `AudioHost.kt:104` | Audio focus is unavailable. Try again after the other audio ends. |
 | `output.bluetooth` | `AudioHost.kt:141` | Bluetooth · `{product}` |
 | `output.wired` | `AudioHost.kt:143` | Wired headphones |
@@ -517,10 +518,23 @@ resource. Same key as `home.title` (§2.5), which is the product name on screen.
 
 ### 2.22 Catalogue content — `core/src/main/kotlin/dev/nightfall/core/Library.kt`
 
-98 sound names, 10 category names, six description strings, and 15 built-in preset names. These are not chrome, and they do not extract the same way: the id of every sound is
+98 sound names, 10 category names, six description strings, and 15 built-in preset names. These are
+not chrome, and they do not extract the same way: for 86 of the 98 sounds the id is
 `Library.slug(name)` (line 230), computed from the English name at construction. Display name and id
-are currently the same information, which is why the id must be frozen as a literal before any name
+are the same information for those, which is why the id must be frozen as a literal before any name
 is translated.
+
+Twelve sounds break that derivation, and the appendix records the real pair for each rather than the
+rule:
+
+- **Eleven noises** (`white` … `velvet`) have a one-word id and a two-word name: the id is
+  `n.lowercase()` (line 38) while the displayed name is `"$n noise"` (line 39). `white` shows
+  "White noise", not "White" — the layer row and the library both print the longer form.
+- **Binaural tones** carries the explicit id `binaural` (line 219) against the name `Binaural tones`
+  (line 220), so `slug(name)` would produce the wrong id.
+
+Anyone generating keys mechanically from the names would get those twelve wrong in exactly the way
+the appendix exists to prevent.
 
 **Categories** (displayed as filter chips at `Screens.kt:80` and in the library section heading at
 `Screens.kt:87`):
@@ -829,7 +843,7 @@ Robolectric test target exists.
 
 **Do not extract the full app in service of a translation that does not exist.** Extraction with no
 target locale buys nothing at runtime: the app renders the same English from a resource file instead
-of a literal. What it costs is a diff of 249 UI strings across the six Kotlin files and the
+of a literal. What it costs is a diff of 250 UI strings across the six Kotlin files and the
 manifest, 129 catalogue strings in `core`, and a saved-state migration, in a codebase whose
 distinguishing claims are written in careful prose and whose only verification path is lint plus 18
 core tests — no emulator, no device, and an accessibility contract (`stateDescription` per slider)
@@ -874,23 +888,24 @@ listening test in this thread; no emulator exists on these machines to check it.
 ## Appendix A — the 98 sound names
 
 Every name below is displayed by `Screens.kt:108` in the library list, `NightfallScreen.kt:755` in the
-layer row and `Screens.kt:283` in a preset's layer line. The id in the key is `Library.slug(name)`
-(`Library.kt:230`), which is also the value stored in `Layer.soundId` and `SavedState`, so the same
-string is the display name today and must become two values. Line numbers are `Library.kt`.
+layer row and `Screens.kt:283` in a preset's layer line. The id in each key is the real `Sound.id`,
+which is also the value stored in `Layer.soundId` and `SavedState`; for 86 of these it is
+`Library.slug(name)` (`Library.kt:230`), and the twelve exceptions are listed in §2.22. Display name
+and id are the same information today and must become two values. Line numbers are `Library.kt`.
 
 | Key | Name | Line |
 | --- | --- | --- |
-| `library.sound.white.name` | White | 23 |
-| `library.sound.pink.name` | Pink | 24 |
-| `library.sound.brown.name` | Brown | 25 |
-| `library.sound.red.name` | Red | 26 |
-| `library.sound.blue.name` | Blue | 27 |
-| `library.sound.violet.name` | Violet | 28 |
-| `library.sound.purple.name` | Purple | 29 |
-| `library.sound.gray.name` | Gray | 30 |
-| `library.sound.green.name` | Green | 31 |
-| `library.sound.black.name` | Black | 32 |
-| `library.sound.velvet.name` | Velvet | 33 |
+| `library.sound.white.name` | White noise | 23 |
+| `library.sound.pink.name` | Pink noise | 24 |
+| `library.sound.brown.name` | Brown noise | 25 |
+| `library.sound.red.name` | Red noise | 26 |
+| `library.sound.blue.name` | Blue noise | 27 |
+| `library.sound.violet.name` | Violet noise | 28 |
+| `library.sound.purple.name` | Purple noise | 29 |
+| `library.sound.gray.name` | Gray noise | 30 |
+| `library.sound.green.name` | Green noise | 31 |
+| `library.sound.black.name` | Black noise | 32 |
+| `library.sound.velvet.name` | Velvet noise | 33 |
 | `library.sound.light-drizzle.name` | Light drizzle | 56 |
 | `library.sound.moderate-rain.name` | Moderate rain | 57 |
 | `library.sound.heavy-rain.name` | Heavy rain | 58 |
@@ -977,4 +992,4 @@ string is the display name today and must become two values. Line numbers are `L
 | `library.sound.slow-percussion-free-lo-fi.name` | Slow percussion-free lo-fi | 212 |
 | `library.sound.gentle-lo-fi.name` | Gentle lo-fi | 213 |
 | `library.sound.evolving-cinematic-ambient-textures.name` | Evolving cinematic ambient textures | 214 |
-| `library.sound.binaural-tones.name` | Binaural tones | 220 |
+| `library.sound.binaural.name` | Binaural tones | 220 |
