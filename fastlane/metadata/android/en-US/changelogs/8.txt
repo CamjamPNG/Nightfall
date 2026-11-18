@@ -1,0 +1,1 @@
+- docs: inventory every user-visible string and stage the localization extraction (#6)

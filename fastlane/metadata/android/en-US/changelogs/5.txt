@@ -1,0 +1,1 @@
+- ui: rebuild the mixer layer list for per-row state and visible options (#1)

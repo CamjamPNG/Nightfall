@@ -13,30 +13,51 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.nightfall.core.*
+import dev.nightfall.update.UpdateSettingsSection
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 private fun PageHeading(title: String, subtitle: String) {
     Column(Modifier.padding(top = 16.dp, bottom = 12.dp)) {
-        Text(title, fontSize = 28.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-.6).sp)
+        Text(
+            title,
+            Modifier.semantics { heading() },
+            fontSize = 28.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = (-.6).sp,
+        )
         Spacer(Modifier.height(6.dp))
         Text(subtitle, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
+/** How many layers in the current mix use this sound, subscribed per row instead of per screen. */
+@Composable
+private fun LayerCount(r: NightfallRuntime, soundId: String) {
+    val n by
+        selectSaved(r, r.savedNow().current.layers.count { it.soundId == soundId }) { s ->
+            s.current.layers.count { it.soundId == soundId }
+        }
+    if (n > 0)
+        Text("$n in your mix", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary)
+}
+
 @Composable
 fun SoundLibrary(r: NightfallRuntime) {
-    val saved by r.saved.collectAsStateWithLifecycle()
-    var category by rememberSaveable { mutableStateOf("All") }
+    // null is "every category": the chip said "All" and was also the filter sentinel, which is an
+    // English word deciding behaviour. The label is a label, the value is a value.
+    var category by rememberSaveable { mutableStateOf<String?>(null) }
     var query by rememberSaveable { mutableStateOf("") }
     val sounds =
         Library.all.filter {
-            (category == "All" || it.category == category) &&
+            (category == null || it.category == category) &&
                 (it.name.contains(query, true) || it.category.contains(query, true))
         }
     LazyColumn(
@@ -58,18 +79,18 @@ fun SoundLibrary(r: NightfallRuntime) {
         }
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(listOf("All") + Library.all.map { it.category }.distinct()) { c ->
+                items(listOf<String?>(null) + Library.all.map { it.category }.distinct()) { c ->
                     FilterChip(
                         selected = category == c,
                         onClick = { category = c },
-                        label = { Text(c) },
+                        label = { Text(c ?: "All") },
                     )
                 }
             }
         }
         item {
             SectionLabel(
-                if (category == "All") "Explore sounds" else category,
+                category ?: "Explore sounds",
                 "${sounds.count {it.available}} available",
             )
         }
@@ -102,13 +123,7 @@ fun SoundLibrary(r: NightfallRuntime) {
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        val n = saved.current.layers.count { it.soundId == sound.id }
-                        if (n > 0)
-                            Text(
-                                "$n in your mix",
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
+                        LayerCount(r, sound.id)
                     }
                     IconButton(onClick = { r.add(sound) }, enabled = sound.available) {
                         Icon(
@@ -140,13 +155,14 @@ fun SoundLibrary(r: NightfallRuntime) {
 
 @Composable
 fun PresetScreen(
-    saved: SavedState,
     r: NightfallRuntime,
     onImport: () -> Unit,
     onExport: (Mix) -> Unit,
     onRename: (Mix) -> Unit,
 ) {
     var favoritesOnly by rememberSaveable { mutableStateOf(false) }
+    val presets by selectSaved(r, r.savedNow().presets) { it.presets }
+    val favoriteIds by selectSaved(r, r.savedNow().favoriteIds) { it.favoriteIds }
     LazyColumn(
         contentPadding = PaddingValues(22.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -169,20 +185,20 @@ fun PresetScreen(
                 )
             }
         }
-        if (saved.presets.isNotEmpty())
-            item { SectionLabel("Your mixes", "${saved.presets.size} saved") }
+        if (presets.isNotEmpty())
+            item { SectionLabel("Your mixes", "${presets.size} saved") }
         items(
-            saved.presets.filter { !favoritesOnly || it.favorite || it.id in saved.favoriteIds },
+            presets.filter { !favoritesOnly || it.favorite || it.id in favoriteIds },
             key = { it.id },
         ) { p ->
             PresetCard(p, r, false, onExport, onRename)
         }
-        item { SectionLabel("Nightfall collection", "15 soundscapes") }
+        item { SectionLabel("Nightfall collection", "${Presets.all.size} soundscapes") }
         items(
-            Presets.all.filter { !favoritesOnly || it.id in saved.favoriteIds },
+            Presets.all.filter { !favoritesOnly || it.id in favoriteIds },
             key = { "builtin-${it.id}" },
         ) { p ->
-            PresetCard(p.copy(favorite = p.id in saved.favoriteIds), r, true, onExport, onRename)
+            PresetCard(p.copy(favorite = p.id in favoriteIds), r, true, onExport, onRename)
         }
     }
 }
@@ -205,7 +221,7 @@ private fun PresetCard(
                 Column(Modifier.weight(1f)) {
                     Text(p.name, fontSize = 17.sp, fontWeight = FontWeight.Medium)
                     Text(
-                        "${p.layers.size} layers",
+                        "${p.layers.size} ${plural(p.layers.size, "layer", "layers")}",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp),
@@ -294,8 +310,9 @@ fun Studio(
     onSaved: (String) -> Unit,
     onClearEdit: () -> Unit,
 ) {
-    val saved by r.saved.collectAsStateWithLifecycle()
-    val existing = saved.current.layers.firstOrNull { it.id == layerId }
+    // One read, not a subscription: the studio form is local state and must not recompose with
+    // every mixer change.
+    val existing = remember(layerId) { r.savedNow().current.layers.firstOrNull { it.id == layerId } }
     var encoded by
         rememberSaveable(layerId) {
             mutableStateOf(PresetJson.json.encodeToString(existing?.music ?: MusicConfig()))
@@ -552,7 +569,7 @@ fun Studio(
         }
         item {
             Text(
-                "Adjust midrange, filters and independent fade timing in the layer’s Effects controls on Home. Save the whole mix as a preset at any time.",
+                "Adjust midrange, filters and independent fade timing in the layer’s Options on Home. Save the whole mix as a preset at any time.",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -621,13 +638,19 @@ fun SettingToggle(
 
 @Composable
 fun SettingsScreen(
-    saved: SavedState,
-    status: PlaybackStatus,
     r: NightfallRuntime,
     onExport: () -> Unit,
     onCredits: () -> Unit,
 ) {
-    val s = saved.settings
+    val s by selectSaved(r, r.savedNow().settings) { it.settings }
+    val output by selectStatus(r, OutputRoute()) { it.output }
+    val load by selectStatus(r, 0) { (it.load * 100).roundToInt() }
+    val underruns by selectStatus(r, 0) { it.underruns }
+    val context = LocalContext.current
+    // The installed package, not a build constant: a literal here drifted two releases behind.
+    val version by
+        produceState("") { value = withContext(Dispatchers.IO) { installedVersion(context) } }
+    val appTitle = if (version.isEmpty()) "Nightfall" else "Nightfall $version"
     LazyColumn(
         contentPadding = PaddingValues(22.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -696,13 +719,13 @@ fun SettingsScreen(
                 s.fadeSeconds,
                 { v -> r.change { it.copy(settings = it.settings.copy(fadeSeconds = v)) } },
                 5f..120f,
-                "${s.fadeSeconds.roundToInt()} seconds",
+                "${s.fadeSeconds.roundToInt()} ${plural(s.fadeSeconds.roundToInt(), "second", "seconds")}",
             )
         }
         item { SectionLabel("On this device") }
         item {
             Text(
-                "Output: ${status.output}\nAudio render load: ${(status.load*100).roundToInt()}% of buffer time\nAudioTrack underruns: ${status.underruns}\n48 kHz · stereo · floating-point PCM",
+                "Output: ${outputLabel(output)}\nAudio render load: $load% of buffer time\nAudioTrack underruns: $underruns\n48 kHz · stereo · floating-point PCM",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 22.sp,
@@ -715,10 +738,12 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        item { SectionLabel("Updates") }
+        item { UpdateSettingsSection() }
         item { SectionLabel("Your data & audio") }
         item {
             Text(
-                "Everything runs on your device. No account, advertising, analytics, tracking, purchases or network permission. Mixes and settings are stored locally. Keep listening levels comfortable; percentages describe layer gain, not acoustic loudness.",
+                "Everything that makes sound runs on your device. No account, advertising, analytics, tracking or purchases. Mixes and settings are stored locally. Keep listening levels comfortable; percentages describe layer gain, not acoustic loudness.",
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -735,7 +760,7 @@ fun SettingsScreen(
         }
         item {
             Text(
-                "Nightfall 1.0\nFree forever. A small space for a quieter night.",
+                "$appTitle\nFree forever. A small space for a quieter night.",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(vertical = 20.dp),

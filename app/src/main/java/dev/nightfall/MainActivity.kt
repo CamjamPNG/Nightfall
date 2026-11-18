@@ -9,7 +9,16 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.nightfall.update.UpdateForegroundEffect
+import dev.nightfall.update.UpdateOverlay
 
 class MainActivity : ComponentActivity() {
     private val requestNotifications =
@@ -21,7 +30,17 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
         )
-        setContent { NightfallScreen(viewModel()) }
+        setContent {
+            val vm: NightfallViewModel = viewModel()
+            val saved by vm.saved.collectAsStateWithLifecycle()
+            NightfallTheme(saved.settings.light) {
+                Box(Modifier.fillMaxSize()) {
+                    NightfallScreen(vm)
+                    UpdateOverlay(Modifier.align(Alignment.TopCenter).statusBarsPadding())
+                    UpdateForegroundEffect()
+                }
+            }
+        }
         if (Build.VERSION.SDK_INT >= 33)
             requestNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
     }

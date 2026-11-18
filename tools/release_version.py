@@ -60,7 +60,9 @@ def update(root, version, code, messages):
     recipe = root / "fdroid/metadata/io.github.camjampng.nightfall.yml"
     metadata = recipe.read_text()
     yaml_version = f"'{version}'" if version.count('.') == 1 else version
-    block = f"  - versionName: {yaml_version}\n    versionCode: {code}\n    commit: v{version}\n    subdir: app\n    gradle:\n      - yes\n\n"
+    # Releases after the two-channel split build the F-Droid flavor, which has no updater and no
+    # network permission. Earlier entries stay on the default build of their own tag.
+    block = f"  - versionName: {yaml_version}\n    versionCode: {code}\n    commit: v{version}\n    subdir: app\n    gradle:\n      - fdroid\n\n"
     if f"commit: v{version}\n" in metadata: raise ValueError("Version already exists in F-Droid metadata")
     build_start = metadata.index("Builds:\n") + len("Builds:\n")
     next_field = re.search(r"(?m)^[A-Za-z]\w*:", metadata[build_start:])
