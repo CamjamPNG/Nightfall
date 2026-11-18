@@ -41,6 +41,10 @@ object PackageInstalls {
                     setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
             }
         val sessionId = installer.createSession(params)
+        // Built before the copy so that nothing but the commit follows the window's last read: a
+        // PendingIntent is a binder call, and it has no business sitting between the guard and the
+        // commit it guards.
+        val sender = statusIntent(context, sessionId, versionName).intentSender
         installer.openSession(sessionId).use { session ->
             return InstallWindow.copyThenCommit(
                 copy = {
@@ -52,7 +56,7 @@ object PackageInstalls {
                     }
                 },
                 windowOpen = windowOpen,
-                commit = { session.commit(statusIntent(context, sessionId, versionName).intentSender) },
+                commit = { session.commit(sender) },
                 abandon = { session.abandon() },
             )
         }

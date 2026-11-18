@@ -340,6 +340,11 @@ class GithubUpdater(context: Context) : UpdateApi {
                     // the update goes back to waiting instead of killing the audio it waited for.
                     handedOverAt = 0L
                     _state.value = UpdateState.ReadyToInstall(ready.versionName, ready.versionCode)
+                    // Playback may have stopped again while the session was being abandoned, and
+                    // that transition would have found the row still installing. Re-ask rather than
+                    // wait for an event that may not come: this refuses unless the setting is on and
+                    // playback is stopped, and only a guarded install can reach here.
+                    installIfWindowOpen()
                 }
             } catch (e: Exception) {
                 _state.value =
