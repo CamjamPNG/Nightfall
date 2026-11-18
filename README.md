@@ -16,7 +16,7 @@ Android 8.0+ (API 26) · Kotlin and Compose · MIT
 wind, water, fire, indoor hum, travel, seven bundled field recordings and eighteen
 generated music profiles. One row — *Distant household ambience* — is declared and
 **disabled** rather than filled with substitute audio, because no recording we may
-redistribute exists for it. That is a deliberate absence, not a bug. Fifteen built-in
+redistribute exists for it. That is a deliberate absence, not a bug. Nineteen built-in
 mixes start you off, and every one of them is an ordinary mix you can edit, rename or
 duplicate.
 
@@ -73,21 +73,27 @@ them, and what they cannot show.
 ### GitHub Releases — the channel that works today
 
 1. Open **[Releases](https://github.com/CamjamPNG/Nightfall/releases)** and take the
-   newest version. The current one is **1.3.1** (versionCode 12).
+   newest version. The current one is **1.8.2** (versionCode 22).
 2. Pick **`arm64-v8a`** for a modern phone (a Pixel 7, most Android phones from the
    last five years), or **`universal`** if you are unsure. `armeabi-v7a`, `x86` and
-   `x86_64` cover older 32-bit devices and Intel emulators. All of them contain the
-   complete offline library; they differ only in which native libraries are inside.
+   `x86_64` cover older 32-bit devices and Intel emulators, and
+   **`fdroid-universal`** is the offline build described below. All of them contain the
+   complete offline library; the five `github` files differ only in which native
+   libraries are inside.
 3. Open the APK on the phone and allow installs from your file manager when Android
    asks.
 
-The `arm64-v8a` APK is **91,162,628 bytes (86.9 MiB)** and the universal one
-**91,261,452 bytes**. That is a large download, and it is not at its floor: 77,449,472
-bytes of it are the recordings shipped as uncompressed PCM (so the mixer can memory-map
-them instead of copying them into RAM) and the dex is unshrunk because minification is
-not configured yet. The route to a much smaller APK — an Opus re-encode of the
-recordings plus R8 — is measured in `docs/launch/izzyondroid-request.md`; none of it has
-shipped, so the size above is real and the reduction is not.
+The `arm64-v8a` APK is **79,190,898 bytes (75.5 MiB)** and the universal one
+**79,289,722 bytes**. That is still a large download, and what is left of it is the
+sound library: 77,449,472 bytes are the recordings shipped as uncompressed PCM (so the
+mixer can memory-map them instead of copying them into RAM), which is 97.8% of the file.
+The code is no longer the problem it was — R8 minification and resource shrinking landed
+in 1.5.2 and cut the dex from 47,367,428 bytes to 2,933,096, which is why the APK fell
+from 91 MB to 79 MB. The remaining route to a much smaller APK is the Opus re-encode of
+the recordings, which exists in the repository behind `-PnightfallOpus=true` and ships
+off by default because it has not been heard on a device yet; the arithmetic is in
+`docs/launch/izzyondroid-request.md`. Until it ships, the size above is real and the
+reduction is not.
 
 This channel can update itself afterwards, and by default it does: **Update automatically**
 is on, so a newer release is downloaded, verified and installed without a tap. Settings
@@ -114,12 +120,17 @@ repository's own changelog. After the app replaces itself, the version it instal
 those notes once. Details in [`docs/RELEASING.md`](docs/RELEASING.md) and
 [`PRIVACY.md`](PRIVACY.md).
 
-### The F-Droid build — buildable from source today
+### The F-Droid build — downloadable, and buildable from source
 
 The second channel is the same app with the updater removed, not the same app
 configured not to use it. It has no manifest parser, no fetcher, no installer and no
-network code, and it declares none of the four network or install permissions. To get
-it today you build it:
+network code, and it declares none of the four network or install permissions.
+
+Every release carries it as `Nightfall-<version>-fdroid-universal.apk` — one universal
+APK, signed with the same pinned key and published beside the update options. It is
+deliberately kept out of `release-manifest.json`, so the in-app updater never offers a
+build that cannot update itself, and updates arrive by installing the next release's
+copy yourself. It also builds from source:
 
 ```sh
 ./gradlew :app:assembleFdroidDebug
@@ -128,11 +139,7 @@ it today you build it:
 
 CI builds this channel, lints it, and runs the same ten playback-lifecycle scenarios
 against it on every push; `tools/check_release.py --fdroid-apk` asserts from the built
-dex and manifest that no updater class and no network permission survived. Every release
-now carries `Nightfall-<version>-fdroid-universal.apk`: this channel, one universal APK,
-signed with the same pinned key and published beside the update options. It is
-deliberately kept out of `release-manifest.json`, so the in-app updater never offers a
-build that cannot update itself.
+dex and manifest that no updater class and no network permission survived.
 
 ### The self-hosted F-Droid repository — address reserved, not serving yet
 
@@ -222,17 +229,20 @@ what no one has ever confirmed. All three columns are kept honest in
 | No bundled recording loops before three minutes, and every one loops without a seam | `AudioAcceptanceTest.noBundledRecordingLoopsBeforeThreeMinutes`, `RenderPathTest.everyFieldRecordingLoopsWithoutASeam` |
 | Every playable catalogue row renders finite, nonzero output | `AudioAcceptanceTest.entireAvailableCatalogHasRealAudibleOutput` |
 | Every catalogue source is trimmed to −18 LUFS at full layer gain, so a percentage means the same loudness for every sound | `Levels.REFERENCE_LUFS`, `LoudnessTargetTest.everyContinuousSourceReachesTheReferenceLevel` |
-| The updater refuses a foreign package id, a foreign signing certificate, a downgrade, a mismatched checksum, an address outside this repository's assets, and a truncated or oversized response | `UpdatePolicyTest`, `ReleaseManifestParserTest`, `ReleaseFetchTest` (part of the 51 updater tests counted below) |
+| The updater refuses a foreign package id, a foreign signing certificate, a downgrade, a mismatched checksum, an address outside this repository's assets, and a truncated or oversized response | `UpdatePolicyTest`, `ReleaseManifestParserTest`, `ReleaseFetchTest` (part of the 54 updater tests counted below) |
 | An install the app starts itself never lands in playing audio — refused while playing, refused on an unknown playback fact, allowed only when stopped, and a night that starts in playback ends with exactly one install, at the stop | `UpdateAutomationTest` |
 | Playback that resumes while the APK is being copied never reaches the installer commit; the session is abandoned and the update goes back to waiting | `InstallWindowTest` |
 | Release notes survive a hostile or missing `log` in the manifest without changing a single trust field | `ReleaseManifestParserTest.hostileNotesNeverChangeTheTrustDecision`, `…aManifestWithNoNotesStillUpdates` |
 | Playback survives navigation, activity recreation, backgrounding, audio-focus loss and service teardown | ten Robolectric scenarios in `app/src/test`, run under both channels in CI |
 | The F-Droid APK carries no network permission and no class from the updater package, and the GitHub APK carries code from every updater source file | `tools/check_release.py --fdroid-apk` and `--apk`, on every push |
 
-How many tests: **42 in `core`** (41 run, plus the opt-in `NIGHTFALL_CALIBRATE=1`
+How many tests: **68 in `core`** (67 run, plus the opt-in `NIGHTFALL_CALIBRATE=1`
 calibration generator, which is skipped by design), **10 playback-lifecycle scenarios**
-that run twice, once per channel, **51 updater tests**, and **48 release-tooling
-tests**. They run on a JVM with no device, no emulator and no network.
+that run twice, once per channel, **54 updater tests**, and **53 release-tooling
+tests**. They run on a JVM with no device, no emulator and no network. Counting them
+takes one command per suite: `grep -A2 '@Test' core/src/test`,
+`grep -A2 '@Test' app/src/test`, `grep -A2 '@Test' app/src/testGithub`, and
+`python3 -m unittest discover -s tools/tests`.
 
 ### Measured by a script or recorded in the repository
 
@@ -243,7 +253,7 @@ tests**. They run on a JVM with no device, no emulator and no network.
 | Two machines building the same tag produce byte-identical APKs | `docs/verification/reproducibility.json` and `docs/FDROID.md` |
 | The F-Droid recipe parses, rewrites to canonical form, lints clean, and its source scanner reports no errors | `docs/verification/fdroid-source-scan.json`, `fdroid-apk-scan.log` |
 | No GMS, Firebase, billing, advertising or tracking SDK is in the resolved dependency graph | `docs/verification/dependency-audit.json` |
-| The APK sizes above, and the 77,449,472 bytes of PCM | release asset records for v1.3.1; `app/src/pcm/assets/audio` |
+| The APK sizes above, and the 77,449,472 bytes of PCM | release asset records for v1.8.2; `app/src/pcm/assets/audio` |
 
 ### Never checked on hardware
 
@@ -266,8 +276,8 @@ Needs JDK 17 and Android SDK 35 with build-tools 35.0.0. These three commands ar
 documented gate, and CI runs these three plus the rest of the list below.
 
 ```sh
-./gradlew :core:test :app:assembleDebug :app:lintDebug   # 42 core tests, both channels, lint aborts on error
-python3 -m unittest discover -s tools/tests              # 48 release-tooling tests
+./gradlew :core:test :app:assembleDebug :app:lintDebug   # 68 core tests, both channels, lint aborts on error
+python3 -m unittest discover -s tools/tests              # 53 release-tooling tests
 python3 tools/check_release.py                           # store metadata, bundled audio, both channels
 ```
 

@@ -2,7 +2,7 @@
 
 ## Executed checks
 
-- 51 JVM tests in `app/src/testGithub` cover the update channel: release-manifest
+- 54 JVM tests in `app/src/testGithub` cover the update channel: release-manifest
   parsing (untrusted documents, wrong types, unknown and duplicate architectures,
   addresses that are not this repository's release assets, oversized input),
   every trust refusal (`UpdatePolicy`), version-name ordering, and the downloader
@@ -69,8 +69,9 @@
   rejection of duplicate versions and preservation of code/audio in ABI options.
   Signed APK variants are additionally checked with Android's apksigner, aapt,
   zipalign and source-tag audio hashes before publication.
-- 42 deterministic JVM/core tests pass (41 executed, 1 skipped by design: the
-  opt-in `NIGHTFALL_CALIBRATE=1` level-calibration generator). They cover nine
+- 68 deterministic JVM/core tests pass (67 executed, 1 skipped by design: the
+  opt-in `NIGHTFALL_CALIBRATE=1` level-calibration generator). One of them renders
+  a whole eight-hour night through the real render path. They cover nine
   simultaneous non-silent sources, 512 allocated layers, unrelated-source phase
   continuity, independent gain/master/mute/solo, limiting, colored-noise
   behavior, musical tuning/seeds, local-state serialization, timers and fades,
@@ -249,7 +250,7 @@ The automatic download of a published release, the waiting state that follows it
 while audio plays, the install that a play-to-pause transition triggers, the
 resumption of a verified download after the process was killed, and the once-only
 changelog on the next launch are all covered as rules and state transitions in JVM
-tests (51 in `app/src/testGithub`) and not as observed device behaviour. The Compose
+tests (54 in `app/src/testGithub`) and not as observed device behaviour. The Compose
 surfaces — the Settings toggle, the waiting row and the changelog dialog — were
 compiled and linted, never rendered on a screen. The commit-time re-check is
 tested as an ordering over a fake session, not against Android's installer.

@@ -18,14 +18,26 @@ its only network access, and it is a download, never an upload:
   address and the app's user agent (`Nightfall-Updater`). Nightfall sends no
   identifier, account, device name, installed-app list, listening history or mix data
   with it.
-- When you tap **Update**, it downloads the one APK for your device's
-  architecture, checks its size and SHA-256 against the manifest, checks that it
-  is signed by the same certificate as the installed app, and hands it to
-  Android's installer. The downloaded file is deleted from the app's cache after
-  a failed or refused attempt.
-- It keeps four things in its own private preferences file: when it last attempted
-  a check, when it last got a successful answer, what the installer reported about
-  the last attempt, and which release's update row you dismissed.
+- **Update automatically** is on by default in this build, so a newer release is
+  downloaded and installed without a tap. The install is refused while audio is
+  playing, or while the app has no playback answer yet, because a replacement
+  restarts the process and would silence a night; it happens when sound stops or on
+  the next launch. With the switch off, nothing is downloaded until you press
+  **Update**, and a press of *Update* installs when you ask.
+- Either way it downloads the one APK for your device's architecture, checks its
+  size and SHA-256 against the manifest, checks that it is signed by the same
+  certificate as the installed app, and hands it to Android's installer. The
+  downloaded file is deleted from the app's cache if the download or its verification
+  fails, and kept when the install itself does not finish, so a retry does not fetch
+  it again.
+- It keeps nine things in one private preferences file, and nothing else: when it
+  last attempted a check, when it last got a successful answer, whether the
+  automatic switch is on, what the installer reported about the last attempt (read
+  once and cleared), which release's update row you dismissed, the release notes the
+  last manifest read carried, which version's notes you have already seen, the
+  verified download waiting for a window (its version, version code and file name),
+  and the version it last handed to Android, so the next launch can tell an update
+  from a fresh install.
 
 There is no background worker, alarm, notification channel or periodic wake-up:
 an app that is not in the foreground does not check anything.
@@ -54,5 +66,6 @@ you want to preserve them across uninstall or signing-key changes.
 
 Downloading an APK, obtaining source/dependencies, or reproducing audio assets
 may require internet access. Installed playback, music generation, timers,
-local presets and settings require none. If you never tap *Update* in the GitHub
-build, no APK is ever downloaded.
+local presets and settings require none. In the GitHub build, turning
+**Update automatically** off means no APK is downloaded unless you tap *Update*;
+the F-Droid build has no updater and downloads nothing.
