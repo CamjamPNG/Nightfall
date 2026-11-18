@@ -23,7 +23,7 @@ an app cannot phone home, and they notice when a mixer labels synthesized rain a
 a field recording.
 
 The secondary audience reads or changes the DSP: the audio engine is a Kotlin
-module with no Android dependency and 68 JVM tests. Most of them finish in seconds;
+module with no Android dependency and 69 JVM tests. Most of them finish in seconds;
 one renders a whole eight-hour night through the real render path and takes a couple
 of minutes.
 
@@ -46,7 +46,7 @@ command that produced it, because a number without one is a number nobody re-che
 | Permissions, `github` | `INTERNET`, `ACCESS_NETWORK_STATE`, `REQUEST_INSTALL_PACKAGES`, `UPDATE_PACKAGES_WITHOUT_USER_ACTION`, plus foreground service, media-playback foreground type, notifications and wake lock — read out of the published `v1.8.2` `arm64-v8a` APK | `strings -el` on the APK's `AndroidManifest.xml`; `app/src/github/AndroidManifest.xml` |
 | Permissions, `fdroid` | the same four are `tools:node="remove"`d, and the published `fdroid-universal` APK declares none of them and carries no class from the updater package | `tools/check_release.py`'s `fdroid_violation()` and `updater_symbols()` on the downloaded asset — both empty |
 | Mapping files | the release workflow now attaches one R8 `mapping.txt` per channel; `v1.8.2` predates that step, so its assets have none and the next release will | `.github/workflows/release.yml` upload line; `git show v1.8.2:.github/workflows/release.yml` has no mapping step |
-| Tests | 68 `@Test` in `core/src/test` (67 execute; the level-calibration generator is skipped unless `NIGHTFALL_CALIBRATE=1`), 10 playback scenarios that run under both channels, 54 updater tests, 53 release-tooling tests | `grep -A2 '@Test' core/src/test`; `app/src/test`; `app/src/testGithub`; `python3 -m unittest discover -s tools/tests` |
+| Tests | 69 `@Test` in `core/src/test` (68 execute; the level-calibration generator is skipped unless `NIGHTFALL_CALIBRATE=1`), 10 playback scenarios that run under both channels, 51 updater tests in `app/src/testGithub/java/dev/nightfall/update`, 53 release-tooling tests | `grep -rhA2 '@Test' core/src/test --include=*.kt \| grep -c 'fun '`; the same grep per suite; `python3 -m unittest discover -s tools/tests` |
 | Licence | MIT code; recordings CC BY / CC BY-SA / CC0 | `LICENSE`, `AUDIO_LICENSES.md` |
 | Not verified | anything on hardware: Pixel 7 pass, Bluetooth, loudness, overnight battery, and an update actually installing on a phone | `docs/TESTING.md` |
 
@@ -226,7 +226,7 @@ Each claim is checkable in the repository and each has its limit stated next to 
 | --- | --- | --- |
 | Playback needs no network, in either build | `PRIVACY.md`; the `fdroid` channel removes `INTERNET`, `ACCESS_NETWORK_STATE`, `REQUEST_INSTALL_PACKAGES` and `UPDATE_PACKAGES_WITHOUT_USER_ACTION` (`app/src/fdroid/AndroidManifest.xml`), and `tools/check_release.py` fails a release if either channel's permissions drift | The GitHub APK *does* have `INTERNET`, for its own update check; the claim is about playback and about the F-Droid build, not about every download |
 | The update channel is bounded, and it never interrupts a night | `README.md` "Updates"; `PRIVACY.md`: one manifest read at most every six hours after a successful check and never more than once every fifteen minutes, no upload; an install is refused while audio is playing or while playback state is unknown (`UpdateAutomation.mayInstallNow`) and waits for the stop | Installing needs no tap by default. The automatic check can be switched off, but *Check for updates* stays, so a check is always something the app can be made to do; it is still a network call from an app whose selling point is not making them, and no automatic update has been watched on a phone |
-| A DSP core with real tests | 68 JVM tests in `core/src/test/` (67 execute; the calibration generator is opt-in), free of Android dependencies, one of which renders an eight-hour night | Tests prove signal behavior, not that it sounds good to you |
+| A DSP core with real tests | 69 JVM tests in `core/src/test/` (68 execute; the calibration generator is opt-in), free of Android dependencies, one of which renders an eight-hour night | Tests prove signal behavior, not that it sounds good to you |
 | No layer-count cap, and measured capacity instead | `MixerTest` no-cap case; the render-budget warning on Home | Your phone has finite CPU; a heavy mix can still underrun |
 | Bundled recordings loop for at least 180 seconds | `docs/audio-credits.json` cycle lengths; enforced by `tools/prepare_audio.py` and `tools/check_release.py` | Long loops are not the same as a well-recorded loop |
 | Synthesis is labeled as synthesis | Catalogue descriptions; "distant household ambience" is declared unavailable rather than faked | Some sounds are interpretations, not recordings of that place |
