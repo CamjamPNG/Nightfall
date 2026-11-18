@@ -4,15 +4,37 @@
 import argparse
 import hashlib
 import json
-import os
 import pathlib
 import re
 import ssl
 import subprocess
+import sys
 import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "tools"))
+import release_artifact  # noqa: E402
+
 ABIS = {"arm64-v8a", "armeabi-v7a", "x86", "x86_64"}
+
+
+def verify_apk(file, abis, version, code, credits, pin):
+    """Prove one published APK's signer, alignment, identity, architecture and audio payloads."""
+    sdk = release_artifact.build_tools()
+    certificate = subprocess.check_output([str(sdk / "apksigner"), "verify", "--verbose", "--print-certs", str(file)], text=True)
+    assert re.findall(r"certificate SHA-256 digest: ([a-f0-9]+)", certificate) == [pin], "Invalid signer: " + file.name
+    subprocess.run([str(sdk / "zipalign"), "-c", "-P", "16", "4", str(file)], check=True)
+    badging = subprocess.check_output([str(sdk / "aapt"), "dump", "badging", str(file)], text=True)
+    for field in ("name='io.github.camjampng.nightfall'", f"versionName='{version}'", f"versionCode='{code}'"):
+        assert field in badging.splitlines()[0], "Wrong APK package/version: " + file.name
+    assert "sdkVersion:'26'" in badging and "targetSdkVersion:'35'" in badging
+    with zipfile.ZipFile(file) as z:
+        assert release_artifact.universal_abis(file) == abis, "Wrong architecture in " + file.name
+        for asset in credits:
+            entry = z.getinfo(f'assets/audio/{asset["id"]}.pcm')
+            assert entry.compress_type == zipfile.ZIP_STORED and entry.file_size / 48000 - 1 >= 180
+            with z.open(entry) as stream:
+                assert hashlib.file_digest(stream, "sha256").hexdigest() == asset["sha256"], "Audio differs from source tag"
 
 
 def main():
@@ -39,6 +61,11 @@ def main():
         assert apk["url"] == ('https://github.com/CamjamPNG/Nightfall/releases/download/v'
                               f'{manifest["versionName"]}/{apk["file"]}'), "Manifest download URL is not this release's asset"
         expected.add(apk["file"])
+    # The F-Droid-channel APK is published beside the update options and deliberately left out of
+    # release-manifest.json: the updater must never offer a build that cannot update itself.
+    fdroid_asset = release_artifact.fdroid_asset_name(manifest["versionName"])
+    assert fdroid_asset not in {a["file"] for a in manifest["apks"]}, "The F-Droid asset must not be an update option"
+    if "productFlavors" in source: expected.add(fdroid_asset)
     public_notes = {"release-notes.md"} if (folder / "release-notes.md").exists() else set()
     assert {p.name for p in folder.iterdir()} == expected | public_notes, "Unexpected/missing release files"
     der = ssl.PEM_cert_to_DER_cert((folder / "nightfall-release-certificate.pem").read_text())
@@ -54,26 +81,18 @@ def main():
     for name, digest in sums.items():
         with (folder / name).open("rb") as stream: actual = hashlib.file_digest(stream, "sha256").hexdigest()
         assert actual == digest, "Checksum mismatch: " + name
-    sdk = pathlib.Path(os.environ["ANDROID_HOME"]) / "build-tools/35.0.0"
+    version, code = manifest["versionName"], manifest["versionCode"]
     for apk in manifest["apks"]:
         file = folder / apk["file"]
         assert apk["sha256"] == sums[apk["file"]] and apk["bytes"] == file.stat().st_size
-        cert = subprocess.check_output([str(sdk / "apksigner"), "verify", "--verbose", "--print-certs", str(file)], text=True)
-        assert re.findall(r"certificate SHA-256 digest: ([a-f0-9]+)", cert) == [pin], "Invalid signer"
-        subprocess.run([str(sdk / "zipalign"), "-c", "-P", "16", "4", str(file)], check=True)
-        badging = subprocess.check_output([str(sdk / "aapt"), "dump", "badging", str(file)], text=True)
-        for field in (f'name=\'{manifest["applicationId"]}\'', f'versionName=\'{manifest["versionName"]}\'', f'versionCode=\'{manifest["versionCode"]}\''):
-            assert field in badging.splitlines()[0], "Wrong APK package/version"
-        assert "sdkVersion:'26'" in badging and "targetSdkVersion:'35'" in badging
-        with zipfile.ZipFile(file) as z:
-            abis = {n.split("/")[1] for n in z.namelist() if n.startswith("lib/") and n.endswith(".so")}
-            assert abis == (ABIS if apk["abi"] == "universal" else {apk["abi"]})
-            for asset in credits:
-                entry = z.getinfo(f'assets/audio/{asset["id"]}.pcm')
-                assert entry.compress_type == zipfile.ZIP_STORED and entry.file_size / 48000 - 1 >= 180
-                with z.open(entry) as stream:
-                    assert hashlib.file_digest(stream, "sha256").hexdigest() == asset["sha256"], "Audio differs from source tag"
+        verify_apk(file, ABIS if apk["abi"] == "universal" else {apk["abi"]}, version, code, credits, pin)
         print("Validated", file.name, flush=True)
+    if fdroid_asset in expected:
+        file = folder / fdroid_asset
+        verify_apk(file, ABIS, version, code, credits, pin)
+        violation = release_artifact.fdroid_violation(file)
+        assert violation is None, "F-Droid asset " + violation
+        print("Validated", file.name, "without network permission or updater code", flush=True)
     print("Release assets verified against source tag and pinned certificate.")
 
 

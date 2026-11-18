@@ -13,8 +13,8 @@ android {
         applicationId = "io.github.camjampng.nightfall"
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
-        versionName = "1.3"
+        versionCode = 14
+        versionName = "1.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     androidResources { noCompress += "pcm" }
@@ -36,6 +36,11 @@ android {
     kotlinOptions { jvmTarget = "17" }
     lint { abortOnError = true }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        // DataStore is a per-process singleton: one JVM per test class keeps scenarios isolated.
+        unitTests.all { it.forkEvery = 1 }
+    }
 }
 
 // The flavor split turns lintDebug/lintRelease into per-channel tasks; keep the aggregate names
@@ -69,6 +74,11 @@ dependencies {
     debugImplementation(libs.compose.tooling)
     debugImplementation(libs.compose.test.manifest)
     testImplementation(libs.junit)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.androidx.test)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.compose.test)
+    testImplementation(libs.robolectric)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.androidx.test)
     androidTestImplementation(libs.androidx.runner)

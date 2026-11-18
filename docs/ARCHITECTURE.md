@@ -38,12 +38,13 @@ JSON imports validate known sound IDs, unique layer IDs, finite numeric values, 
 `app/src/github`, which declares `INTERNET`, `ACCESS_NETWORK_STATE`,
 `REQUEST_INSTALL_PACKAGES` and `UPDATE_PACKAGES_WITHOUT_USER_ACTION`. `app/src/main`
 names no update type at all: it calls three flavour-provided composables —
-`UpdateOverlay`, `UpdateForegroundEffect` and `UpdateSettingsSection` — and hands
-`UpdateForegroundEffect` one `Flow<Boolean>` of play/pause, which `app/src/fdroid`
-answers in `UpdateSurfaces.kt` with no updater, stripping the four permissions and
-showing only the installed version and where updates come from. The F-Droid APK therefore contains no manifest parser, no fetcher, no
-installer, no state machine and no network code; `tools/check_release.py` asserts
-that from the built APK's dex and permissions, not from the source tree.
+`UpdateOverlay`, `UpdateForegroundEffect` and `UpdateSettingsSection` — and
+hands `UpdateForegroundEffect` one `Flow<Boolean>` of play/pause, which
+`app/src/fdroid` answers in `UpdateSurfaces.kt` with no updater, stripping the
+four permissions and showing only the installed version and where updates come
+from. The F-Droid APK therefore contains no manifest parser, no fetcher, no
+installer, no state machine and no network code; `tools/check_release.py`
+asserts that from the built APK's dex and permissions, not from the source tree.
 
 The `github` channel reads the `release-manifest.json` asset that
 `tools/package_release.py` publishes with every release: version name and code,

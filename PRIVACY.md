@@ -11,18 +11,21 @@ Nightfall ships in two builds, and they differ in exactly one respect.
 its only network access, and it is a download, never an upload:
 
 - It reads one public file, `release-manifest.json`, from the latest Nightfall
-  release on github.com — at most once every six hours while the app is open and
-  the device is online, and whenever you press *Check for updates*. Like any
-  download, GitHub sees the request's IP address and the app's user agent
-  (`Nightfall-Updater`). Nightfall sends no identifier, account, device name,
-  installed-app list, listening history or mix data with it.
+  release on github.com. On its own that happens at most once every six hours while
+  the app is open and the device is online, counted from the last successful check,
+  and never more than once every fifteen minutes; pressing *Check for updates* obeys
+  that same fifteen-minute limit. Like any download, GitHub sees the request's IP
+  address and the app's user agent (`Nightfall-Updater`). Nightfall sends no
+  identifier, account, device name, installed-app list, listening history or mix data
+  with it.
 - When you tap **Update**, it downloads the one APK for your device's
   architecture, checks its size and SHA-256 against the manifest, checks that it
   is signed by the same certificate as the installed app, and hands it to
   Android's installer. The downloaded file is deleted from the app's cache after
   a failed or refused attempt.
-- It stores two facts in private preferences: when it last checked, and what the
-  installer reported about the last attempt.
+- It keeps four things in its own private preferences file: when it last attempted
+  a check, when it last got a successful answer, what the installer reported about
+  the last attempt, and which release's update row you dismissed.
 
 There is no background worker, alarm, notification channel or periodic wake-up:
 an app that is not in the foreground does not check anything.

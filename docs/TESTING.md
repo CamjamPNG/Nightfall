@@ -95,9 +95,76 @@
   inventory has no GMS, Firebase, billing, ad or tracking SDK from the checked
   denylist. F-Droid's independent review remains necessary.
 
+- 9 JVM playback-lifecycle tests pass under Robolectric in both channels (see
+  below). They replace the instrumented attempt that never went green.
+
 Machine-readable results: `docs/verification/update-channel.json`,
 `release-checks.json`, `dependency-audit.json`, `reproducibility.json`, and
 `release-dependencies.txt`.
+
+## Playback lifecycle tests (Robolectric, JVM)
+
+`app/src/test/java/dev/nightfall` runs the real `NightfallApp`, `NightfallRuntime`,
+the Compose screens, `PlaybackService`, `AudioHost`, its PCM worker thread and the
+core `PcmMixer` on a JVM. Only the Android edges are shadowed: `AudioTrack` is a
+float sink that records what the mixer wrote and plays nothing, `AudioManager`
+records the focus request without arbitrating between apps, plus the power,
+notification and activity managers. Nine scenarios, all asserting measured
+behavior rather than that a method was called:
+
+- `NineLayerPlaybackTest`: the transport control starts the nine-layer mix; the
+  worker writes non-silent, finite PCM; the service reaches foreground with its
+  notification attached and does not stop itself; the media session reports
+  `STATE_READY`, `playWhenReady`, the mix title and nine layers; navigating to the
+  Library and recreating the activity keep audio flowing and the mix intact.
+- `LayerEditingTest`: adding a layer (9 → 10) and removing three (10 → 7) while
+  playing keep samples flowing, keep the output finite, and update the layer count
+  the media session reports.
+- `BackgroundPlaybackTest`: with the activity moved to CREATED the worker keeps
+  writing, the wake lock stays held and the foreground notification stays
+  attached; the sleep timer fades, then stops playback and releases the wake lock
+  without an error, and the audio thread stops writing.
+- `AudioFocusTest`: the request is `AUDIOFOCUS_GAIN` for `USAGE_MEDIA`; a
+  transient loss stops the samples and releases the wake lock without abandoning
+  the request, and a gain resumes both; a permanent loss stops playback and a
+  later gain does not restart it; a user pause abandons the request.
+- `StateRestorationTest`: a gain and a setting reach the DataStore file on disk,
+  and a fresh runtime restores them, including nine layers.
+- `TeardownTest`: destroying the service ends the `Nightfall PCM` thread, drops
+  playback state, releases the wake lock, and stops sample writes.
+
+Limits of this harness, stated plainly:
+
+- No audio hardware, driver or route is exercised. A float sink receiving samples
+  is not a speaker producing sound, and underruns are shadowed counters.
+- Robolectric does not arbitrate audio focus between apps, and `SystemClock` is
+  virtual, so timer expiry is deterministic but does not show that a phone keeps
+  the CPU awake for an hour with the screen off.
+- "Background" here means the activity layer does not stop playback; process
+  death, Doze and OEM task killers are not simulated.
+- The transport control's label is asserted only where a click drives the change.
+  A state flip arriving from the focus handler does not reliably recompose the
+  Compose tree under Robolectric, so those scenarios assert sample flow and wake
+  lock state instead.
+- One JVM per test class (`forkEvery = 1`) is required: in a shared JVM a later
+  class restores state left by an earlier one and two scenarios time out.
+
+### Build wiring
+
+The suite is configured in the repository: `app/build.gradle.kts` sets
+`testOptions { unitTests.isIncludeAndroidResources = true }` and
+`unitTests.all { it.forkEvery = 1 }`, and `testImplementation` carries the Compose
+BOM, `androidx.test:core`, `androidx.test.ext:junit`, `androidx.compose.ui:ui-test-junit4`
+and Robolectric 4.18.1 alongside the JUnit that was already there. Because the two
+channels are flavours rather than one variant, the scenarios run twice — under
+`:app:testGithubDebugUnitTest` and `:app:testFdroidDebugUnitTest` — and the CI job
+runs both, so the F-Droid build's playback lifecycle is gated as well as the
+GitHub build's.
+
+`gradle/verification-metadata.xml` carries the SHA-256 entries for every
+transitive artifact these dependencies resolve, so dependency verification stays
+strict without a second pass. Robolectric downloads its Android 35 runtime jar on
+first use, so the CI step needs network access the first time it runs on a runner.
 
 ## Android emulator observations
 
@@ -114,7 +181,8 @@ The heavily constrained software emulator produced audio underruns and is not a
 valid phone-performance or audio-quality benchmark. No Bluetooth hardware or
 instrumentation passes are claimed from this run. Startup restoration was then
 moved off the main thread; this does not establish that every device issue has
-been resolved.
+been resolved. That never-green `PlaybackIntegrationTest` has since been replaced
+by the Robolectric scenarios above, which run on a JVM without an emulator.
 
 ## Update channel that was not exercised
 
@@ -151,10 +219,15 @@ underrun run. Manufacturer-independent all-night playback is not guaranteed.
 ## Reproduce
 
 ```sh
-./gradlew :core:test :app:testGithubDebugUnitTest :app:assembleGithubRelease :app:assembleFdroidRelease :app:lintRelease
-python3 tools/check_release.py --apk app/build/outputs/apk/release/app-release-unsigned.apk
-./gradlew :app:connectedGithubDebugAndroidTest
+./gradlew :core:test :app:testGithubDebugUnitTest :app:testFdroidDebugUnitTest \
+  :app:assembleGithubRelease :app:assembleFdroidRelease :app:lintRelease
+python3 tools/check_release.py --apk app/build/outputs/apk/github/release/app-github-release-unsigned.apk --fdroid-apk app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk
 ```
 
 The core acceptance test creates `artifacts/nine-layer-dream.wav` and host JVM
-render measurements. These are not Pixel 7 CPU, battery or listening results.
+render measurements. The playback lifecycle tests report under
+`app/build/reports/tests/testGithubDebugUnitTest/` and
+`app/build/reports/tests/testFdroidDebugUnitTest/`. Neither is a Pixel 7 CPU,
+battery or listening result. `:app:connectedGithubDebugAndroidTest` is no longer
+part of the record: there is no instrumented test left, and no `/dev/kvm` on the
+machines that run these checks.
