@@ -1,0 +1,102 @@
+# SPDX-License-Identifier: MIT
+name: Publish F-Droid repository
+on:
+  release:
+    types: [published]
+  workflow_run:
+    # Releases published by the repository's own workflows use GITHUB_TOKEN,
+    # and GitHub does not start workflows for events that token creates, so a
+    # release event alone would never reach here. Both publishers are followed.
+    workflows: [Publish Android release, Publish already signed APKs]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      releases:
+        description: Recent releases to index
+        default: '2'
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: nightfall-fdroid-repository
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+      - name: Check the repository signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.FDROID_REPO_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.FDROID_REPO_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo '::error::Add FDROID_REPO_KEYSTORE_BASE64 and FDROID_REPO_KEYSTORE_PASSWORD in repository Actions secrets. See docs/FDROID.md. The index will never be published unsigned.'
+            exit 1
+          fi
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/fdroid-repo.p12"
+          echo "FDROID_REPO_KEYSTORE=$RUNNER_TEMP/fdroid-repo.p12" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install fdroidserver
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet --disable-pip-version-check fdroidserver==2.4.5
+          echo "FDROID_BIN=$RUNNER_TEMP/venv/bin/fdroid" >> "$GITHUB_ENV"
+      - name: Install apksigner
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0"
+      - name: Download the published APKs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASES: ${{ inputs.releases || '2' }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/apks"
+          : > "$RUNNER_TEMP/apks/list"
+          for TAG in $(gh release list --limit "$RELEASES" --exclude-drafts --json tagName --jq '.[].tagName'); do
+            NAMES=$(gh release view "$TAG" --json assets --jq '.assets[].name')
+            ASSET=$(printf '%s\n' "$NAMES" | grep -iE '(^|[-_.])fdroid([-_.]|$)' | grep -i universal | head -1)
+            [ -n "$ASSET" ] || ASSET=$(printf '%s\n' "$NAMES" | grep -iE '(^|[-_.])fdroid([-_.]|$)' | head -1)
+            [ -n "$ASSET" ] || ASSET=$(printf '%s\n' "$NAMES" | grep -i universal | head -1)
+            if [ -z "$ASSET" ]; then
+              echo "::error::$TAG has no installable APK asset to index"
+              exit 1
+            fi
+            echo "$TAG -> $ASSET"
+            mkdir -p "$RUNNER_TEMP/apks/$TAG"
+            gh release download "$TAG" --pattern "$ASSET" --dir "$RUNNER_TEMP/apks/$TAG" --clobber
+            find "$RUNNER_TEMP/apks/$TAG" -name '*.apk' >> "$RUNNER_TEMP/apks/list"
+          done
+          cat "$RUNNER_TEMP/apks/list"
+      - name: Generate and verify the signed index
+        env:
+          FDROID_REPO_KEYSTORE_PASSWORD: ${{ secrets.FDROID_REPO_KEYSTORE_PASSWORD }}
+        run: |
+          ARGS=()
+          while read -r APK; do ARGS+=(--apk "$APK"); done < "$RUNNER_TEMP/apks/list"
+          "$RUNNER_TEMP/venv/bin/python" tools/fdroid_repo.py build "${ARGS[@]}" \
+            --out "$RUNNER_TEMP/fdroid" --keep 2 --summary "$RUNNER_TEMP/fdroid-index.json"
+      - name: Assemble the published site
+        run: |
+          mkdir -p site/fdroid
+          cp -a "$RUNNER_TEMP/fdroid/repo" site/fdroid/repo
+          cp "$RUNNER_TEMP/fdroid-index.json" site/fdroid/repo/index-summary.json
+          touch site/.nojekyll
+          du -sh site
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+          include-hidden-files: true
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

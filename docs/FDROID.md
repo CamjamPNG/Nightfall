@@ -1,17 +1,161 @@
-# F-Droid inclusion
+# F-Droid distribution
 
-Status on 18 November 2026: the recipe validates against F-Droid's own tooling
-at 1.0.1.2 (versionCode 4), and the store metadata F-Droid reads from this
-repository is complete. Nightfall is **not ready to submit**, for two reasons
-that are not about metadata quality: the recipe still builds the release variant
-that the update channel will make network-capable, and F-Droid's inclusion
-policy asks for three months of active development while the project is six days
-old. Both are listed under [Blockers](#blockers).
+Nightfall reaches F-Droid users by two routes, and this document covers both.
+
+**The self-hosted repository is the route that works today**: an index we build
+and sign ourselves from the APKs we publish, which the official F-Droid client
+can add to install Nightfall and receive updates. It is not F-Droid-verified;
+adding it means trusting the maintainer's repository key. Its address is
+`https://camjampng.github.io/Nightfall/fdroid/repo`, and nothing is served there
+until the one-time setup below has run once. See
+[the self-hosted repository](#the-self-hosted-repository).
+
+**Inclusion in F-Droid's main repository is not submitted.** The metadata is
+complete and the recipe validates against F-Droid's own tooling (measured at
+1.0.1.2, versionCode 4); the one remaining blocker is the development-history
+rule, not metadata quality. See [Blockers](#blockers).
 
 This document is the maintainer-side view. The request text is in
 [`fdroid/SUBMISSION.md`](../fdroid/SUBMISSION.md), the build recipe is
 [`fdroid/metadata/io.github.camjampng.nightfall.yml`](../fdroid/metadata/io.github.camjampng.nightfall.yml),
 and the review-facing notes are in [`fdroid/README.md`](../fdroid/README.md).
+
+## The self-hosted repository
+
+```
+https://camjampng.github.io/Nightfall/fdroid/repo
+```
+
+Add that address in the F-Droid client (Settings → Repositories → Add). Because
+it is a custom repository the client asks for a fingerprint before it will trust
+the index: the add-URL is `address?fingerprint=…` with the upper-case SHA-256 of
+the repository certificate, and `tools/configure_fdroid_repo_key.py` prints the
+finished URL. The path keeps the repository's capital N because GitHub Pages
+project paths are case-sensitive (`/Nightfall/` serves, `/nightfall/` is a 404);
+that was checked against existing Pages sites, not assumed.
+
+**What it serves, and what it does not.** Only the offline build: the `fdroid`
+flavor once releases carry product flavors, and today's single offline release
+variant, which is the same app with no updater, no network code and no
+`INTERNET` permission. The index builder refuses any APK that declares
+`INTERNET` or `ACCESS_NETWORK_STATE`, so the network-capable `github` channel
+cannot enter this repository even if it is handed the wrong file. It refuses
+APKs that are not signed with the pinned release certificate in `docs/` for the
+same reason: two signing identities in one repository is a confusing update
+path.
+
+**Trust.** These are our builds, signed by us, on an index signed by a key
+Camden holds. F-Droid has not verified the source, the build, the signature or
+the bug reports, and a compromise of this repository would not be caught by
+anyone else. That is the trade for getting an install and updates through the
+official client while the main repository's development-history rule keeps
+Nightfall out of `fdroiddata`.
+
+**Two different keys, never interchangeable.** The app APKs keep the pinned
+release certificate in `docs/` (the same identity the GitHub channel uses, so an
+installed app updates normally). The repository index is signed by a separate
+key whose certificate is recorded in `fdroid/repo/fingerprint.txt` and whose
+private half exists only in the Actions secret. That file is committed and is
+what the add-URL's fingerprint is built from, and `tools/fdroid_repo.py`
+refuses to build when the key it signs with does not match it, so the published
+index and the documented identity cannot disagree. Losing the key means every
+existing user has to remove and re-add the repository, so keep the `.p12` and
+the `<keystore>.password` file the setup writes beside it.
+
+**How it is generated.** `.github/workflows/fdroid-repo.yml` runs when
+`Publish Android release` or `Publish already signed APKs` finishes
+successfully, on a published release, and on manual dispatch. The workflow_run
+triggers exist because a release created with the repository's `GITHUB_TOKEN`
+does not itself start a workflow run, so the release event alone would leave the
+index stale. It downloads the newest two releases'
+APKs, then `tools/fdroid_repo.py build` inspects each one (package, versionCode,
+permissions, signing certificate), copies the accepted APKs into an
+fdroidserver directory, and runs `fdroid update --clean --use-date-from-apk
+--pretty`. That is the same indexer `fdroiddata` uses, run against our APKs
+instead of a recipe, so nothing is rebuilt and the bytes users download are the
+published release assets. The same command reproduces the repository locally:
+
+```sh
+pip install fdroidserver==2.4.5           # plus a JDK and Android build-tools for apksigner
+export ANDROID_HOME=~/android-sdk
+export FDROID_REPO_KEYSTORE=~/nightfall-fdroid-repo.p12
+export FDROID_REPO_KEYSTORE_PASSWORD=…    # never in a file that is committed
+python3 tools/fdroid_repo.py build \
+  --apk Nightfall-1.1.3-universal.apk --apk Nightfall-1.1.2-universal.apk \
+  --out build/fdroid --keep 2
+```
+
+Secrets reach fdroidserver through `{env: …}` expansion in
+`fdroid/repo/config.yml`, so no key path or password is ever written into the
+tree. The run re-creates the output directory, keeps the newest `--keep`
+versions, and verifies the result before publishing: the index must parse,
+describe exactly this package with exactly those versionCodes, list no network
+permission, carry matching APK hashes, and its `index-v1.jar` must be signed by
+the configured repository key. A missing key, a missing `apksigner` or an
+unsigned jar fails the run rather than publishing anything.
+
+Re-running it is idempotent in content: the same APKs produce the same versions,
+hashes, permissions and listing. Two things move on every run because they are
+timestamps — `repo.timestamp` in the index and the `added`/`lastUpdated` fields
+of every version — and the index signature changes with them. That is
+fdroidserver's own behaviour, not a choice made here.
+
+**Publishing.** The workflow assembles `site/fdroid/repo/` and deploys it with
+GitHub Actions Pages, so the workflow owns the index and no branch carries it.
+Only the newest two versions are published; at about 91 MB per APK the site
+stays well inside the 1 GB Pages limit, and a device on an older version still
+updates straight to the newest one. GitHub Pages is not an F-Droid mirror:
+its 100 GB monthly bandwidth cap is roughly a thousand downloads per month.
+
+The workflow can only index what a release actually publishes, and that is the
+one thing still missing upstream: the release workflow builds
+`app-fdroid-release-unsigned.apk` for its checks but signs and uploads only the
+`github` flavor. Its asset picker prefers an asset whose name contains `fdroid`,
+falls back to the `universal` one, and then the permission check refuses it. So
+until a release uploads a signed `fdroid`-flavor APK, a publishing run fails
+with a message naming the refusal instead of shipping the network-capable build
+— fail-closed, but also no updates for F-Droid users. The change that closes it
+belongs to the release workflow's owner; it is one extra
+`tools/package_release.py` invocation for the `fdroid` flavor, emitting an asset
+whose name contains `fdroid` (for example
+`Nightfall-1.1.3-fdroid-universal.apk`).
+
+**One-time setup only Camden can do.** Two repository secrets, and Pages
+pointed at Actions:
+
+1. Generate the repository key once and install the secrets, from a machine
+   whose `gh` may write Actions secrets:
+
+   ```sh
+   python3 tools/configure_fdroid_repo_key.py --keystore ~/nightfall-fdroid-repo.p12 --upload
+   ```
+
+   The path must be outside the checkout: a key or password inside it is
+   refused, so no git command can stage either. That creates a 4096-bit RSA
+   PKCS12 key, writes its password to `~/nightfall-fdroid-repo.p12.password`, sets `FDROID_REPO_KEYSTORE_BASE64`
+   (base64 of the `.p12`) and `FDROID_REPO_KEYSTORE_PASSWORD`, records the
+   fingerprint in `fdroid/repo/fingerprint.txt`, and prints the add-URL. The
+   password is generated locally and sent straight to GitHub; it is never
+   printed. Back up the `.p12` and its `.password` file with the app signing key
+   — they are the only copy of the repository identity, and the password is not
+   recoverable from GitHub once written. Commit `fdroid/repo/fingerprint.txt`
+   (it is the one source file this setup touches); the index build fails until
+   it matches the key.
+2. Settings → Pages → Build and deployment → Source: **GitHub Actions**.
+3. Actions → **Publish F-Droid repository** → Run workflow.
+
+**What has not been verified.** No Pages deployment has run from this
+repository, so the URL above is the address the workflow and `config.yml`
+target, not one that has served a request. The trigger chain has not been
+exercised either: the repository has never seen `Publish Android release` finish
+and wake this workflow. No F-Droid client on a phone has added the repository,
+fetched the index, installed a version or auto-updated between two of them. The
+index was generated and verified locally against the published 1.1.3 and 1.2
+universal APKs with a throwaway repository key, which proves the procedure, the
+fingerprint invariant and the refusal paths but not the deployed key.
+`index-v1.jar` is SHA-1 JAR-signed because fdroidserver signs it that way for
+client compatibility; `entry.jar` and the index-v2 files carry the modern
+algorithm.
 
 ## What an inclusion request needs
 
@@ -31,7 +175,7 @@ and the [Build Metadata Reference](https://f-droid.org/en/docs/Build_Metadata_Re
 | Update detection works | Met | `fdroid checkupdates --auto` moved 1.0.1.1/3 to 1.0.1.2/4 from the tags |
 | No tracking, accounts or ad SDKs | Met | No such permission or dependency; see `PRIVACY.md` |
 | Anti-features declared honestly | Met | None apply; see [Anti-features](#anti-features) |
-| Builds the variant F-Droid should ship | **No** | Recipe builds `assembleRelease`, which becomes the network-capable variant |
+| Builds the variant F-Droid should ship | Rule in place | Pre-flavor blocks keep `gradle: [yes]`; a post-flavor block names `fdroid` — see [Variant selection](#variant-selection-is-settled-per-build-block) |
 | Policy development history | **No** | First published 12 November 2026 |
 | Screenshots showing the shipped version | Weak | Real captures, but not refreshed for 1.0.1.2 |
 
@@ -62,38 +206,32 @@ release notes are worth writing before submission.
 
 ## Blockers
 
-### The recipe builds the wrong variant (waiting on build flavors)
+### Variant selection is settled, per build block
 
-The recipe's build blocks run `subdir: app` with `gradle: yes`, which fdroidserver
-turns into `assembleRelease` (`build.py`: `flavors == ['yes']` means no flavor
-prefix). Once the update channel lands as `github` and `fdroid` product flavors,
-`assembleRelease` stops meaning "the offline app": it would build the
-network-capable variant with the updater and `INTERNET`.
-
-The migration is per block, not across the whole file. F-Droid checks out each
-block's own commit, so a block pinned to `v1.0` … `v1.0.1.2` must keep
-`gradle: yes`: those tags have no product flavors, `assembleFdroidRelease` does
-not exist in them, and switching them would make a legitimate re-build of a
-published version fail. They are also still correct as written — at those tags
-`assembleRelease` is the single offline variant, with no network permission and
-no updater. Only blocks whose tag contains the `fdroid` flavor name it:
+The recipe must build the offline app, and the rule that guarantees it is per
+block rather than global. Every block pinned to a tag from before the
+`github`/`fdroid` product flavors existed keeps `gradle: [yes]`: at those tags
+`assembleRelease` *is* the single offline variant, and naming a flavor there
+would ask fdroidserver for a task that tag does not define. A block whose tag
+does contain the flavors names one instead:
 
 ```yaml
     gradle:
       - fdroid
 ```
 
-fdroidserver turns that into `assembleFdroidRelease`, and it finds the resulting
-`app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk` on its own
-(`build.py` appends `build/outputs/apk/<flavor>/release` to its search), so
-`subdir: app` stays correct and no `output:` override is needed.
+fdroidserver turns that into `assembleFdroidRelease` and finds the result at
+`app/build/outputs/apk/fdroid/release/` on its own (`build.py` appends
+`build/outputs/apk/<flavor>/release` to its search), so `subdir: app` stays
+correct and no `output:` override is needed. `tools/release_version.py` writes
+new blocks from a template, and that template is what has to emit `- fdroid`
+from the first release cut on a flavored tree; until it does, a new block would
+build the network-capable variant.
 
-`tools/release_version.py` also writes new build blocks from a hardcoded
-template, so that template has to emit `- fdroid` from the first release that
-carries the flavor; otherwise every automatic release adds a block that builds
-the network-capable variant. Both files are outside this document's ownership
-(build config and release tooling), which is why the change is sequenced rather
-than applied here.
+This is a rule to follow rather than an open blocker, and it is not specific to
+inclusion: the same boundary decides what the self-hosted repository will accept,
+except that the repository enforces it by inspecting the APK's permissions
+instead of trusting a recipe.
 
 ### Development history
 
@@ -205,7 +343,7 @@ header image.
 
 ## Submitting
 
-Steps, in order, once the two blockers are cleared:
+Steps, in order, once the development-history blocker is cleared:
 
 1. `fdroid build --server` one version against the final recipe in a full
    `fdroiddata` checkout, so the buildserver proves the recipe before review.

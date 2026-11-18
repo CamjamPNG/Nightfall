@@ -1,0 +1,18 @@
+# fdroidserver settings for the self-hosted Nightfall repository.
+# tools/fdroid_repo.py copies this file into the build directory (mode 0600) and
+# runs "fdroid update" there. Secret values are expanded from the environment by
+# fdroidserver's {env: NAME} syntax, so no key path or password is ever written
+# to a committed file. A missing variable fails the build.
+repo_url: https://camjampng.github.io/Nightfall/fdroid/repo
+repo_name: Nightfall
+repo_description: >-
+  Nightfall releases built and signed by the Nightfall maintainer. F-Droid has
+  not reviewed or verified these builds.
+repo_icon: icon.png
+repo_keyalias: nightfall-repo
+keystore: {env: FDROID_REPO_KEYSTORE}
+keystorepass: {env: FDROID_REPO_KEYSTORE_PASSWORD}
+keypass: {env: FDROID_REPO_KEYSTORE_PASSWORD}
+keydname: CN=Nightfall F-Droid repository, O=Nightfall, C=US
+archive_older: 0
+make_current_version_link: false

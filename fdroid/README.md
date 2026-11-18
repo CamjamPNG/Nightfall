@@ -13,6 +13,18 @@ The maintainer-side status, requirement checklist, blocker list and
 reproducibility measurements are in [`docs/FDROID.md`](../docs/FDROID.md). This
 file is the review-facing summary of what the recipe asserts.
 
+## Self-hosted repository (separate from this recipe)
+
+`fdroid/repo/` is not part of the inclusion recipe. It is the configuration for
+our own signed repository at
+`https://camjampng.github.io/Nightfall/fdroid/repo`, which serves the APKs we
+publish so F-Droid-client users can install and update Nightfall without waiting
+for `fdroiddata`. F-Droid has not verified those builds and they are signed by
+the maintainer's repository key rather than by F-Droid. Only offline builds
+enter that index, and
+[`tools/fdroid_repo.py`](../tools/fdroid_repo.py) refuses any APK that declares
+`INTERNET`. Procedure, secrets and limits: [`docs/FDROID.md`](../docs/FDROID.md).
+
 ## Build and validate
 
 Use a free OpenJDK 17 or later, Android SDK 35, Build Tools 35.0.0 and Gradle 8.11.1.
