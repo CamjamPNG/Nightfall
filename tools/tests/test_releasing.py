@@ -250,6 +250,14 @@ class SiteArtifactTest(unittest.TestCase):
                              ["io.github.camjampng.nightfall_11.apk"])
             self.assertFalse((out / "index-v1.json").exists(), "the index must not sit at the site root")
 
+    def test_the_landing_page_deploys_alone_when_no_index_exists(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = site.assemble(None, None, pathlib.Path(tmp) / "site")
+            self.assertTrue((out / "index.html").is_file())
+            self.assertTrue((out / "style.css").is_file())
+            self.assertTrue((out / ".nojekyll").is_file())
+            self.assertFalse((out / "fdroid").exists(), "no repository means no empty fdroid/repo")
+
     def test_an_incomplete_artifact_is_refused_rather_than_deployed(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = pathlib.Path(tmp)

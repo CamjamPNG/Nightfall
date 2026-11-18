@@ -40,31 +40,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
-      - name: Check the repository signing key
-        env:
-          KEYSTORE_BASE64: ${{ secrets.FDROID_REPO_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.FDROID_REPO_KEYSTORE_PASSWORD }}
-        run: |
-          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
-            echo '::error::Add FDROID_REPO_KEYSTORE_BASE64 and FDROID_REPO_KEYSTORE_PASSWORD in repository Actions secrets. See docs/FDROID.md. The index will never be published unsigned.'
-            exit 1
-          fi
-          umask 077
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/fdroid-repo.p12"
-          echo "FDROID_REPO_KEYSTORE=$RUNNER_TEMP/fdroid-repo.p12" >> "$GITHUB_ENV"
-      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
-        with:
-          distribution: temurin
-          java-version: '21'
-      - name: Install fdroidserver
-        run: |
-          python3 -m venv "$RUNNER_TEMP/venv"
-          "$RUNNER_TEMP/venv/bin/pip" install --quiet --disable-pip-version-check fdroidserver==2.4.5
-          echo "FDROID_BIN=$RUNNER_TEMP/venv/bin/fdroid" >> "$GITHUB_ENV"
-      - name: Install apksigner
-        run: |
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0"
       - name: Download the published APKs
+        id: pick
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASES: ${{ inputs.releases || '2' }}
@@ -90,12 +67,45 @@ jobs:
             gh release download "$TAG" --pattern "$ASSET" --dir "$RUNNER_TEMP/apks/$TAG" --clobber
             find "$RUNNER_TEMP/apks/$TAG" -name '*.apk' >> "$RUNNER_TEMP/apks/list"
           done
-          if [ ! -s "$RUNNER_TEMP/apks/list" ]; then
-            echo "::error::No release in the requested window publishes an F-Droid-channel APK, so there is nothing to index. Skipped:${SKIPPED:- none}. Publish one with tools/package_release.py --fdroid-apk, or dispatch this workflow once a newer release exists."
+          if [ -s "$RUNNER_TEMP/apks/list" ]; then
+            echo 'indexable=true' >> "$GITHUB_OUTPUT"
+            cat "$RUNNER_TEMP/apks/list"
+          else
+            # No release in the window carries one yet. The site still deploys, without a
+            # repository beneath it; the first release that publishes the asset builds one.
+            echo "::warning::No release in the requested window publishes an F-Droid-channel APK, so this deploy carries the landing page alone. Skipped:${SKIPPED:- none}."
+            echo 'indexable=false' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Check the repository signing key
+        if: steps.pick.outputs.indexable == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.FDROID_REPO_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.FDROID_REPO_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo '::error::Add FDROID_REPO_KEYSTORE_BASE64 and FDROID_REPO_KEYSTORE_PASSWORD in repository Actions secrets. See docs/FDROID.md. The index will never be published unsigned.'
             exit 1
           fi
-          cat "$RUNNER_TEMP/apks/list"
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/fdroid-repo.p12"
+          echo "FDROID_REPO_KEYSTORE=$RUNNER_TEMP/fdroid-repo.p12" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        if: steps.pick.outputs.indexable == 'true'
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install fdroidserver
+        if: steps.pick.outputs.indexable == 'true'
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet --disable-pip-version-check fdroidserver==2.4.5
+          echo "FDROID_BIN=$RUNNER_TEMP/venv/bin/fdroid" >> "$GITHUB_ENV"
+      - name: Install apksigner
+        if: steps.pick.outputs.indexable == 'true'
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0"
       - name: Generate and verify the signed index
+        if: steps.pick.outputs.indexable == 'true'
         env:
           FDROID_REPO_KEYSTORE_PASSWORD: ${{ secrets.FDROID_REPO_KEYSTORE_PASSWORD }}
         run: |
@@ -104,9 +114,15 @@ jobs:
           "$RUNNER_TEMP/venv/bin/python" tools/fdroid_repo.py build "${ARGS[@]}" \
             --out "$RUNNER_TEMP/fdroid" --keep 2 --summary "$RUNNER_TEMP/fdroid-index.json"
       - name: Assemble the single Pages artifact
+        env:
+          INDEXABLE: ${{ steps.pick.outputs.indexable }}
         run: |
-          python3 tools/assemble_site.py --repo "$RUNNER_TEMP/fdroid/repo" \
-            --summary "$RUNNER_TEMP/fdroid-index.json" --out site
+          if [ "$INDEXABLE" = "true" ]; then
+            python3 tools/assemble_site.py --repo "$RUNNER_TEMP/fdroid/repo" \
+              --summary "$RUNNER_TEMP/fdroid-index.json" --out site
+          else
+            python3 tools/assemble_site.py --out site
+          fi
           du -sh site
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

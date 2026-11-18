@@ -107,18 +107,16 @@ stays well inside the 1 GB Pages limit, and a device on an older version still
 updates straight to the newest one. GitHub Pages is not an F-Droid mirror:
 its 100 GB monthly bandwidth cap is roughly a thousand downloads per month.
 
-The workflow can only index what a release actually publishes, and that is the
-one thing still missing upstream: the release workflow builds
-`app-fdroid-release-unsigned.apk` for its checks but signs and uploads only the
-`github` flavor. Its asset picker prefers an asset whose name contains `fdroid`,
-falls back to the `universal` one, and then the permission check refuses it. So
-until a release uploads a signed `fdroid`-flavor APK, a publishing run fails
-with a message naming the refusal instead of shipping the network-capable build
-— fail-closed, but also no updates for F-Droid users. The change that closes it
-belongs to the release workflow's owner; it is one extra
-`tools/package_release.py` invocation for the `fdroid` flavor, emitting an asset
-whose name contains `fdroid` (for example
-`Nightfall-1.1.3-fdroid-universal.apk`).
+The workflow can only index what a release actually publishes, and it accepts
+one asset: `Nightfall-<version>-fdroid-universal.apk`, the `fdroid` flavor signed
+with the pinned release key. It has no fallback that could pull the
+network-capable build into the index. A release published before that asset
+existed carries none and is skipped with a warning naming it; the site still
+deploys, with the landing page alone until a release carries the asset.
+
+The same workflow deploys the landing page, because GitHub Pages serves one
+artifact per deployment: the page sits at the site root and the repository at
+`fdroid/repo` beneath it, so the two cannot overwrite each other.
 
 **One-time setup only Camden can do.** Two repository secrets, and Pages
 pointed at Actions:
@@ -142,7 +140,7 @@ pointed at Actions:
    (it is the one source file this setup touches); the index build fails until
    it matches the key.
 2. Settings → Pages → Build and deployment → Source: **GitHub Actions**.
-3. Actions → **Publish F-Droid repository** → Run workflow.
+3. Actions → **Publish the Nightfall site** → Run workflow.
 
 **What has not been verified.** No Pages deployment has run from this
 repository, so the URL above is the address the workflow and `config.yml`

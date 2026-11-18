@@ -18,16 +18,17 @@ REPOSITORY_FILES = ("index-v1.json", "index-v1.jar", "index.xml", "entry.json")
 
 
 def assemble(repository, summary, out):
-    """Copy the landing page and the generated repository into one deployable tree."""
+    """Copy the landing page, and the generated repository beneath it when there is one."""
     out = pathlib.Path(out)
     if out.exists(): shutil.rmtree(out)
     shutil.copytree(LANDING, out)
+    for name in LANDING_FILES:
+        if not (out / name).is_file(): raise ValueError("Landing page is missing " + name)
+    (out / ".nojekyll").touch()
+    if repository is None: return out
     target = out / "fdroid/repo"
     shutil.copytree(repository, target)
     if summary: shutil.copyfile(summary, target / "index-summary.json")
-    (out / ".nojekyll").touch()
-    for name in LANDING_FILES:
-        if not (out / name).is_file(): raise ValueError("Landing page is missing " + name)
     for name in REPOSITORY_FILES:
         if not (target / name).is_file(): raise ValueError("Repository index is missing fdroid/repo/" + name)
     if not list(target.glob("*.apk")): raise ValueError("Repository carries no APK")
@@ -36,7 +37,7 @@ def assemble(repository, summary, out):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repo", type=pathlib.Path, required=True, help="Generated fdroidserver repository")
+    parser.add_argument("--repo", type=pathlib.Path, help="Generated fdroidserver repository, when one exists")
     parser.add_argument("--summary", type=pathlib.Path, help="Build summary to publish with the index")
     parser.add_argument("--out", type=pathlib.Path, required=True, help="Deployable site directory")
     args = parser.parse_args()
