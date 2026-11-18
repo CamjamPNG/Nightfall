@@ -6,9 +6,12 @@ import json
 import os
 import pathlib
 import subprocess
+import sys
 import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "tools"))
+from release_artifact import fdroid_asset_name
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--assets", type=pathlib.Path, required=True)
 parser.add_argument("--notes", type=pathlib.Path, required=True, help="Public release notes only")
@@ -17,7 +20,7 @@ manifest = json.loads((args.assets / "release-manifest.json").read_text())
 version = manifest["versionName"]
 if not __import__("re").fullmatch(r"\d+\.\d+(?:\.\d+){0,2}", version): raise ValueError("Invalid version")
 tag = "v" + version
-files = {a["file"] for a in manifest["apks"]} | {"release-manifest.json", "SHA256SUMS.txt", "nightfall-release-certificate.pem"}
+files = {a["file"] for a in manifest["apks"]} | {fdroid_asset_name(version), "release-manifest.json", "SHA256SUMS.txt", "nightfall-release-certificate.pem"}
 if {p.name for p in args.assets.iterdir()} != files: raise ValueError("Only the expected public release assets may be staged")
 subprocess.run(["python3", str(ROOT / "tools/verify_release.py"), "--assets", str(args.assets), "--tag", tag], check=True)
 with tempfile.TemporaryDirectory(prefix="nightfall-git-index-") as folder:
