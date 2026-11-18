@@ -14,6 +14,9 @@ class CatalogueQualityTest {
     /** Seed draws averaged per preset: the stochastic layers make one draw a lottery, not a level. */
     private val presetDraws = 4
 
+    /** Independent layer seeds per music profile: one seed can repeat two phrases by chance. */
+    private val MUSIC_DRAWS = 5
+
     private val loader = M.assetLoader()
 
     /**
@@ -240,6 +243,46 @@ class CatalogueQualityTest {
             println("%s peak envelope correlation %.3f at %.0fs".format(id, correlation, lag))
             assertTrue("$id breathes on a %.0fs cycle (%.3f)".format(lag, correlation), abs(correlation) < .6)
         }
+    }
+
+    @Test
+    fun musicDoesNotReturnToTheSameProgressionOnAFixedPeriod() {
+        // Every music profile changed chord on a fixed eight-beat grid through one four-chord
+        // progression, so a whole phrase returned every 32 beats. Measured as the correlation of one
+        // full phrase against the next, over five independent layer seeds, medians below.
+        val report = StringBuilder()
+        for (s in Library.all.filter { it.kind == "music" }) {
+            val atCycle = DoubleArray(MUSIC_DRAWS)
+            val control = DoubleArray(MUSIC_DRAWS)
+            for (draw in 0 until MUSIC_DRAWS) {
+                val layer = Library.layer(s.id, .35f, "music-loop-$draw")
+                val beat = 60.0 / layer.music.tempo
+                val mix = Mix(layers = listOf(layer))
+                atCycle[draw] = CatalogueMetrics.selfCorrelation(mix, beat * 32, beat * 32, 12000)
+                control[draw] =
+                    CatalogueMetrics.selfCorrelation(mix, beat * 34, beat * 32, 12000)
+            }
+            atCycle.sort()
+            control.sort()
+            report.append(
+                "%-34s phrase corr %+.3f control %+.3f (all %s)\n"
+                    .format(
+                        s.id,
+                        atCycle[MUSIC_DRAWS / 2],
+                        abs(control[MUSIC_DRAWS / 2]),
+                        atCycle.joinToString(" ") { "%+.2f".format(it) },
+                    )
+            )
+            assertTrue(
+                "${s.id} returns to the same phrase (correlation ${atCycle[MUSIC_DRAWS / 2]})",
+                atCycle[MUSIC_DRAWS / 2] < .5,
+            )
+            assertTrue(
+                "${s.id} control lag correlates ${control[MUSIC_DRAWS / 2]}",
+                abs(control[MUSIC_DRAWS / 2]) < .25,
+            )
+        }
+        println(report)
     }
 
     @Test
