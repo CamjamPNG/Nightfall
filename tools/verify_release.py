@@ -66,8 +66,15 @@ def main():
     fdroid_asset = release_artifact.fdroid_asset_name(manifest["versionName"])
     assert fdroid_asset not in {a["file"] for a in manifest["apks"]}, "The F-Droid asset must not be an update option"
     if "productFlavors" in source: expected.add(fdroid_asset)
+    # Each channel's R8 mapping is published beside its APKs so a stack trace from a published build
+    # can be read. Both or neither: a release published before they were published carries none.
+    mapping_files = {f'Nightfall-{manifest["versionName"]}-{flavour}-mapping.txt' for flavour in ("github", "fdroid")}
+    published = {p.name for p in folder.iterdir()}
+    if published & mapping_files:
+        assert mapping_files <= published, "Both channels' mapping files are published together"
+        expected |= mapping_files
     public_notes = {"release-notes.md"} if (folder / "release-notes.md").exists() else set()
-    assert {p.name for p in folder.iterdir()} == expected | public_notes, "Unexpected/missing release files"
+    assert published == expected | public_notes, "Unexpected/missing release files"
     der = ssl.PEM_cert_to_DER_cert((folder / "nightfall-release-certificate.pem").read_text())
     assert hashlib.sha256(der).hexdigest() == pin, "Wrong public certificate file"
     credits = json.loads(subprocess.check_output(["git", "show", f"refs/tags/{args.tag}:docs/audio-credits.json"], text=True))
@@ -81,6 +88,11 @@ def main():
     for name, digest in sums.items():
         with (folder / name).open("rb") as stream: actual = hashlib.file_digest(stream, "sha256").hexdigest()
         assert actual == digest, "Checksum mismatch: " + name
+    for name in sorted(expected & mapping_files):
+        text = (folder / name).read_text(encoding="utf-8", errors="replace")
+        assert text.startswith("# compiler:"), "Not an R8 mapping file: " + name
+        assert "dev.nightfall" in text, "Mapping file explains no Nightfall class: " + name
+        print("Validated", name, "as an R8 mapping of this app", flush=True)
     version, code = manifest["versionName"], manifest["versionCode"]
     for apk in manifest["apks"]:
         file = folder / apk["file"]

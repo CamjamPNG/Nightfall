@@ -53,11 +53,16 @@
   `:app:assembleFdroidDebug`, `:app:assembleGithubRelease`,
   `:app:assembleFdroidRelease`, `:app:lintGithubDebug`, `:app:lintFdroidDebug`
   (`abortOnError = true`). `tools/check_release.py --fdroid-apk` asserts the
-  F-Droid APK declares none of the network or install permissions and that none of
-  the fourteen updater classes it names appears in any dex; `--apk` asserts the
-  GitHub APK declares all of them and does carry the updater. The recipe check
-  reads `app/build.gradle.kts` at each pinned tag, and the CI job fetches tags so
-  that comparison runs instead of being skipped.
+  F-Droid APK declares none of the network or install permissions and that no
+  class from the updater package appears in any dex. That list is read from
+  `app/src/github/java/dev/nightfall/update` at check time — the file's own name
+  plus every type it declares — rather than kept by hand, so a class added to the
+  package is covered the day it is written; `--apk` asserts the GitHub APK
+  declares all the permissions and carries code from every one of those files,
+  which is what stops the negative half from passing vacuously if a name is
+  dropped from the minified build. The recipe check reads `app/build.gradle.kts`
+  at each pinned tag, and the CI job fetches tags so that comparison runs instead
+  of being skipped.
 
 - The release-tool suite covers all four version levels, ordering and resets,
   classification of mixed changes, synchronized Android/store/F-Droid metadata,
@@ -95,7 +100,7 @@
   inventory has no GMS, Firebase, billing, ad or tracking SDK from the checked
   denylist. F-Droid's independent review remains necessary.
 
-- 9 JVM playback-lifecycle tests pass under Robolectric in both channels (see
+- 10 JVM playback-lifecycle tests pass under Robolectric in both channels (see
   below). They replace the instrumented attempt that never went green.
 
 Machine-readable results: `docs/verification/update-channel.json`,
@@ -109,7 +114,7 @@ the Compose screens, `PlaybackService`, `AudioHost`, its PCM worker thread and t
 core `PcmMixer` on a JVM. Only the Android edges are shadowed: `AudioTrack` is a
 float sink that records what the mixer wrote and plays nothing, `AudioManager`
 records the focus request without arbitrating between apps, plus the power,
-notification and activity managers. Nine scenarios, all asserting measured
+notification and activity managers. Ten scenarios, all asserting measured
 behavior rather than that a method was called:
 
 - `NineLayerPlaybackTest`: the transport control starts the nine-layer mix; the
@@ -119,7 +124,17 @@ behavior rather than that a method was called:
   Library and recreating the activity keep audio flowing and the mix intact.
 - `LayerEditingTest`: adding a layer (9 → 10) and removing three (10 → 7) while
   playing keep samples flowing, keep the output finite, and update the layer count
-  the media session reports.
+  the media session reports. Its closing assertion on the app's save error is read
+  after the edited mix is on disk (`PlaybackHarness.awaitSaved`), not at whatever
+  moment the test reaches the line: the earlier version added and removed layers
+  faster than the 250 ms debounce could write them, so under CPU load it asserted
+  on a save that was still in flight and failed at random.
+- `SavingTest`: an edit that arrives after the debounce has expired — a second
+  drag while the first write is still inside DataStore — is not reported as a
+  failed save, and the newest state is the one on disk. It is the scenario the
+  flaky teardown turned out to be, and it reproduces on the unfixed code without
+  needing a slow machine: the first write is put in flight by advancing the main
+  clock past the debounce, then the next edit supersedes it.
 - `BackgroundPlaybackTest`: with the activity moved to CREATED the worker keeps
   writing, the wake lock stays held and the foreground notification stays
   attached; the sleep timer fades, then stops playback and releases the wake lock
