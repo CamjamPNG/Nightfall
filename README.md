@@ -243,7 +243,7 @@ tests**. They run on a JVM with no device, no emulator and no network.
 | Two machines building the same tag produce byte-identical APKs | `docs/verification/reproducibility.json` and `docs/FDROID.md` |
 | The F-Droid recipe parses, rewrites to canonical form, lints clean, and its source scanner reports no errors | `docs/verification/fdroid-source-scan.json`, `fdroid-apk-scan.log` |
 | No GMS, Firebase, billing, advertising or tracking SDK is in the resolved dependency graph | `docs/verification/dependency-audit.json` |
-| The APK sizes above, and the 77,449,472 bytes of PCM | release asset records for v1.3.1; `app/src/main/assets/audio` |
+| The APK sizes above, and the 77,449,472 bytes of PCM | release asset records for v1.3.1; `app/src/pcm/assets/audio` |
 
 ### Never checked on hardware
 

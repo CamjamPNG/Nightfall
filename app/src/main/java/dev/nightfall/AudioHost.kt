@@ -26,6 +26,10 @@ class AudioHost(private val runtime: NightfallRuntime) {
             .getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Nightfall:audio")
     private val monitor = Object()
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    /** Decoded recordings opened for this host, so their decoders are closed when it goes away. */
+    private val decoded = java.util.concurrent.CopyOnWriteArrayList<OpusRecording>()
     @Volatile private var running = true
     @Volatile private var resetRequested = false
     @Volatile private var playing = false
@@ -211,19 +215,7 @@ class AudioHost(private val runtime: NightfallRuntime) {
                     val cache = HashMap<String, SampleData>()
                     val mixer =
                         PcmMixer(sampleRate, frames) { asset ->
-                            cache.getOrPut(asset) {
-                                context.assets.openFd("audio/$asset.pcm").use { fd ->
-                                    fd.createInputStream().use { input ->
-                                        Pcm16Data(
-                                            input.channel.map(
-                                                FileChannel.MapMode.READ_ONLY,
-                                                fd.startOffset,
-                                                fd.length,
-                                            )
-                                        )
-                                    }
-                                }
-                            }
+                            cache[asset] ?: loadRecording(asset)?.also { cache[asset] = it }
                         }
                     var previous: Mix? = null
                     val pcm = FloatArray(frames * 2)
@@ -271,10 +263,12 @@ class AudioHost(private val runtime: NightfallRuntime) {
                             if (snapshot.current != previous) {
                                 mixer.sync(snapshot.current)
                                 previous = snapshot.current
+                                reportDecodeFailure(cache.values)
                             }
                             mixer.settings = snapshot.settings
                             val now = SystemClock.elapsedRealtime()
                             mixer.render(pcm, frames, runtime.timer.gain(now) * focusGain)
+                            if (blocks % 8 == 0) reportDecodeFailure(cache.values)
                             val time = (System.nanoTime() - start) / 1e9f
                             average =
                                 .98f * average + .02f * (time / (frames.toFloat() / sampleRate))
@@ -327,6 +321,50 @@ class AudioHost(private val runtime: NightfallRuntime) {
     val isAlive
         get() = worker.isAlive
 
+    /**
+     * One bundled recording, either decoded from its Opus container or memory mapped from PCM. The
+     * asset kind is a build flag, so a build either carries the encoded recordings or the originals,
+     * never both.
+     */
+    private fun loadRecording(asset: String): SampleData? =
+        if (BuildConfig.OPUS_ASSETS)
+            OpusAssets.open(context, asset) { reason -> reportDecodeFailure(reason) }
+                ?.also { if (it is OpusRecording) decoded += it }
+        else
+            context.assets.openFd("audio/$asset.pcm").use { fd ->
+                fd.createInputStream().use { input ->
+                    Pcm16Data(
+                        input.channel.map(
+                            FileChannel.MapMode.READ_ONLY,
+                            fd.startOffset,
+                            fd.length,
+                        )
+                    )
+                }
+            }
+
+    /**
+     * A recording this device cannot decode must be reported: a layer that contributes silence without
+     * saying so is the worst failure a mixer can have.
+     */
+    private fun reportDecodeFailure(reason: String) {
+        val message = "A bundled recording cannot be decoded on this device ($reason)."
+        // The main thread owns playback status; a decoder's worker reports through it rather than
+        // writing the state flow itself, which could resurrect a stale copy of `playing`.
+        mainHandler.post {
+            if (runtime.status.value.error != message)
+                runtime.status.value = runtime.status.value.copy(error = message)
+        }
+    }
+
+    /** A decoder that fails after the mix was built still has to reach the user. */
+    private fun reportDecodeFailure(recordings: Collection<SampleData>) {
+        val reason =
+            recordings.filterIsInstance<DecodedSampleData>().firstNotNullOfOrNull { it.unavailable }
+                ?: return
+        reportDecodeFailure(reason)
+    }
+
     fun release() {
         pause(true)
         running = false
@@ -335,6 +373,10 @@ class AudioHost(private val runtime: NightfallRuntime) {
         track?.flush()
         worker.interrupt()
         worker.join(1500)
+        // Only once the mixing worker has stopped: closing a recording under a block in flight would
+        // hand the mixer a cursor with no decoder.
+        decoded.forEach { it.close() }
+        decoded.clear()
         manager.unregisterAudioDeviceCallback(devices)
         context.unregisterReceiver(noisy)
     }

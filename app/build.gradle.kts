@@ -18,6 +18,11 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     androidResources { noCompress += "pcm" }
+    // The recordings ship as memory-mapped PCM until an Opus decode path has been heard on a device.
+    // `-PnightfallOpus=true` builds the encoded variant for exactly that test: it packs
+    // `src/opus/assets` instead of the PCM assets and points the loader at the containers. Default
+    // off, so an ordinary build is byte-for-byte the build that has always shipped.
+    val opusAssets = providers.gradleProperty("nightfallOpus").map { it.toBoolean() }.getOrElse(false)
     // Two distribution channels. `github` ships the in-app updater and the only network
     // permission in the product; `fdroid` ships no updater, no network permission and no
     // network code, which is what F-Droid's inclusion policy requires of self-updating apps.
@@ -26,7 +31,13 @@ android {
         create("github") { dimension = "channel" }
         create("fdroid") { dimension = "channel" }
     }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+    defaultConfig { buildConfigField("boolean", "OPUS_ASSETS", "$opusAssets") }
+    // One recording kind per build: the originals, or the encoded containers the flag selects.
+    sourceSets.getByName("main").assets.srcDir(if (opusAssets) "src/opus/assets" else "src/pcm/assets")
     buildTypes {
         release {
             // R8 shrinks and renames the release dex; resource shrinking then drops the resources no
