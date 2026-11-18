@@ -7,9 +7,17 @@ import android.os.*
 import dev.nightfall.core.*
 import java.nio.channels.FileChannel
 import kotlin.math.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-/** Owns the single output stream; never performs DSP on the main thread. */
+/**
+ * Owns the single output stream; never performs DSP on the main thread.
+ *
+ * The worker thread is the audio thread. Inside its block loop it allocates nothing, takes no lock,
+ * logs nothing and catches nothing: pending state is published into volatile fields that a main
+ * thread monitor reads, because a `MutableStateFlow` write allocates and notifies collectors.
+ */
 class AudioHost(private val runtime: NightfallRuntime) {
     private val context = runtime.context
     private val manager = context.getSystemService(AudioManager::class.java)
@@ -25,6 +33,12 @@ class AudioHost(private val runtime: NightfallRuntime) {
     @Volatile private var resumeAfterFocus = false
     private var focusHeld = false
     @Volatile private var track: AudioTrack? = null
+    @Volatile private var meterPeak = 0f
+    @Volatile private var meterLoad = 0f
+    @Volatile private var meterUnderruns = 0
+    @Volatile private var meterRemaining = 0L
+    @Volatile private var timerExpired = false
+    @Volatile private var failure: String? = null
     private val attributes =
         AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -84,6 +98,39 @@ class AudioHost(private val runtime: NightfallRuntime) {
             androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED,
         )
         manager.registerAudioDeviceCallback(devices, Handler(Looper.getMainLooper()))
+        runtime.scope.launch {
+            while (isActive && running) {
+                delay(250)
+                publishMeters()
+            }
+        }
+    }
+
+    /** Main thread: the only place playback status is written. */
+    private fun publishMeters() {
+        failure?.let {
+            failure = null
+            pause(true)
+            runtime.status.value = runtime.status.value.copy(error = "Audio stopped: $it")
+            return
+        }
+        if (!playing) return
+        val now = SystemClock.elapsedRealtime()
+        updateRoute()
+        runtime.status.value =
+            runtime.status.value.copy(
+                peak = meterPeak,
+                load = meterLoad,
+                underruns = meterUnderruns,
+                remainingMs = meterRemaining,
+                timerActive = runtime.timer.active,
+                timerPaused = runtime.timer.paused,
+                timerFading = runtime.timer.active && runtime.timer.remainingMs(now) == 0L,
+            )
+        if (timerExpired) {
+            timerExpired = false
+            runtime.stop()
+        }
     }
 
     fun play() {
@@ -232,7 +279,10 @@ class AudioHost(private val runtime: NightfallRuntime) {
                                         pcm.size - offset,
                                         AudioTrack.WRITE_BLOCKING,
                                     )
-                                check(written > 0) { "AudioTrack write failed: $written" }
+                                if (written <= 0) {
+                                    failure = "AudioTrack write returned $written"
+                                    break
+                                }
                                 offset += written
                             }
                             // Prefill 64 ms before starting/resuming to absorb cold DSP/JIT work.
@@ -242,32 +292,18 @@ class AudioHost(private val runtime: NightfallRuntime) {
                                     ++queuedBlocks >= 3
                             )
                                 output.play()
-                            if (++blocks % 24 == 0)
-                                runtime.scope.launch {
-                                    updateRoute()
-                                    runtime.status.value =
-                                        runtime.status.value.copy(
-                                            peak = mixer.peak,
-                                            load = average,
-                                            underruns = output.underrunCount,
-                                            remainingMs = runtime.timer.remainingMs(now),
-                                            timerActive = runtime.timer.active,
-                                            timerPaused = runtime.timer.paused,
-                                            timerFading =
-                                                runtime.timer.active &&
-                                                    runtime.timer.remainingMs(now) == 0L,
-                                        )
-                                    if (runtime.timer.expired(SystemClock.elapsedRealtime()))
-                                        runtime.stop()
-                                }
+                            // Publish into plain volatiles; the main-thread monitor reads them.
+                            blocks++
+                            if (blocks % 24 == 0) {
+                                meterPeak = mixer.peak
+                                meterLoad = average
+                                meterUnderruns = output.underrunCount
+                                meterRemaining = runtime.timer.remainingMs(now)
+                                timerExpired = runtime.timer.expired(SystemClock.elapsedRealtime())
+                            }
                         }
                     } catch (e: Exception) {
-                        if (running)
-                            runtime.scope.launch {
-                                pause(true)
-                                runtime.status.value =
-                                    runtime.status.value.copy(error = "Audio stopped: ${e.message}")
-                            }
+                        if (running) failure = e.message ?: e.javaClass.simpleName
                     } finally {
                         track?.release()
                         track = null

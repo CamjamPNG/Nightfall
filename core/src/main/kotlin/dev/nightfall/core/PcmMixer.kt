@@ -3,13 +3,25 @@ package dev.nightfall.core
 
 import kotlin.math.*
 
-/** One render owner. UI submits immutable snapshots; no locks, IO or allocation in sample loops. */
+/**
+ * One render owner. UI submits immutable snapshots; no locks, IO or allocation in sample loops.
+ *
+ * Level staging, in order: [Levels] trims each source to the same reference loudness, the layer
+ * gain slider scales it, and the master gain follows. Summing is unnormalised, so adding a layer
+ * adds level; [limit] is the only thing that ever removes it, and it exists to keep intersample
+ * peaks under the ceiling rather than to set the app's loudness.
+ */
 class PcmMixer(
     val sampleRate: Int = 48000,
     private val blockSize: Int = 1024,
     private val recordings: (String) -> SampleData? = { null },
 ) {
-    private class Channel(var layer: Layer, val source: Source) {
+    private class Channel(
+        var layer: Layer,
+        val source: Source,
+        val trim: Float,
+        val music: Boolean,
+    ) {
         var removed = false
         var gain = 0f
         var life = 0f
@@ -25,24 +37,29 @@ class PcmMixer(
         var trebleR = 0f
     }
 
-    private val channels = linkedMapOf<String, Channel>()
+    private val channels = HashMap<String, Channel>()
+    private val active = ArrayList<Channel>()
     private val scratchL = FloatArray(blockSize)
     private val scratchR = FloatArray(blockSize)
     private val accumL = FloatArray(blockSize)
     private val accumR = FloatArray(blockSize)
+    private val smoothing = (1 - exp(-1.0 / (sampleRate * .025))).toFloat()
     var settings = Settings()
     private var masterTarget = .5f
     private var master = .0f
     private var duck = 1f
     private var smoothedExternal = 1f
+    private var duckFrames = -1
+    private var duckStep = 0f
     var peak = 0f
         private set
 
     val channelCount
-        get() = channels.values.count { !it.removed }
+        get() = active.count { !it.removed }
 
     fun reset() {
         channels.clear()
+        active.clear()
         master = 0f
         duck = 1f
         smoothedExternal = 1f
@@ -50,8 +67,18 @@ class PcmMixer(
     }
 
     fun sync(mix: Mix) {
-        val ids = mix.layers.mapTo(HashSet()) { it.id }
-        channels.values.forEach { it.removed = it.layer.id !in ids }
+        // Nested scan rather than a temporary set: sync runs on the audio thread, so it allocates
+        // nothing beyond the case where a layer is genuinely new.
+        for (n in 0 until active.size) {
+            val id = active[n].layer.id
+            var present = false
+            for (layer in mix.layers)
+                if (layer.id == id) {
+                    present = true
+                    break
+                }
+            active[n].removed = !present
+        }
         for (layer in mix.layers) {
             val existing = channels[layer.id]
             if (existing != null) {
@@ -77,13 +104,15 @@ class PcmMixer(
                             )
                         else -> EnvironmentSource(sampleRate, seed, s.kind, s.variant)
                     }
-                channels[layer.id] = Channel(layer, source)
+                val channel = Channel(layer, source, Levels.trim(s), s.music)
+                channels[layer.id] = channel
+                active.add(channel)
             }
         }
         masterTarget = mix.master
     }
 
-    fun activeIds() = channels.values.filter { !it.removed }.map { it.layer.id }
+    fun activeIds() = active.filter { !it.removed }.map { it.layer.id }
 
     fun layerGain(id: String) = channels[id]?.gain ?: 0f
 
@@ -91,33 +120,45 @@ class PcmMixer(
         require(frames <= blockSize && output.size >= frames * 2)
         accumL.fill(0f, 0, frames)
         accumR.fill(0f, 0, frames)
-        val solo =
-            channels.values.any {
-                !it.removed && it.layer.solo && it.layer.enabled && !it.layer.mute
-            }
-        val smoothing = (1 - exp(-1.0 / (sampleRate * .025))).toFloat()
-        val thunder =
-            channels.values.maxOfOrNull {
-                if (it.layer.enabled && !it.layer.mute && (!solo || it.layer.solo))
-                    it.source.eventEnergy * it.layer.gain
-                else 0f
-            } ?: 0f
+        val count = active.size
+        var solo = false
+        for (n in 0 until count) {
+            val c = active[n].layer
+            if (!active[n].removed && c.solo && c.enabled && !c.mute) solo = true
+        }
+        var thunder = 0f
+        for (n in 0 until count) {
+            val ch = active[n]
+            val c = ch.layer
+            if (c.enabled && !c.mute && (!solo || c.solo))
+                thunder = max(thunder, ch.source.eventEnergy * c.gain)
+        }
         val duckTarget = if (settings.ducking && thunder > .04f) .72f else 1f
-        duck += (duckTarget - duck) * (1 - exp(-frames.toDouble() / (sampleRate * .6))).toFloat()
-        val iterator = channels.values.iterator()
-        while (iterator.hasNext()) {
-            val ch = iterator.next()
+        if (duckFrames != frames) {
+            duckFrames = frames
+            duckStep = (1 - exp(-frames.toDouble() / (sampleRate * .6))).toFloat()
+        }
+        duck += (duckTarget - duck) * duckStep
+        var index = 0
+        // active.size, not the pre-scan count: retiring a channel shrinks the list underneath us.
+        while (index < active.size) {
+            val ch = active[index]
             val c = ch.layer
             if (ch.removed && ch.life <= 0f) {
-                iterator.remove()
+                active.removeAt(index)
+                channels.remove(c.id)
                 continue
             }
+            index++
             val stopFrame = c.stopAfterMinutes * 60 * sampleRate
             if (stopFrame > 0 && ch.played >= stopFrame) {
                 ch.expired = true
                 ch.source.eventEnergy = 0f
                 ch.played += frames
-                if (ch.removed) iterator.remove()
+                if (ch.removed) {
+                    active.removeAt(--index)
+                    channels.remove(c.id)
+                }
                 continue
             }
             if (ch.expired) {
@@ -137,9 +178,9 @@ class PcmMixer(
             val treble = 10f.pow((c.treble + c.tilt * 4 + (c.brightness - .5f) * 6) / 20).toFloat()
             val leftPan = sqrt((1 - c.pan) * .5f)
             val rightPan = sqrt((1 + c.pan) * .5f)
-            val isMusic = Library.byId[c.soundId]?.music == true
-            val musicDuck = if (isMusic) duck else 1f
+            val musicDuck = if (ch.music && settings.ducking) duck else 1f
             val lifecycleStep = 1f / (sampleRate * c.fadeSeconds.coerceAtLeast(.05f))
+            val scale = ch.trim
             for (i in 0 until frames) {
                 ch.gain += (target - ch.gain) * smoothing
                 ch.life =
@@ -165,7 +206,7 @@ class PcmMixer(
                 ch.trebleR += high * (ch.lpR - ch.trebleR)
                 l = ch.bassL * bass + (ch.trebleL - ch.bassL) * mid + (ch.lpL - ch.trebleL) * treble
                 r = ch.bassR * bass + (ch.trebleR - ch.bassR) * mid + (ch.lpR - ch.trebleR) * treble
-                val gain = ch.gain * ch.life * fade * musicDuck * .65f
+                val gain = ch.gain * ch.life * fade * musicDuck * scale
                 accumL[i] += l * gain * leftPan
                 accumR[i] += r * gain * rightPan
                 ch.played++
@@ -184,10 +225,29 @@ class PcmMixer(
     }
 
     companion object {
+        /** Samples below this pass untouched (-6.4 dBFS): the limiter works on peaks, not the mix. */
+        const val LIMIT_KNEE = .48f
+
+        /**
+         * -5.0 dBFS sample ceiling, which keeps 4x-oversampled true peaks under -1.0 dBTP.
+         *
+         * A memoryless waveshaper cannot see the peak a converter reconstructs between two samples.
+         * White noise measured a 4x true peak 2.4 dB above its own sample peak, and nine white layers
+         * at full gain and full master is the worst case in the catalogue. The 4 dB gap between the
+         * sample ceiling and the -1.0 dBTP limit is that measurement plus margin, which is what a
+         * true-peak guarantee costs without an oversampled lookahead limiter.
+         */
+        const val LIMIT_CEILING = .56f
+
         fun limit(x: Float): Float {
             if (!x.isFinite()) return 0f
             val a = abs(x)
-            return if (a <= .75f) x else sign(x) * (.75f + .23f * (1 - exp(-(a - .75f) / .23f)))
+            return if (a <= LIMIT_KNEE) x
+            else
+                sign(x) *
+                    (LIMIT_KNEE +
+                        (LIMIT_CEILING - LIMIT_KNEE) *
+                            (1 - exp(-(a - LIMIT_KNEE) / (LIMIT_CEILING - LIMIT_KNEE))))
         }
     }
 }
