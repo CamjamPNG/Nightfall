@@ -97,6 +97,16 @@ class OpusStreamTest {
         }
     }
 
+    /** Waits for at least [count] decoders to be open, for work a cursor does on its own thread. */
+    private fun awaitDecodersAtLeast(count: Int, seconds: Long = 15, what: String = "decoders") {
+        val deadline = System.nanoTime() + seconds * 1_000_000_000L
+        while (Fake.open.get() < count) {
+            if (System.nanoTime() > deadline)
+                fail("$what: ${Fake.open.get()} decoders open after ${seconds}s, expected at least $count")
+            Thread.sleep(20)
+        }
+    }
+
     /** Waits for a decoder count to fall below [limit], which is what pruning must achieve. */
     private fun awaitDecodersBelow(limit: Int, seconds: Long = 15, what: String = "decoders") {
         val deadline = System.nanoTime() + seconds * 1_000_000_000L
@@ -232,7 +242,7 @@ class OpusStreamTest {
         val cursors =
             listOf(recording.cursor(4.0), recording.cursor(4.0), recording.cursor(1.0), recording.cursor(1.0))
         cursors.forEach { it[0] }
-        assertTrue("cursors opened decoders", Fake.open.get() > before)
+        awaitDecodersAtLeast(before + 1, what = "cursors opened decoders")
         recording.close()
         awaitDecoders(before, what = "every decoder is released")
     }
