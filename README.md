@@ -16,7 +16,7 @@ Android 8.0+ (API 26) · Kotlin and Compose · MIT
 wind, water, fire, indoor hum, travel, seven bundled field recordings and eighteen
 generated music profiles. One row — *Distant household ambience* — is declared and
 **disabled** rather than filled with substitute audio, because no recording we may
-redistribute exists for it. That is a deliberate absence, not a bug. Nineteen built-in
+redistribute exists for it. That is a deliberate absence, not a bug. Twenty-one built-in
 mixes start you off, and every one of them is an ordinary mix you can edit, rename or
 duplicate.
 
@@ -229,20 +229,27 @@ what no one has ever confirmed. All three columns are kept honest in
 | No bundled recording loops before three minutes, and every one loops without a seam | `AudioAcceptanceTest.noBundledRecordingLoopsBeforeThreeMinutes`, `RenderPathTest.everyFieldRecordingLoopsWithoutASeam` |
 | Every playable catalogue row renders finite, nonzero output | `AudioAcceptanceTest.entireAvailableCatalogHasRealAudibleOutput` |
 | Every catalogue source is trimmed to −18 LUFS at full layer gain, so a percentage means the same loudness for every sound | `Levels.REFERENCE_LUFS`, `LoudnessTargetTest.everyContinuousSourceReachesTheReferenceLevel` |
-| The updater refuses a foreign package id, a foreign signing certificate, a downgrade, a mismatched checksum, an address outside this repository's assets, and a truncated or oversized response | `UpdatePolicyTest`, `ReleaseManifestParserTest`, `ReleaseFetchTest` (part of the 54 updater tests counted below) |
+| The updater refuses a foreign package id, a foreign signing certificate, a downgrade, a mismatched checksum, an address outside this repository's assets, and a truncated or oversized response | `UpdatePolicyTest`, `ReleaseManifestParserTest`, `ReleaseFetchTest` (part of the 51 updater tests counted below) |
 | An install the app starts itself never lands in playing audio — refused while playing, refused on an unknown playback fact, allowed only when stopped, and a night that starts in playback ends with exactly one install, at the stop | `UpdateAutomationTest` |
 | Playback that resumes while the APK is being copied never reaches the installer commit; the session is abandoned and the update goes back to waiting | `InstallWindowTest` |
 | Release notes survive a hostile or missing `log` in the manifest without changing a single trust field | `ReleaseManifestParserTest.hostileNotesNeverChangeTheTrustDecision`, `…aManifestWithNoNotesStillUpdates` |
 | Playback survives navigation, activity recreation, backgrounding, audio-focus loss and service teardown | ten Robolectric scenarios in `app/src/test`, run under both channels in CI |
 | The F-Droid APK carries no network permission and no class from the updater package, and the GitHub APK carries code from every updater source file | `tools/check_release.py --fdroid-apk` and `--apk`, on every push |
 
-How many tests: **68 in `core`** (67 run, plus the opt-in `NIGHTFALL_CALIBRATE=1`
+How many tests: **69 in `core`** (68 run, plus the opt-in `NIGHTFALL_CALIBRATE=1`
 calibration generator, which is skipped by design), **10 playback-lifecycle scenarios**
-that run twice, once per channel, **54 updater tests**, and **53 release-tooling
-tests**. They run on a JVM with no device, no emulator and no network. Counting them
-takes one command per suite: `grep -A2 '@Test' core/src/test`,
-`grep -A2 '@Test' app/src/test`, `grep -A2 '@Test' app/src/testGithub`, and
-`python3 -m unittest discover -s tools/tests`.
+that run twice, once per channel, **51 updater tests** in
+`app/src/testGithub/java/dev/nightfall/update`, and **53 release-tooling tests**. The
+three screenshot renders in `app/src/testGithub/java/dev/nightfall/render` are not
+updater tests and are not counted there. They all run on a JVM with no device, no
+emulator and no network. Recount them with:
+
+```sh
+grep -rhA2 '@Test' core/src/test --include=*.kt | grep -c 'fun '
+grep -rhA2 '@Test' app/src/test --include=*.kt | grep -c 'fun '
+grep -rhA2 '@Test' app/src/testGithub/java/dev/nightfall/update --include=*.kt | grep -c 'fun '
+python3 -m unittest discover -s tools/tests
+```
 
 ### Measured by a script or recorded in the repository
 
@@ -276,7 +283,7 @@ Needs JDK 17 and Android SDK 35 with build-tools 35.0.0. These three commands ar
 documented gate, and CI runs these three plus the rest of the list below.
 
 ```sh
-./gradlew :core:test :app:assembleDebug :app:lintDebug   # 68 core tests, both channels, lint aborts on error
+./gradlew :core:test :app:assembleDebug :app:lintDebug   # 69 core tests, both channels, lint aborts on error
 python3 -m unittest discover -s tools/tests              # 53 release-tooling tests
 python3 tools/check_release.py                           # store metadata, bundled audio, both channels
 ```

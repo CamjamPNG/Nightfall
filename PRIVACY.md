@@ -23,7 +23,8 @@ its only network access, and it is a download, never an upload:
   playing, or while the app has no playback answer yet, because a replacement
   restarts the process and would silence a night; it happens when sound stops or on
   the next launch. With the switch off, nothing is downloaded until you press
-  **Update**, and a press of *Update* installs when you ask.
+  **Update**: that press fetches and verifies the release, and the app then offers
+  **Install**, which is the tap that hands it to Android's installer.
 - Either way it downloads the one APK for your device's architecture, checks its
   size and SHA-256 against the manifest, checks that it is signed by the same
   certificate as the installed app, and hands it to Android's installer. The
