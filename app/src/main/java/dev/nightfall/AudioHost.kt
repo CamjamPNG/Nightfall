@@ -211,19 +211,7 @@ class AudioHost(private val runtime: NightfallRuntime) {
                     val cache = HashMap<String, SampleData>()
                     val mixer =
                         PcmMixer(sampleRate, frames) { asset ->
-                            cache.getOrPut(asset) {
-                                context.assets.openFd("audio/$asset.pcm").use { fd ->
-                                    fd.createInputStream().use { input ->
-                                        Pcm16Data(
-                                            input.channel.map(
-                                                FileChannel.MapMode.READ_ONLY,
-                                                fd.startOffset,
-                                                fd.length,
-                                            )
-                                        )
-                                    }
-                                }
-                            }
+                            cache[asset] ?: loadRecording(asset)?.also { cache[asset] = it }
                         }
                     var previous: Mix? = null
                     val pcm = FloatArray(frames * 2)
@@ -271,6 +259,7 @@ class AudioHost(private val runtime: NightfallRuntime) {
                             if (snapshot.current != previous) {
                                 mixer.sync(snapshot.current)
                                 previous = snapshot.current
+                                reportDecodeFailure(cache.values)
                             }
                             mixer.settings = snapshot.settings
                             val now = SystemClock.elapsedRealtime()
@@ -326,6 +315,39 @@ class AudioHost(private val runtime: NightfallRuntime) {
 
     val isAlive
         get() = worker.isAlive
+
+    /**
+     * One bundled recording, either decoded from its Opus container or memory mapped from PCM. The
+     * asset kind is a build flag, so a build either carries the encoded recordings or the originals,
+     * never both.
+     */
+    private fun loadRecording(asset: String): SampleData? =
+        if (BuildConfig.OPUS_ASSETS) OpusAssets.open(context, asset)
+        else
+            context.assets.openFd("audio/$asset.pcm").use { fd ->
+                fd.createInputStream().use { input ->
+                    Pcm16Data(
+                        input.channel.map(
+                            FileChannel.MapMode.READ_ONLY,
+                            fd.startOffset,
+                            fd.length,
+                        )
+                    )
+                }
+            }
+
+    /**
+     * A recording this device cannot decode must be reported: a layer that contributes silence without
+     * saying so is the worst failure a mixer can have.
+     */
+    private fun reportDecodeFailure(recordings: Collection<SampleData>) {
+        val reason =
+            recordings.filterIsInstance<DecodedSampleData>().firstNotNullOfOrNull { it.unavailable }
+                ?: return
+        val message = "A bundled recording cannot be decoded on this device ($reason)."
+        if (runtime.status.value.error != message)
+            runtime.status.value = runtime.status.value.copy(error = message)
+    }
 
     fun release() {
         pause(true)

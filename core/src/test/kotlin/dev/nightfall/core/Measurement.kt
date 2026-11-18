@@ -13,7 +13,7 @@ object M {
 
     const val RATE = 48000
 
-    fun assetLoader(root: File = File("../app/src/main/assets/audio")): (String) -> SampleData? = { id ->
+    fun assetLoader(root: File = File("../app/src/pcm/assets/audio")): (String) -> SampleData? = { id ->
         val file = File(root, "$id.pcm")
         if (!file.exists()) null else Pcm16Data(ByteBuffer.wrap(file.readBytes()))
     }

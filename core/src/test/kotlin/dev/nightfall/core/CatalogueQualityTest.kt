@@ -212,7 +212,7 @@ class CatalogueQualityTest {
     fun bundledRecordingsDoNotReplayOnAFixedPeriod() {
         val report = StringBuilder()
         for (s in Library.all.filter { it.kind == "recording" }) {
-            val samples = (java.io.File("../app/src/main/assets/audio/${s.asset}.pcm").length() / 2).toInt()
+            val samples = (java.io.File("../app/src/pcm/assets/audio/${s.asset}.pcm").length() / 2).toInt()
             val cycle = RecordingSource.cycleSeconds(samples)
             val shortest = RecordingSource.shortestCycleSeconds(samples)
             println("%s shortest cycle %.1fs of %.1fs".format(s.id, shortest, cycle))
