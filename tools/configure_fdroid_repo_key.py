@@ -51,6 +51,17 @@ def settings():
     return alias, dname, url
 
 
+def outside_worktree(path, flag):
+    """Refuse a key or password path a git command could stage from this checkout."""
+    root = ROOT.resolve()
+    resolved = path.resolve()
+    if resolved == root or root in resolved.parents:
+        raise ValueError(
+            f"{flag} {path} is inside the repository working tree; keep the key and its password "
+            f"outside it, for example ~/{path.name}, so no git command can stage either"
+        )
+
+
 def generate(path, alias, dname, password):
     subprocess.run(
         ["keytool", "-genkeypair", "-keystore", str(path), "-storetype", "PKCS12", "-alias", alias,
@@ -88,6 +99,8 @@ def main():
     alias, dname, url = settings()
     path = args.keystore.expanduser()
     backup = path.with_name(path.name + ".password")
+    outside_worktree(path, "--keystore")
+    outside_worktree(backup, "--keystore password backup")
     password = (args.password or os.environ.get("FDROID_REPO_KEYSTORE_PASSWORD")
                 or (backup.read_text().strip() if backup.exists() else ""))
     if not path.exists():

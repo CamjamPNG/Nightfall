@@ -15,6 +15,7 @@ def load(name):
 
 
 repo = load("fdroid_repo")
+keytool = load("configure_fdroid_repo_key")
 PACKAGE = "io.github.camjampng.nightfall"
 SIGNER = "0ef5904042e684e4158711036c04c6fb2527cb48c023d5173fd8ded18db032de"
 
@@ -94,6 +95,18 @@ class DocumentedFingerprintTest(unittest.TestCase):
         self.path.write_text("nightfall\n")
         with self.assertRaises(ValueError):
             repo.documented_fingerprint()
+
+
+class KeyLocationTest(unittest.TestCase):
+    def test_key_inside_the_working_tree_is_refused(self):
+        for path in (pathlib.Path("nightfall-fdroid-repo.p12"),
+                     keytool.ROOT / "artifacts/nightfall-fdroid-repo.p12",
+                     keytool.ROOT / "nightfall-fdroid-repo.p12.password"):
+            with self.subTest(path=str(path)), self.assertRaises(ValueError):
+                keytool.outside_worktree(path, "--keystore")
+
+    def test_key_outside_the_working_tree_is_accepted(self):
+        keytool.outside_worktree(pathlib.Path(tempfile.gettempdir()) / "nightfall-fdroid-repo.p12", "--keystore")
 
 
 if __name__ == "__main__":

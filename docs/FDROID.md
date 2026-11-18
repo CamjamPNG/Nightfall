@@ -130,8 +130,9 @@ pointed at Actions:
    python3 tools/configure_fdroid_repo_key.py --keystore ~/nightfall-fdroid-repo.p12 --upload
    ```
 
-   That creates a 4096-bit RSA PKCS12 key, writes its password to
-   `~/nightfall-fdroid-repo.p12.password`, sets `FDROID_REPO_KEYSTORE_BASE64`
+   The path must be outside the checkout: a key or password inside it is
+   refused, so no git command can stage either. That creates a 4096-bit RSA
+   PKCS12 key, writes its password to `~/nightfall-fdroid-repo.p12.password`, sets `FDROID_REPO_KEYSTORE_BASE64`
    (base64 of the `.p12`) and `FDROID_REPO_KEYSTORE_PASSWORD`, records the
    fingerprint in `fdroid/repo/fingerprint.txt`, and prints the add-URL. The
    password is generated locally and sent straight to GitHub; it is never

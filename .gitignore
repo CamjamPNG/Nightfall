@@ -16,4 +16,5 @@ key.properties
 fdroid/local/
 __pycache__/
 *.p12
+*.p12.password
 credentials.json
