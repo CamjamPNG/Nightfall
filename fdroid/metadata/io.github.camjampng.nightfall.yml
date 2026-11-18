@@ -4,7 +4,7 @@ License: MIT
 AuthorName: Camden VandenBosch
 SourceCode: https://github.com/CamjamPNG/Nightfall
 IssueTracker: https://github.com/CamjamPNG/Nightfall/issues
-Changelog: https://github.com/CamjamPNG/Nightfall/blob/HEAD/fastlane/metadata/android/en-US/changelogs/4.txt
+Changelog: https://github.com/CamjamPNG/Nightfall/blob/HEAD/fastlane/metadata/android/en-US/changelogs/5.txt
 
 AutoName: Nightfall
 
@@ -40,10 +40,26 @@ Builds:
     gradle:
       - yes
 
+  - versionName: '1.1'
+    versionCode: 5
+    commit: v1.1
+    subdir: app
+    gradle:
+      - yes
+
 MaintainerNotes: |
   Original code is MIT. The commercial-courtesy request is voluntary and
   adds no license restriction. Bundled non-executable recordings retain
   their CC BY, CC BY-SA or CC0 terms; see AUDIO_LICENSES.md and sidecars.
+
+  Flavor migration: every block above pins a tag from before the github/fdroid
+  product flavors existed, so they keep "gradle: [yes]", which builds the single
+  offline release variant with no network permission, and they must not be
+  switched. A block pinned to a pre-flavor tag would have no
+  assembleFdroidRelease task to run. Use "gradle: [fdroid]" only for a tag whose
+  app/build.gradle.kts defines that flavor. tools/release_version.py writes new
+  blocks, so its template must emit the flavor from the first release that has
+  it. See docs/FDROID.md.
 
   New application: development-age or proven-user policy eligibility has
   not been demonstrated. No inclusion exception or hardware certification
@@ -55,5 +71,5 @@ MaintainerNotes: |
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9].*
-CurrentVersion: 1.0.1.2
-CurrentVersionCode: 4
+CurrentVersion: '1.1'
+CurrentVersionCode: 5

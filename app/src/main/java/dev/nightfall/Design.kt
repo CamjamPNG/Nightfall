@@ -111,7 +111,12 @@ fun SectionLabel(title: String, aside: String? = null) {
         Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(
+            title,
+            Modifier.semantics { heading() },
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
         aside?.let {
             Text(
                 it,
@@ -122,6 +127,10 @@ fun SectionLabel(title: String, aside: String? = null) {
     }
 }
 
+/**
+ * A labelled slider. [spokenName] is what TalkBack announces; [display] is announced as the value,
+ * so a row of sliders is distinguishable in a long list of layer options.
+ */
 @Composable
 fun LevelSlider(
     label: String,
@@ -129,9 +138,13 @@ fun LevelSlider(
     onChange: (Float) -> Unit,
     range: ClosedFloatingPointRange<Float> = 0f..1f,
     display: String = "${(value*100).roundToInt()}%",
+    spokenName: String = label,
 ) {
     Column {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(
+            Modifier.fillMaxWidth().clearAndSetSemantics {},
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
             Text(
                 label,
                 style = MaterialTheme.typography.bodySmall,
@@ -148,7 +161,10 @@ fun LevelSlider(
             onValueChange = onChange,
             valueRange = range,
             modifier =
-                Modifier.fillMaxWidth().height(48.dp).semantics { contentDescription = label },
+                Modifier.fillMaxWidth().height(48.dp).semantics {
+                    contentDescription = spokenName
+                    stateDescription = display
+                },
         )
     }
 }
@@ -160,24 +176,26 @@ fun Waveform(playing: Boolean, reducedMotion: Boolean) {
             .currentStateAsState()
             .value
             .isAtLeast(Lifecycle.State.RESUMED)
-    val phase =
+    // Keep the animation as a State and never read it here: reading it during composition would
+    // recompose this composable, and the card around it, on every animation frame.
+    val phase: State<Float>? =
         if (playing && !reducedMotion && resumed) {
             val transition = rememberInfiniteTransition(label = "Quiet waveform")
-            transition
-                .animateFloat(
-                    0f,
-                    (2 * PI).toFloat(),
-                    infiniteRepeatable(tween(9000, easing = LinearEasing)),
-                    label = "Wave phase",
-                )
-                .value
-        } else 0f
+            transition.animateFloat(
+                0f,
+                (2 * PI).toFloat(),
+                infiniteRepeatable(tween(9000, easing = LinearEasing)),
+                label = "Wave phase",
+            )
+        } else null
     val color = MaterialTheme.colorScheme.primary
     Canvas(
         Modifier.fillMaxWidth().height(52.dp).semantics {
             contentDescription = if (playing) "Soundscape playing" else "Soundscape paused"
         }
     ) {
+        // Read in the draw phase: a phase change invalidates this drawing only.
+        val phase = phase?.value ?: 0f
         val bars = 53
         val step = size.width / bars
         repeat(bars) { i ->
