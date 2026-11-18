@@ -145,7 +145,15 @@ class FdroidAssetTest(unittest.TestCase):
             z.writestr("assets/audio/birds.pcm", b"\x00\x01" * 16, compress_type=zipfile.ZIP_STORED)
             for abi in packaging.ABIS: z.writestr(f"lib/{abi}/libexample.so", abi.encode())
 
-    def package(self, root, name_version, name_code, fdroid_network=False):
+    def mapping(self, path, flavour="github"):
+        """A minimal R8 mapping file for this app, in the shape the release build writes."""
+        path.write_text("# compiler: R8\n# compiler_version: 8.9.35\n"
+                        "dev.nightfall.MainActivity -> a.b:\n"
+                        f"    # {{'id':'sourceFile','fileName':'MainActivity.kt'}}\n"
+                        f"    1:1:void run():42:42 -> a\n# {flavour} channel\n")
+        return path
+
+    def package(self, root, name_version, name_code, fdroid_network=False, mappings=()):
         self.source_apk(root / "github.apk", network=True, update_code=True)
         self.source_apk(root / "fdroid-source.apk", network=fdroid_network, update_code=fdroid_network)
         key = root / "release.p12"
@@ -153,10 +161,11 @@ class FdroidAssetTest(unittest.TestCase):
         env = {"PATH": "/usr/local/bin:/usr/bin:/bin",
                "ANDROID_HOME": str(self.stub_build_tools(root, name_version, name_code)),
                "NIGHTFALL_KEYSTORE_PATH": str(key), "NIGHTFALL_KEYSTORE_PASSWORD": "unused by the stub"}
-        return subprocess.run([sys.executable, str(TOOLS / "package_release.py"),
-                               "--apk", str(root / "github.apk"), "--fdroid-apk", str(root / "fdroid-source.apk"),
-                               "--out", str(root / "publish"), "--version", name_version, "--code", str(name_code)],
-                              env=env, capture_output=True, text=True)
+        arguments = [sys.executable, str(TOOLS / "package_release.py"),
+                     "--apk", str(root / "github.apk"), "--fdroid-apk", str(root / "fdroid-source.apk"),
+                     "--out", str(root / "publish"), "--version", name_version, "--code", str(name_code)]
+        for flavour, path in mappings: arguments += ["--mapping", f"{flavour}={path}"]
+        return subprocess.run(arguments, env=env, capture_output=True, text=True)
 
     def test_the_asset_name_is_what_a_repository_index_selects(self):
         """The index picks the flavour and the architecture by name, not by a fallback guess."""
@@ -194,6 +203,47 @@ class FdroidAssetTest(unittest.TestCase):
             self.assertEqual(len(manifest["apks"]), 5)
             sums = {line.split("  ")[1] for line in (root / "publish/SHA256SUMS.txt").read_text().splitlines()}
             self.assertIn(asset, sums)
+
+    def test_packaging_publishes_a_mapping_file_for_each_channel(self):
+        """A published APK's stack trace is unreadable without the mapping that build produced."""
+        name_version, name_code = version.current(ROOT)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            mappings = [("github", self.mapping(root / "github-mapping.txt")),
+                        ("fdroid", self.mapping(root / "fdroid-mapping.txt"))]
+            result = self.package(root, name_version, name_code, mappings=mappings)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            published = {p.name for p in (root / "publish").iterdir()}
+            for flavour in ("github", "fdroid"):
+                name = f"Nightfall-{name_version}-{flavour}-mapping.txt"
+                self.assertIn(name, published)
+                self.assertEqual((root / "publish" / name).read_text(), (root / f"{flavour}-mapping.txt").read_text())
+                self.assertIn(name, (root / "publish/SHA256SUMS.txt").read_text())
+                self.assertIn(f"Published {name}", result.stdout)
+
+    def test_packaging_refuses_a_mapping_that_explains_nothing(self):
+        """A file that is not R8's, or not this app's, must never be published as its mapping."""
+        name_version, name_code = version.current(ROOT)
+        for body in ("not a mapping file\n", "# compiler: R8\ncom.example.Other -> a:\n"):
+            with tempfile.TemporaryDirectory() as tmp:
+                root = pathlib.Path(tmp)
+                bad = root / "bad-mapping.txt"
+                bad.write_text(body)
+                result = self.package(root, name_version, name_code,
+                                      mappings=[("github", bad), ("fdroid", self.mapping(root / "ok.txt"))])
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse((root / "publish" / f"Nightfall-{name_version}-github-mapping.txt").exists())
+                self.assertIn("mapping", result.stderr.lower())
+
+    def test_packaging_refuses_one_channel_without_the_other(self):
+        """The pair is published together or not at all; half a pair explains half the release."""
+        name_version, name_code = version.current(ROOT)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            result = self.package(root, name_version, name_code,
+                                  mappings=[("github", self.mapping(root / "m.txt"))])
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Both channels", result.stderr)
 
     def test_packaging_refuses_a_network_capable_fdroid_build(self):
         name_version, name_code = version.current(ROOT)

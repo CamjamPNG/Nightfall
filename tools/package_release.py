@@ -18,6 +18,10 @@ sys.path.insert(0, str(ROOT / "tools"))
 import release_artifact  # noqa: E402
 
 ABIS = ("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+# R8 renames classes in both release channels, so each one's mapping file is the only way to read a
+# stack trace from its APK. They are published as separate assets rather than per architecture: the
+# mapping is identical across the architecture options of one channel.
+MAPPING_FLAVOURS = ("github", "fdroid")
 PACKAGE = "io.github.camjampng.nightfall"
 REPOSITORY = "CamjamPNG/Nightfall"
 # 1 was the original document: version, package, SDK levels, certificate, APKs.
@@ -41,6 +45,21 @@ def filter_apk(source, output, abi):
             if abi and name.startswith("lib/") and name.split("/")[1] != abi: continue
             with src.open(info) as read, dst.open(info, "w") as write:
                 shutil.copyfileobj(read, write, 1024 * 1024)
+
+
+def mapping_name(version, flavour):
+    """The published name of one channel's mapping file; it names the build it explains."""
+    if flavour not in MAPPING_FLAVOURS: raise ValueError("Unknown mapping flavour: " + str(flavour))
+    return f"Nightfall-{version}-{flavour}-mapping.txt"
+
+
+def checked_mapping(source):
+    """One R8 mapping file's text, refused unless it is one and covers this app's classes."""
+    try: text = pathlib.Path(source).read_text(encoding="utf-8", errors="replace")
+    except OSError: raise ValueError("Missing mapping file: " + str(source))
+    if not text.startswith("# compiler:"): raise ValueError("Not an R8 mapping file: " + str(source))
+    if "dev.nightfall" not in text: raise ValueError("Mapping file explains no Nightfall class: " + str(source))
+    return text
 
 
 def sha256(path):
@@ -155,6 +174,8 @@ def main():
     parser.add_argument("--out", type=pathlib.Path, required=True)
     parser.add_argument("--version", required=True)
     parser.add_argument("--code", type=int, required=True)
+    parser.add_argument("--mapping", action="append", default=[], metavar="FLAVOUR=PATH",
+                        help="R8 mapping.txt to publish for the github or fdroid channel")
     args = parser.parse_args()
     if not re.fullmatch(r"\d+\.\d+(?:\.\d+){0,2}", args.version): raise ValueError("Invalid version")
     if not pathlib.Path(os.environ["NIGHTFALL_KEYSTORE_PATH"]).is_file() or not os.environ.get("NIGHTFALL_KEYSTORE_PASSWORD"):
@@ -179,6 +200,18 @@ def main():
     violation = release_artifact.fdroid_violation(args.out / asset)
     if violation: raise ValueError(asset + " " + violation)
     print("Verified", asset, "without network permission or updater code", flush=True)
+    mappings = {}
+    for entry in args.mapping:
+        flavour, _, path = entry.partition("=")
+        if flavour not in MAPPING_FLAVOURS: raise ValueError("Unknown mapping flavour: " + str(entry))
+        if flavour in mappings: raise ValueError("Duplicate mapping for " + flavour)
+        mappings[flavour] = path
+    if mappings and set(mappings) != set(MAPPING_FLAVOURS):
+        raise ValueError("Both channels' mapping files are published together")
+    for flavour, path in mappings.items():
+        name = mapping_name(args.version, flavour)
+        (args.out / name).write_text(checked_mapping(path), encoding="utf-8")
+        print("Published", name, flush=True)
     manifest = release_manifest(args.version, args.code, signed)
     print("Manifest carries", len(manifest["log"]), "release notes entries", flush=True)
     metadata = args.out / "release-manifest.json"
@@ -186,6 +219,7 @@ def main():
     certificate = args.out / "nightfall-release-certificate.pem"
     shutil.copyfile(ROOT / "docs/nightfall-release-certificate.pem", certificate)
     files = [args.out / item["file"] for item in signed] + [args.out / asset, metadata, certificate]
+    files += [args.out / mapping_name(args.version, flavour) for flavour in mappings]
     (args.out / "SHA256SUMS.txt").write_text("".join(f"{sha256(file)}  {file.name}\n" for file in files))
 
 

@@ -82,7 +82,9 @@ jobs:
           CODE: ${{ steps.version.outputs.code }}
         run: |
           export NIGHTFALL_KEYSTORE_PATH="$RUNNER_TEMP/nightfall-release.p12"
-          python3 tools/package_release.py --apk app/build/outputs/apk/github/release/app-github-release-unsigned.apk --fdroid-apk app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk --out artifacts/publish --version "$VERSION" --code "$CODE"
+          python3 tools/package_release.py --apk app/build/outputs/apk/github/release/app-github-release-unsigned.apk --fdroid-apk app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk --out artifacts/publish --version "$VERSION" --code "$CODE" \
+            --mapping "github=app/build/outputs/mapping/githubRelease/mapping.txt" \
+            --mapping "fdroid=app/build/outputs/mapping/fdroidRelease/mapping.txt"
       - name: Verify the published F-Droid asset
         if: steps.publish.outputs.needed == 'true'
         env:
@@ -111,7 +113,7 @@ jobs:
             if [ "$DRAFT" != true ]; then
               gh release create "$TAG" --verify-tag --draft --title "Nightfall ${TAG#v}" --notes-file artifacts/release-notes.md
             fi
-            gh release upload "$TAG" --clobber artifacts/publish/*.apk artifacts/publish/SHA256SUMS.txt artifacts/publish/release-manifest.json artifacts/publish/nightfall-release-certificate.pem
+            gh release upload "$TAG" --clobber artifacts/publish/*.apk artifacts/publish/*-mapping.txt artifacts/publish/SHA256SUMS.txt artifacts/publish/release-manifest.json artifacts/publish/nightfall-release-certificate.pem
             gh release view "$TAG" --json assets > artifacts/uploaded-assets.json
             python3 - <<'PY'
           import json, pathlib

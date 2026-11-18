@@ -20,8 +20,11 @@ manifest = json.loads((args.assets / "release-manifest.json").read_text())
 version = manifest["versionName"]
 if not __import__("re").fullmatch(r"\d+\.\d+(?:\.\d+){0,2}", version): raise ValueError("Invalid version")
 tag = "v" + version
+mappings = {f"Nightfall-{version}-{flavour}-mapping.txt" for flavour in ("github", "fdroid")}
+published = {p.name for p in args.assets.iterdir()}
 files = {a["file"] for a in manifest["apks"]} | {fdroid_asset_name(version), "release-manifest.json", "SHA256SUMS.txt", "nightfall-release-certificate.pem"}
-if {p.name for p in args.assets.iterdir()} != files: raise ValueError("Only the expected public release assets may be staged")
+files |= mappings if published & mappings else set()
+if published != files: raise ValueError("Only the expected public release assets may be staged")
 subprocess.run(["python3", str(ROOT / "tools/verify_release.py"), "--assets", str(args.assets), "--tag", tag], check=True)
 with tempfile.TemporaryDirectory(prefix="nightfall-git-index-") as folder:
     env = os.environ.copy()
