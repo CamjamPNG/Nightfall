@@ -169,11 +169,11 @@ difference the copy anywhere in this project is allowed to blur.
 | Settings → Updates | installed version, **Check for updates**, next check time | installed version and where updates come from |
 
 So "Nightfall has no `INTERNET` permission" is true of the F-Droid channel and false of
-every file on the Releases page. There is also no switch that turns the check off: the
-`github` build asks GitHub once every six hours while it is open for as long as it is
-installed, and dismissing the update row hides the notice and nothing else. If a build
-that cannot open a socket at all is the point for you, that build is the `fdroid` one —
-which today means building it yourself.
+every file on the Releases page. There is also no switch that turns the check off in
+the current release: the `github` build asks GitHub once every six hours while it is
+open for as long as it is installed, and dismissing the update row hides the notice and
+nothing else. If a build that cannot open a socket at all is the point for you, that
+build is the `fdroid` one — which today means building it yourself.
 
 Both channels declare what a background music player needs and nothing more:
 foreground service, the media-playback foreground type, notifications, and a wake
