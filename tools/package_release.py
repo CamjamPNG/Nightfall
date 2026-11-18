@@ -16,6 +16,14 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 ABIS = ("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
 PACKAGE = "io.github.camjampng.nightfall"
 REPOSITORY = "CamjamPNG/Nightfall"
+# 1 was the original document: version, package, SDK levels, certificate, APKs.
+# 2 adds `log`: the recent releases with their notes, so the app can list what changed.
+SCHEMA = 2
+LOG_VERSIONS = 8
+LOG_NOTES = 4
+LOG_NOTE_CHARS = 120
+LOG_HEADING = re.compile(r"(?m)^## +(\d+\.\d+(?:\.\d+){0,2})(?: +[—–-] +(\d{4}-\d{2}-\d{2}))? *$")
+ISSUE_REFERENCE = re.compile(r"\s*\(#\d+\)\s*$")
 
 
 def filter_apk(source, output, abi):
@@ -42,7 +50,43 @@ def release_url(version, name):
     return f"https://github.com/{REPOSITORY}/releases/download/v{version}/{name}"
 
 
-def release_manifest(version, code, apks):
+def plain_note(line):
+    """One changelog line as the app shows it: a single bounded sentence, no issue reference."""
+    note = " ".join(ISSUE_REFERENCE.sub("", line).split())
+    if len(note) > LOG_NOTE_CHARS: note = note[:LOG_NOTE_CHARS - 1].rstrip() + "…"
+    return note
+
+
+def release_log(path=None, versions=LOG_VERSIONS):
+    """The recent releases and their notes, read from the changelog the release workflow writes.
+
+    Never hand-authored: the workflow runs release_version.py before this tool, so the changelog's
+    newest section is the release being packaged. A missing or unreadable changelog publishes no
+    notes rather than failing a release the app can otherwise install.
+    """
+    path = pathlib.Path(path or ROOT / "CHANGELOG.md")
+    try: text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError): return []
+    headings = list(LOG_HEADING.finditer(text))
+    entries, seen = [], set()
+    for index, heading in enumerate(headings):
+        version, date = heading.group(1), heading.group(2) or ""
+        if version in seen: continue
+        end = headings[index + 1].start() if index + 1 < len(headings) else len(text)
+        notes = []
+        for line in text[heading.end():end].splitlines():
+            if not line.lstrip().startswith("- "): continue
+            note = plain_note(line.lstrip()[2:])
+            if note and note not in notes: notes.append(note)
+            if len(notes) == LOG_NOTES: break
+        if not notes and not date: continue
+        seen.add(version)
+        entries.append(dict(version=version, date=date, notes=notes))
+        if len(entries) == versions: break
+    return entries
+
+
+def release_manifest(version, code, apks, log=None):
     """The machine-readable manifest published with each release, read by the in-app updater."""
     if not re.fullmatch(r"\d+\.\d+(?:\.\d+){0,2}", version): raise ValueError("Invalid version")
     if not 1 <= code <= 2100000000: raise ValueError("Invalid version code")
@@ -59,8 +103,18 @@ def release_manifest(version, code, apks):
         if not isinstance(apk["bytes"], int) or apk["bytes"] <= 0: raise ValueError("Invalid size for " + name)
         entries.append(dict(file=name, abi=abi, bytes=apk["bytes"], sha256=apk["sha256"],
                             url=release_url(version, name)))
-    return dict(versionName=version, versionCode=code, applicationId=PACKAGE,
-                minSdk=26, targetSdk=35, certificateSha256=pin(), apks=entries)
+    releases = []
+    for release in release_log() if log is None else log:
+        if not isinstance(release, dict): raise ValueError("Invalid release log entry")
+        if not re.fullmatch(r"\d+\.\d+(?:\.\d+){0,2}", str(release.get("version", ""))):
+            raise ValueError("Invalid release log version: " + str(release.get("version")))
+        notes = release.get("notes", [])
+        if not isinstance(notes, list) or not all(isinstance(note, str) for note in notes):
+            raise ValueError("Invalid release notes for " + str(release["version"]))
+        releases.append(dict(version=release["version"], date=str(release.get("date", "")),
+                             notes=[note for note in (plain_note(n) for n in notes) if note][:LOG_NOTES]))
+    return dict(schemaVersion=SCHEMA, versionName=version, versionCode=code, applicationId=PACKAGE,
+                minSdk=26, targetSdk=35, certificateSha256=pin(), apks=entries, log=releases)
 
 
 def pin():
@@ -111,6 +165,7 @@ def main():
             signed.append(dict(file=name, abi=variant, bytes=output.stat().st_size, sha256=sha256(output)))
             print("Verified", name, flush=True)
     manifest = release_manifest(args.version, args.code, signed)
+    print("Manifest carries", len(manifest["log"]), "release notes entries", flush=True)
     metadata = args.out / "release-manifest.json"
     metadata.write_text(json.dumps(manifest, indent=2) + "\n")
     certificate = args.out / "nightfall-release-certificate.pem"

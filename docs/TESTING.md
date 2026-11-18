@@ -2,7 +2,7 @@
 
 ## Executed checks
 
-- 34 JVM tests in `app/src/testGithub` cover the update channel: release-manifest
+- 45 JVM tests in `app/src/testGithub` cover the update channel: release-manifest
   parsing (untrusted documents, wrong types, unknown and duplicate architectures,
   addresses that are not this repository's release assets, oversized input),
   every trust refusal (`UpdatePolicy`), version-name ordering, and the downloader
@@ -11,12 +11,35 @@
   The release-tool suite covers the manifest generator's schema, URLs and
   rejection cases, and asserts that each F-Droid recipe block selects the flavour
   its own tag defines.
+- The manifest's release notes are exercised in three shapes: present (version,
+  date and the notes themselves, as the generator writes them), absent (a document
+  without `log` or `schemaVersion`, which parses as schema 1 with an empty log and
+  an unchanged version code, certificate and APK list), and hostile (`log` that is
+  not a list, entries that are not objects, versions that are not versions, notes
+  that are not strings, a note with a newline in its date, repeated versions, two
+  hundred releases and a two-thousand-character line of control characters). Every
+  hostile case is asserted to leave the version, code, certificate and APK list
+  byte-identical to the clean parse and to bound what the view can draw: at most
+  eight entries, four notes each, 160 characters a note, no control characters. A
+  declared schema newer than this build is read, not refused.
+- `UpdateAutomationTest` pins the playback guard as a truth table and as the
+  sequence it exists for: with the setting on, an install started by the app is
+  refused for `PLAYING` and for `UNKNOWN` (a foreground entry before the app has
+  reported playback), and allowed only for `STOPPED`; a night that begins in
+  playback and ends when audio stops produces exactly one install, at the stop. It
+  also pins that the setting gates the app's own request, that the fifteen-minute
+  floor and the six-hour interval both apply, that a failed attempt never spends the
+  six hours, that a corrected clock is expired rather than a lock, and that a
+  download from an earlier session resumes only while it is still newer and its file
+  is still on disk.
 - `UpdateChannelStateTest` pins the channel's two pacing rules (a fifteen-minute
   floor for every request, a six-hour interval only for the app's own check, a
   failed attempt never starting that interval, a corrected clock treated as
   expired), the minutes reported to the user, and the rule that hiding a banner
-  suppresses only that release's notice. The installer-outcome plumbing and the
-  foreground reconciliation are Android-bound and are not unit-tested.
+  suppresses only that release's notice, including the notice that an update is
+  waiting for playback. The installer-outcome plumbing, the foreground
+  reconciliation, the "What's new" once-only record and the Compose surfaces are
+  Android-bound and are not unit-tested.
 - Both channels build and pass lint: `:app:assembleGithubDebug`,
   `:app:assembleFdroidDebug`, `:app:assembleGithubRelease`,
   `:app:assembleFdroidRelease`, `:app:lintGithubDebug`, `:app:lintFdroidDebug`
@@ -91,6 +114,16 @@ emulator and no device was available: `PackageInstaller` sessions, the
 `STATUS_PENDING_USER_ACTION` fallback, the "install unknown apps" screen and the
 post-install restart are described from Android's documented behaviour, not from a
 measured run. Nothing here claims a silent install was observed.
+
+The same applies to everything this release adds around that path: no install, no
+unattended restart and no post-install "What's new" has been observed on a device.
+The automatic download of a published release, the waiting state that follows it
+while audio plays, the install that a play-to-pause transition triggers, the
+resumption of a verified download after the process was killed, and the once-only
+changelog on the next launch are all covered as rules and state transitions in JVM
+tests (45 in `app/src/testGithub`) and not as observed device behaviour. The Compose
+surfaces — the Settings toggle, the waiting row and the changelog dialog — were
+compiled and linted, never rendered on a screen.
 
 Also unverified: a real download of a published release from GitHub (the tests use
 a local server with the same protocol), behaviour behind a captive portal or a

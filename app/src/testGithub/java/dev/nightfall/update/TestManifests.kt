@@ -32,6 +32,13 @@ object TestManifests {
     ): String =
         """    {"file": "$file", "abi": "$abi", "bytes": $bytes, "sha256": "$sha256", "url": "$url"}"""
 
+    /** The release log two releases look like in the published manifest. */
+    const val RELEASES =
+        """    {"version": "1.0.2", "date": "2026-11-18", "notes": ["feat(update): install a release on its own", "fix: say which window an update waits for"]},
+    {"version": "1.0.1", "date": "2026-11-12", "notes": ["hotfix(release): verify the signing identity"]}"""
+
+    const val SCHEMA = 2
+
     fun manifest(
         versionName: String = "1.0.2",
         versionCode: Long = 5,
@@ -40,6 +47,10 @@ object TestManifests {
         targetSdk: Long = 35,
         certificate: String = PIN,
         apks: List<String> = listOf("universal", "arm64-v8a", "armeabi-v7a", "x86", "x86_64").map { apk(it, versionName) },
+        /** Raw `log` value, so a test can hand the parser a hostile one. Null omits the key. */
+        log: String? = "[\n$RELEASES\n  ]",
+        /** Null omits the key, which is what a pre-log manifest looks like. */
+        schemaVersion: Long? = SCHEMA.toLong(),
     ): String =
         """
         {
@@ -51,7 +62,9 @@ object TestManifests {
           "certificateSha256": "$certificate",
           "apks": [
         ${apks.joinToString(",\n")}
-          ]
+          ]${if (schemaVersion != null) """,
+          "schemaVersion": $schemaVersion""" else ""}${if (log != null) """,
+          "log": $log""" else ""}
         }
         """
             .trimIndent()

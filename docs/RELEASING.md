@@ -22,10 +22,12 @@ Android to replace an older version while retaining local data.
 After the first manual install, this channel can update itself: the app reads
 `release-manifest.json` from the latest release, picks the APK for the device's
 architecture, verifies size, SHA-256 and signing certificate against the installed
-app, and installs it when the user taps Update. On Android 12+ with this target
-SDK the install needs no further prompt; where an OEM image still asks, Android's
-own confirmation is shown. Nothing is downloaded or installed without that tap,
-and nothing is sent to GitHub beyond the request itself. The `fdroid` flavour
+app, and installs it. With **Update automatically** on — the GitHub build's
+default — no tap is needed, except that an install never happens while sound is
+playing: it waits for playback to stop or for the next launch. On Android 12+ with
+this target SDK the install needs no further prompt; where an OEM image still asks,
+Android's own confirmation is shown. Nothing is sent to GitHub beyond the request
+itself. The `fdroid` flavour
 published by F-Droid has no updater and no network permission at all. The earlier `dev.nightfall` development package is separate.
 F-Droid-managed signing is also a separate channel unless a later independent
 reproducible-build/signature configuration is agreed. Export mixes before
@@ -37,15 +39,26 @@ switching packages or signing channels; uninstalling deletes private app data.
 
 ```json
 {
+  "schemaVersion": 2,
   "versionName": "1.0.2", "versionCode": 5,
   "applicationId": "io.github.camjampng.nightfall",
   "minSdk": 26, "targetSdk": 35,
   "certificateSha256": "<pinned release identity>",
   "apks": [{"file": "Nightfall-1.0.2-arm64-v8a.apk", "abi": "arm64-v8a",
             "bytes": 91097092, "sha256": "<digest>",
-            "url": "https://github.com/CamjamPNG/Nightfall/releases/download/v1.0.2/Nightfall-1.0.2-arm64-v8a.apk"}]
+            "url": "https://github.com/CamjamPNG/Nightfall/releases/download/v1.0.2/Nightfall-1.0.2-arm64-v8a.apk"}],
+  "log": [{"version": "1.0.2", "date": "2026-11-18",
+           "notes": ["feat(update): install a release on its own"]}]
 }
 ```
+
+`log` carries the eight most recent releases with up to four notes each, newest
+first, so the app's "What's new" view has nothing to fetch of its own. It is
+generated from the `CHANGELOG.md` section `tools/release_version.py` has just
+written — never authored by hand — and every line is folded to one bounded
+sentence. `schemaVersion` names the shape: 1 is the release-only document, 2 adds
+`log`. The app reads the fields it checks the same way whatever the declared
+version says, so a newer schema never strands an older install.
 
 The app reads this asset through `releases/latest/download/release-manifest.json`
 and accepts an APK address only when it is exactly this repository's release

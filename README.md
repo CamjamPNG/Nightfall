@@ -10,8 +10,8 @@ same complete offline sound library. See [release and version rules](docs/RELEAS
 for automatic publishing, signing setup and update-channel details.
 
 An install from GitHub keeps working offline and does not need to be reinstalled
-by hand: when a release is newer than what you have, Nightfall shows an update row
-with the version name and one **Update** button. See [Updates](#updates).
+by hand: Nightfall updates itself, and Settings → Updates lists what changed in
+each recent release. See [Updates](#updates).
 
 The project builds two channels from the same source: `github` (the updater and
 its network permission) and `fdroid` (no updater, no network permission, no
@@ -35,37 +35,51 @@ Connect a Bluetooth sleep mask or headphones using Android, then select Play. Ni
 
 ## Updates
 
-The GitHub build replaces itself in place. Settings → Updates shows the installed
-version and a **Check for updates** action; when a release is newer, a row appears
-over the app with the version name and one **Update** button. Nothing is
-installed without that tap, and a dismissal is remembered until the next launch.
+The GitHub build replaces itself in place. **Update automatically** is on by
+default: Nightfall checks for a new release at most once every six hours while it
+is open, downloads it, verifies it, and installs it. The one thing it will not do is
+interrupt playback — an install restarts the app, so an update that arrives while
+sound is playing waits, says so in a row over the app, and installs when you stop
+the sound or the next time you open Nightfall. A row also appears whenever a
+release is newer and waiting for something. Turn the setting off and nothing is
+downloaded or installed until you press **Update**, and **Check for updates** stays
+a check you started.
 
-What happens after the tap:
+What happens:
 
 1. Nightfall reads `release-manifest.json` from the latest GitHub release and
    picks the one APK for this device's architecture (an exact match, otherwise
    Universal). The manifest carries the version code and name, the per-variant
-   download address, the byte size, the SHA-256 and the signing certificate.
+   download address, the byte size, the SHA-256, the signing certificate and the
+   notes for the recent releases.
 2. It downloads that one APK and checks four things before Android is asked to
    install anything: the SHA-256 and size match the manifest, the package is
    `io.github.camjampng.nightfall`, the version code is the released one, and the
    signing certificate is **the same certificate as the installed app** and
    contains only that device's native libraries. Any mismatch is discarded with a
-   visible reason.
+   visible reason. A verified download is kept, so trying again does not fetch
+   ninety megabytes a second time.
 3. It refuses downgrades: a version code that is not strictly greater than the
    installed one, or a version name that is not newer, is never installed.
-4. Android's `PackageInstaller` replaces the app. On Android 12 and newer with
-   this app's target SDK the install completes without further prompts; devices
-   whose image still requires one show Android's own confirmation dialog, which
-   Nightfall opens for you. Nightfall restarts afterwards and playback stops
-   during the restart.
+4. Android's `PackageInstaller` replaces the app when playback is stopped. On
+   Android 12 and newer with this app's target SDK the install completes without
+   further prompts; devices whose image still requires one show Android's own
+   confirmation dialog, which Nightfall opens for you. Nightfall restarts
+   afterwards, and the new version shows **What's new** once with the notes of the
+   release it installed.
 
 It asks GitHub at most **once every six hours** on its own, and a check you start
 is rate-limited to **one every fifteen minutes**; a failed attempt never spends the
 six-hour window, so a dropped connection costs you fifteen minutes, not an
 afternoon. Settings says when the next check is allowed. There is no background
 worker, alarm or periodic wake-up, so an idle Nightfall never touches the radio.
-Nothing is sent anywhere: the check is a plain download of a public file.
+Nothing is sent anywhere: the check is a plain download of a public file, and the
+APKs are downloaded from this repository's releases only.
+
+**What's new** in Settings → Updates lists the recent releases — version, date and a
+few lines each — from the copy Nightfall already holds, so reading it asks the
+network for nothing. The notes come from the release manifest, which is generated
+from this repository's changelog. With no notes stored yet, it says just that.
 
 Hiding the row stops it nagging; it never hides the update, which stays available
 in Settings until it is installed. If Android refuses or you cancel its
@@ -74,8 +88,10 @@ reported the next time it opens. The F-Droid build has none of this: it ships no
 updater, no network permission and no network code, and Settings says updates
 arrive through F-Droid or your store.
 
-Not verified on hardware: see [docs/TESTING.md](docs/TESTING.md). The install path
-has not been exercised on a physical device in this workspace.
+Not verified on hardware: see [docs/TESTING.md](docs/TESTING.md). No install, no
+unattended restart and no post-install "What's new" has been observed on a physical
+device in this workspace, and the playback guard is verified as a rule and a state
+sequence, not by watching a phone mid-night.
 
 ## Implemented
 

@@ -27,6 +27,8 @@ class ReleaseManifestParserTest {
         assertEquals(35, manifest.targetSdk)
         assertEquals(TestManifests.PIN, manifest.certificateSha256)
         assertEquals(5, manifest.apks.size)
+        assertEquals(TestManifests.SCHEMA, manifest.schemaVersion)
+        assertEquals(listOf("1.0.2", "1.0.1"), manifest.log.map { it.version })
         val arm64 = manifest.apks.first { it.abi == "arm64-v8a" }
         assertEquals("Nightfall-1.0.2-arm64-v8a.apk", arm64.file)
         assertEquals(TestManifests.SIZES.getValue("arm64-v8a"), arm64.bytes)
@@ -34,6 +36,86 @@ class ReleaseManifestParserTest {
             "https://github.com/CamjamPNG/Nightfall/releases/download/v1.0.2/Nightfall-1.0.2-arm64-v8a.apk",
             arm64.url,
         )
+    }
+
+    @Test
+    fun readsTheReleaseNotesTheManifestCarries() {
+        val newest = ReleaseManifestParser.parse(TestManifests.manifest()).log.first()
+        assertEquals("1.0.2", newest.version)
+        assertEquals("2026-11-18", newest.date)
+        assertEquals(
+            listOf("feat(update): install a release on its own", "fix: say which window an update waits for"),
+            newest.notes,
+        )
+    }
+
+    @Test
+    fun aManifestWithNoNotesStillUpdates() {
+        val manifest = ReleaseManifestParser.parse(TestManifests.manifest(log = null, schemaVersion = null))
+        assertEquals("the original document shape", 1, manifest.schemaVersion)
+        assertTrue(manifest.log.isEmpty())
+        assertEquals(5, manifest.versionCode)
+        assertEquals(TestManifests.PIN, manifest.certificateSha256)
+        assertEquals(5, manifest.apks.size)
+    }
+
+    @Test
+    fun aNewerSchemaIsNotARefusal() {
+        val manifest = ReleaseManifestParser.parse(TestManifests.manifest(schemaVersion = 9))
+        assertEquals(9, manifest.schemaVersion)
+        assertEquals(5, manifest.versionCode)
+        assertEquals("a nonsense schema reads as the original shape", 1, ReleaseManifestParser.parse(TestManifests.manifest(schemaVersion = -4)).schemaVersion)
+        assertEquals(1, ReleaseManifestParser.parse(TestManifests.manifest().replace(""""schemaVersion": 2""", """"schemaVersion": "two"""")).schemaVersion)
+    }
+
+    @Test
+    fun hostileNotesNeverChangeTheTrustDecision() {
+        val clean = ReleaseManifestParser.parse(TestManifests.manifest())
+        val hostile =
+            mapOf(
+                "not a list" to "\"what changed: everything\"",
+                "numbers" to "[1, 2, 3]",
+                "entries that are not objects" to "[\"1.0.2\", 7, null]",
+                "version that is not a version" to """[{"version": "1.0-beta", "notes": ["x"]}, {"version": "<script>", "notes": ["y"]}]""",
+                "notes that are not strings" to """[{"version": "1.0.2", "date": "2026-11-18", "notes": [1, {"a": 1}, null]}]""",
+                "a hostile date" to """[{"version": "1.0.2", "date": "yesterday\\nexpires: never", "notes": ["fine"]}]""",
+                "the same version twice" to
+                    """[{"version": "1.0.2", "notes": ["first"]}, {"version": "1.0.2", "notes": ["second"]}]""",
+                "two hundred releases" to
+                    (1..200).joinToString(",", "[", "]") { """{"version": "1.0.$it", "notes": ["$it"]}""" },
+                "a note of two thousand characters" to
+                    """[{"version": "1.0.2", "notes": ["${"long ".repeat(400)}"]}]""",
+                "a note full of control characters" to
+                    """[{"version": "1.0.2", "notes": ["a\u0000b\u0007c\u001bd\nd  e"]}]""",
+            )
+        for ((label, log) in hostile) {
+            val parsed = ReleaseManifestParser.parse(TestManifests.manifest(log = log))
+            withClue(label) {
+                assertEquals(clean.versionName, parsed.versionName)
+                assertEquals(clean.versionCode, parsed.versionCode)
+                assertEquals(clean.certificateSha256, parsed.certificateSha256)
+                assertEquals(clean.apks, parsed.apks)
+                assertTrue("${parsed.log.size} entries", parsed.log.size <= UpdateLogParser.MAX_ENTRIES)
+                for (entry in parsed.log) {
+                    assertTrue(entry.notes.size <= UpdateLogParser.MAX_NOTES)
+                    for (note in entry.notes) {
+                        assertTrue(note.length <= UpdateLogParser.MAX_NOTE_CHARS)
+                        assertTrue(note, note.none { it < ' ' || it == '\u007f' })
+                    }
+                    assertTrue("$label: ${entry.version}", entry.version.matches(Regex("""\d+\.\d+(?:\.\d+){0,2}""")))
+                }
+            }
+        }
+        assertEquals("duplicate versions are listed once", listOf("first"), ReleaseManifestParser.parse(TestManifests.manifest(log = """[{"version": "1.0.2", "notes": ["first"]}, {"version": "1.0.2", "notes": ["second"]}]""")).log.first().notes)
+        assertTrue(ReleaseManifestParser.parse(TestManifests.manifest(log = "[1, 2, 3]")).log.isEmpty())
+    }
+
+    private fun withClue(label: String, block: () -> Unit) {
+        try {
+            block()
+        } catch (e: AssertionError) {
+            throw AssertionError("$label: ${e.message}", e)
+        }
     }
 
     @Test

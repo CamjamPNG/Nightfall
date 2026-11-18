@@ -31,6 +31,14 @@ data class ReleaseManifest(
     val targetSdk: Int,
     val certificateSha256: String,
     val apks: List<ManifestApk>,
+    /**
+     * What the document declares it carries. `1` is the release-only shape, `2` adds [log]. A value
+     * this build does not know is not a refusal: every field that decides an install is still
+     * checked exactly as before, and a newer schema can only add keys this parser ignores.
+     */
+    val schemaVersion: Int = 1,
+    /** Recent releases and their notes, newest first. Informational only. */
+    val log: List<UpdateLogEntry> = emptyList(),
 )
 
 data class InstalledApp(
@@ -98,8 +106,23 @@ object ReleaseManifestParser {
         val duplicates = apks.groupBy { it.abi }.filterValues { it.size > 1 }.keys
         if (duplicates.isNotEmpty())
             throw UpdateProblem("The release manifest lists ${duplicates.first()} twice")
-        return ReleaseManifest(versionName, versionCode, applicationId, minSdk, targetSdk, certificate, apks)
+        return ReleaseManifest(
+            versionName = versionName,
+            versionCode = versionCode,
+            applicationId = applicationId,
+            minSdk = minSdk,
+            targetSdk = targetSdk,
+            certificateSha256 = certificate,
+            apks = apks,
+            schemaVersion = schemaVersion(obj),
+            log = UpdateLogParser.parse(obj["log"]),
+        )
     }
+
+    /** A declared schema is informative: anything unreadable is reported as the original shape. */
+    private fun schemaVersion(obj: JsonObject): Int =
+        (obj["schemaVersion"] as? JsonPrimitive)?.takeUnless { it.isString }?.content?.toIntOrNull()?.coerceAtLeast(1)
+            ?: 1
 
     private fun apk(obj: JsonObject, versionName: String): ManifestApk {
         val file = string(obj, "file")
