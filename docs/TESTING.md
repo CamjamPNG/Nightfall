@@ -32,10 +32,14 @@
   rejection of duplicate versions and preservation of code/audio in ABI options.
   Signed APK variants are additionally checked with Android's apksigner, aapt,
   zipalign and source-tag audio hashes before publication.
-- 18 deterministic JVM/core tests pass, with no failures or skips. They cover
-  nine simultaneous non-silent sources, 512 allocated layers, unrelated-source
-  phase continuity, independent gain/master/mute/solo, limiting, colored-noise
-  behavior, musical tuning/seeds, local-state serialization, timers and fades.
+- 42 deterministic JVM/core tests pass (41 executed, 1 skipped by design: the
+  opt-in `NIGHTFALL_CALIBRATE=1` level-calibration generator). They cover nine
+  simultaneous non-silent sources, 512 allocated layers, unrelated-source phase
+  continuity, independent gain/master/mute/solo, limiting, colored-noise
+  behavior, musical tuning/seeds, local-state serialization, timers and fades,
+  plus the loudness ledger and per-source level calibration, true-peak ceiling,
+  zero per-block allocation, click size at layer add/remove, loop seams on the
+  bundled recordings, spectral slope, DC offset and tuning in cents.
 - Duplicate noise layers have independent random streams. Pausing in the final
   timer fade preserves the fade level. Expired layer schedules stop source
   reads/rendering and can resume with a new schedule.
