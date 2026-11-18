@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3 — 2026-11-18
+
+- feat(update): one-tap in-app updates on the GitHub channel, no updater in the F-Droid build (#2)
+
 ## 1.2.1 — 2026-11-18
 
 - fix: type the output route and the library filter so wording decides nothing (#9)
