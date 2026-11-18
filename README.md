@@ -95,13 +95,12 @@ when a release is newer an update row appears with one **Update** button. On its
 asks GitHub never sooner than fifteen minutes after any previous attempt, and never
 more often than once every six hours counted from the last successful answer — with no
 successful answer yet, the fifteen-minute floor is the only limit. A check you start
-obeys the same fifteen-minute floor. **Nothing downloads or installs without your tap.** The
-APK it accepts must match the manifest's size, SHA-256, package id, version code and
+obeys the same fifteen-minute floor. **Nothing downloads or installs without your tap.**
+The APK it accepts must match the manifest's size, SHA-256, package id, version code and
 the certificate of the app already installed. No background worker, alarm or periodic
 wake-up exists, so an app that is not in the foreground never checks anything. Both
 pacing rules are in `CheckThrottle.kt`, which is the place to read before paraphrasing
-them. Details in
-[`docs/RELEASING.md`](docs/RELEASING.md) and [`PRIVACY.md`](PRIVACY.md).
+them. Details in [`docs/RELEASING.md`](docs/RELEASING.md) and [`PRIVACY.md`](PRIVACY.md).
 
 ### The F-Droid build — buildable from source today
 
@@ -178,8 +177,8 @@ the current release: the `github` build runs one when it comes to the foreground
 sooner than fifteen minutes after any previous attempt and never more often than once
 every six hours counted from the last successful answer. Dismissing an update row hides
 that notice, and does not stop the next check. If a build that cannot open a socket at
-all is the point for you, that build is
-the `fdroid` one — which today means building it yourself.
+all is the point for you, that build is the `fdroid` one — which today means building
+it yourself.
 
 Both channels declare what a background music player needs and nothing more:
 foreground service, the media-playback foreground type, notifications, and a wake
