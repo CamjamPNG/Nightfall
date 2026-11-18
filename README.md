@@ -227,7 +227,7 @@ what no one has ever confirmed. All three columns are kept honest in
 | Playback that resumes while the APK is being copied never reaches the installer commit; the session is abandoned and the update goes back to waiting | `InstallWindowTest` |
 | Release notes survive a hostile or missing `log` in the manifest without changing a single trust field | `ReleaseManifestParserTest.hostileNotesNeverChangeTheTrustDecision`, `…aManifestWithNoNotesStillUpdates` |
 | Playback survives navigation, activity recreation, backgrounding, audio-focus loss and service teardown | ten Robolectric scenarios in `app/src/test`, run under both channels in CI |
-| The F-Droid APK carries no network permission and none of the fourteen updater classes | `tools/check_release.py --fdroid-apk`, on every push |
+| The F-Droid APK carries no network permission and no class from the updater package, and the GitHub APK carries code from every updater source file | `tools/check_release.py --fdroid-apk` and `--apk`, on every push |
 
 How many tests: **42 in `core`** (41 run, plus the opt-in `NIGHTFALL_CALIBRATE=1`
 calibration generator, which is skipped by design), **10 playback-lifecycle scenarios**

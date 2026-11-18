@@ -53,11 +53,16 @@
   `:app:assembleFdroidDebug`, `:app:assembleGithubRelease`,
   `:app:assembleFdroidRelease`, `:app:lintGithubDebug`, `:app:lintFdroidDebug`
   (`abortOnError = true`). `tools/check_release.py --fdroid-apk` asserts the
-  F-Droid APK declares none of the network or install permissions and that none of
-  the fourteen updater classes it names appears in any dex; `--apk` asserts the
-  GitHub APK declares all of them and does carry the updater. The recipe check
-  reads `app/build.gradle.kts` at each pinned tag, and the CI job fetches tags so
-  that comparison runs instead of being skipped.
+  F-Droid APK declares none of the network or install permissions and that no
+  class from the updater package appears in any dex. That list is read from
+  `app/src/github/java/dev/nightfall/update` at check time — the file's own name
+  plus every type it declares — rather than kept by hand, so a class added to the
+  package is covered the day it is written; `--apk` asserts the GitHub APK
+  declares all the permissions and carries code from every one of those files,
+  which is what stops the negative half from passing vacuously if a name is
+  dropped from the minified build. The recipe check reads `app/build.gradle.kts`
+  at each pinned tag, and the CI job fetches tags so that comparison runs instead
+  of being skipped.
 
 - The release-tool suite covers all four version levels, ordering and resets,
   classification of mixed changes, synchronized Android/store/F-Droid metadata,
