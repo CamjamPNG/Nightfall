@@ -91,9 +91,11 @@ recordings plus R8 — is measured in `docs/launch/izzyondroid-request.md`; none
 shipped, so the size above is real and the reduction is not.
 
 This channel can update itself afterwards: Settings shows the installed version, and
-when a release is newer an update row appears with one **Update** button. It asks
-GitHub at most once every six hours on its own, a check you start is rate-limited to
-one every fifteen minutes, and **nothing downloads or installs without your tap**. The
+when a release is newer an update row appears with one **Update** button. On its own it
+asks GitHub never sooner than fifteen minutes after any previous attempt and, while
+answers are succeeding, no more than once every six hours — so a failing connection is
+retried on a later launch rather than waiting out six hours. A check you start obeys
+the same fifteen-minute floor. **Nothing downloads or installs without your tap.** The
 APK it accepts must match the manifest's size, SHA-256, package id, version code and
 the certificate of the app already installed. No background worker, alarm or periodic
 wake-up exists, so an app that is not in the foreground never checks anything. Details in
@@ -170,10 +172,12 @@ difference the copy anywhere in this project is allowed to blur.
 
 So "Nightfall has no `INTERNET` permission" is true of the F-Droid channel and false of
 every file on the Releases page. There is also no switch that turns the check off in
-the current release: the `github` build asks GitHub once every six hours while it is
-open for as long as it is installed, and dismissing the update row hides the notice and
-nothing else. If a build that cannot open a socket at all is the point for you, that
-build is the `fdroid` one — which today means building it yourself.
+the current release: the `github` build runs one when it comes to the foreground, never
+sooner than fifteen minutes after any previous attempt and, while answers are
+succeeding, no more than once every six hours; a failing connection is retried on a
+later launch. Dismissing an update row hides that notice, and does not stop the next
+check. If a build that cannot open a socket at all is the point for you, that build is
+the `fdroid` one — which today means building it yourself.
 
 Both channels declare what a background music player needs and nothing more:
 foreground service, the media-playback foreground type, notifications, and a wake
