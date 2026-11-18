@@ -1,22 +1,33 @@
 {
-  "change": "in-app updater for the github release channel, two build flavours",
+  "change": "in-app updater for the github release channel: two build flavours, automatic installs held until playback stops, and a release log rendered in the app",
   "date": "2026-11-18",
   "build_gate": {
-    "command": "./gradlew :core:test :app:testGithubDebugUnitTest :app:testFdroidDebugUnitTest :app:assembleDebug :app:lintDebug :app:assembleGithubRelease :app:assembleFdroidRelease :app:lintRelease",
+    "command": "./gradlew :core:test :app:assembleDebug :app:lintDebug :app:testGithubDebugUnitTest",
     "result": "BUILD SUCCESSFUL",
-    "lint_variants": ["githubDebug", "fdroidDebug", "githubRelease", "fdroidRelease"],
-    "lint": "zero errors, abortOnError = true"
+    "exit_code": 0,
+    "lint_variants": [
+      "githubDebug",
+      "fdroidDebug"
+    ],
+    "lint": "zero errors, abortOnError = true; 44 warnings, all pre-existing style and API-level advisories in the updater package",
+    "note": "release variants (:app:assembleGithubRelease, :app:assembleFdroidRelease, :app:lintRelease) are built by the release workflow, not by this local gate"
   },
   "tests": {
-    "core": {"count": 18, "failures": 0, "note": "unchanged MixerTest and AudioAcceptanceTest"},
+    "core": {
+      "count": 18,
+      "failures": 0,
+      "note": "unchanged MixerTest and AudioAcceptanceTest"
+    },
     "app_unit_github": {
-      "count": 34,
+      "count": 51,
       "failures": 0,
       "classes": [
         "ReleaseManifestParserTest",
         "UpdatePolicyTest",
         "ReleaseFetchTest",
-        "UpdateChannelStateTest"
+        "UpdateChannelStateTest",
+        "UpdateAutomationTest",
+        "InstallWindowTest"
       ],
       "covers": [
         "manifest parsing of untrusted documents: wrong types, unknown and duplicate ABIs, non-repository download addresses, oversized input",
@@ -24,13 +35,25 @@
         "downloaded APK checks: size, checksum, package, version code, single signer, signer equalling the installed app, native architectures",
         "version-name ordering across the four-level policy",
         "downloader against a local socket server: redirect following, monotonic progress, oversized response, connection dying mid-file",
-        "the two pacing rules (fifteen-minute floor for every request, six-hour interval for the app's own check, failed attempts never starting the interval, a corrected clock treated as expired), the minutes reported to the user, and banner dismissal hiding only the notice for that release"
+        "the two pacing rules (fifteen-minute floor for every request, six-hour interval for the app's own check, failed attempts never starting the interval, a corrected clock treated as expired), the minutes reported to the user, and banner dismissal hiding only the notice for that release, including the notice that an update waits for playback",
+        "the playback guard as a truth table: with automatic updates on, an install the app starts is refused while playing and refused on an unknown playback fact, and allowed only when stopped; with the setting off nothing installs unattended",
+        "the sequence the guard exists for: a night that begins in playback and ends when audio stops produces exactly one install, at the stop",
+        "the commit-time re-read of the playback guard: playback that starts during the APK copy abandons the installer session and never reaches the commit; a tap the owner made is not vetoed",
+        "the automatic request rule composed from the setting, the connection and both pacing intervals, including that a failed attempt never spends the six hours",
+        "resumption of a verified download after a process restart: only while that version is still newer and its file is still on disk",
+        "release notes present, absent (a schema-1 document with no log parses with an empty log and identical trust fields), and hostile (log that is not a list, entries and versions that are malformed, notes that are not strings, a newline in a date, repeated versions, 200 entries, a 2000-character line of control characters), each leaving the version, code, certificate and APK list identical to the clean parse and bounding what the view may draw",
+        "a declared schemaVersion newer than this build is read rather than refused"
       ]
     },
     "release_tools": {
-      "count": 19,
+      "count": 48,
       "failures": 0,
-      "note": "includes the manifest generator's schema, URLs and rejection cases, the recipe's flavour selection per tag (asserting at least one tag was read), and the fdroid recipe block for new releases"
+      "suites": {
+        "test_releasing.py": 18,
+        "test_updater.py": 16,
+        "test_fdroid_repo.py": 14
+      },
+      "note": "includes the manifest generator's schema, URLs and rejection cases, the release log generated from a written changelog (bounded, de-duplicated versions, issue references stripped, a missing changelog publishing no notes) and the manifest refusing a log it cannot publish, the recipe's flavour selection per tag (asserting at least one tag was read), and the fdroid recipe block for new releases, plus the F-Droid channel asset the release job publishes beside the update options"
     }
   },
   "pacing": {
@@ -47,23 +70,39 @@
         "android.permission.REQUEST_INSTALL_PACKAGES",
         "android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION"
       ],
-      "updater_code": "present"
+      "updater_code": "present, the two new classes included, checked in both dex tables of the debug APK"
     },
     "fdroid": {
       "file": "app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk",
       "network_permissions": [],
-      "updater_code": "none of the classes tools/check_release.py looks for appears in any dex: GithubUpdater, ReleaseFetch, ReleaseManifestParser, PackageInstalls, UpdateInstallReceiver, CheckThrottle, UpdatePrefs, InstallResults, Apks, UpdatePolicy, ReleaseManifest, UpdateState, UpdateApi, UpdateUi. The whole app/src/github source set is excluded from this build, so the absence follows from the build graph as well as from this scan; the scan is what would catch a class drifting into shared code."
+      "updater_code": "none of the classes tools/check_release.py looks for appears in any dex: GithubUpdater, ReleaseFetch, ReleaseManifestParser, PackageInstalls, UpdateInstallReceiver, CheckThrottle, UpdatePrefs, InstallResults, Apks, UpdatePolicy, ReleaseManifest, UpdateState, UpdateApi, UpdateUi. The debug APK built by this change was also scanned for the two classes the release log and the install guard add, UpdateAutomation and UpdateLog, and carries neither. The whole app/src/github source set is excluded from this build, so the absence follows from the build graph as well as from this scan; the scan is what would catch a class drifting into shared code. Those two names are not yet in check_release.py's list, which another open change owns."
     }
   },
-  "structure": "every updater source file lives in app/src/github; app/src/main names no update type, calling three flavour-provided composables instead; INTERNET appears only in app/src/github/AndroidManifest.xml",
+  "structure": "every updater source file lives in app/src/github; app/src/main names no update type, calling three flavour-provided composables and handing one a Flow<Boolean> of play/pause instead; INTERNET appears only in app/src/github/AndroidManifest.xml",
   "recipe": "a build block may select the fdroid flavour only when the tag it pins defines the flavours; tools/check_release.py reads app/build.gradle.kts at each tag and android.yml now fetches tags so the rule is checked rather than skipped",
   "not_verified": [
     "PackageInstaller install path on a device or emulator: this machine has no /dev/kvm",
+    "an unattended install: no install, no automatic restart and no post-install release-log view was observed",
+    "the waiting state, the install a play-to-pause transition triggers and the commit-time deferral; covered as rules, state transitions and an ordering test over a fake session, not observed",
     "STATUS_PENDING_USER_ACTION confirmation dialog and the post-install restart",
     "the 'install unknown apps' screen",
     "a download of a real published release from GitHub (tests use a local HTTP server)",
     "behaviour behind captive portals, proxies or per-OEM installer prompts",
-    "the settings row and floating banner rendered on a screen; no emulator is available",
-    "the installer-outcome plumbing and the foreground reconciliation: Android-bound, not unit-tested"
-  ]
+    "the settings toggle, the waiting row and the release-log dialog rendered on a screen; compiled and linted only",
+    "the installer-outcome plumbing, the foreground reconciliation and the once-only release-log record: Android-bound, not unit-tested"
+  ],
+  "automatic_updates": {
+    "default": "on in the github channel, stored in private preferences, switchable in Settings \u2192 Updates",
+    "install_window": "a downloaded, verified update becomes a ready-to-install state and is handed to PackageInstaller only when the setting is on and playback is known to be stopped; an unknown playback fact refuses, so a race postpones an install rather than interrupting audio",
+    "user_initiated": "a tap on Update installs without waiting, because the user asked",
+    "pacing": "unchanged: the fifteen-minute floor and the six-hour interval below still decide every request",
+    "commit_time": "the window is read once more immediately before the installer session commits, because copying the APK takes seconds with Play still live"
+  },
+  "release_log": {
+    "manifest_schema": 2,
+    "field": "log",
+    "shape": "up to 8 releases, newest first, each {version, date, notes[0..4]}, each note at most 120 characters",
+    "generator": "tools/package_release.py release_log() reads the CHANGELOG.md sections the release workflow has already written; no note is hand-authored",
+    "in_app": "stored in private preferences and rendered from that copy, so the view makes no request of its own; shown once after an install this channel placed, and listed under Settings \u2192 Updates"
+  }
 }

@@ -21,7 +21,17 @@ import java.io.File
  * [PackageInstaller.STATUS_PENDING_USER_ACTION], which is forwarded to the user.
  */
 object PackageInstalls {
-    fun install(context: Context, apk: File, versionName: String) {
+    /**
+     * Copies [apk] into a session and hands it to Android. [windowOpen] is consulted once more after
+     * the copy, right before the commit, because the copy is slow enough for the owner to start
+     * playback: a closed window abandons the session and reports [InstallWindow.Outcome.DEFERRED].
+     */
+    fun install(
+        context: Context,
+        apk: File,
+        versionName: String,
+        windowOpen: () -> Boolean,
+    ): InstallWindow.Outcome {
         val installer = context.packageManager.packageInstaller
         val params =
             PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
@@ -31,14 +41,24 @@ object PackageInstalls {
                     setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
             }
         val sessionId = installer.createSession(params)
+        // Built before the copy so that nothing but the commit follows the window's last read: a
+        // PendingIntent is a binder call, and it has no business sitting between the guard and the
+        // commit it guards.
+        val sender = statusIntent(context, sessionId, versionName).intentSender
         installer.openSession(sessionId).use { session ->
-            apk.inputStream().use { input ->
-                session.openWrite("nightfall-update.apk", 0, apk.length()).use { output ->
-                    input.copyTo(output, 64 * 1024)
-                    session.fsync(output)
-                }
-            }
-            session.commit(statusIntent(context, sessionId, versionName).intentSender)
+            return InstallWindow.copyThenCommit(
+                copy = {
+                    apk.inputStream().use { input ->
+                        session.openWrite("nightfall-update.apk", 0, apk.length()).use { output ->
+                            input.copyTo(output, 64 * 1024)
+                            session.fsync(output)
+                        }
+                    }
+                },
+                windowOpen = windowOpen,
+                commit = { session.commit(sender) },
+                abandon = { session.abandon() },
+            )
         }
     }
 

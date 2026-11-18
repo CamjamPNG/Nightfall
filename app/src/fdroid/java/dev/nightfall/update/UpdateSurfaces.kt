@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.flow.Flow
 
 /**
  * The F-Droid channel's half of the update surface. There is no updater, no manifest URL, no
@@ -25,9 +26,13 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun UpdateOverlay(modifier: Modifier = Modifier) = Unit
 
-/** Nothing to tell the channel: it has no state and never touches the network. */
+/**
+ * Nothing to tell the channel: it has no state and never touches the network. The playback flow is
+ * accepted and ignored so the activity names one surface in both builds.
+ */
 @Composable
-fun UpdateForegroundEffect() = Unit
+@Suppress("UNUSED_PARAMETER")
+fun UpdateForegroundEffect(playing: Flow<Boolean>) = Unit
 
 @Composable
 fun UpdateSettingsSection() {

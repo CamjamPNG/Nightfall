@@ -90,17 +90,30 @@ not configured yet. The route to a much smaller APK — an Opus re-encode of the
 recordings plus R8 — is measured in `docs/launch/izzyondroid-request.md`; none of it has
 shipped, so the size above is real and the reduction is not.
 
-This channel can update itself afterwards: Settings shows the installed version, and
-when a release is newer an update row appears with one **Update** button. On its own it
-asks GitHub never sooner than fifteen minutes after any previous attempt, and never
-more often than once every six hours counted from the last successful answer — with no
-successful answer yet, the fifteen-minute floor is the only limit. A check you start
-obeys the same fifteen-minute floor. **Nothing downloads or installs without your tap.**
-The APK it accepts must match the manifest's size, SHA-256, package id, version code and
-the certificate of the app already installed. No background worker, alarm or periodic
-wake-up exists, so an app that is not in the foreground never checks anything. Both
-pacing rules are in `CheckThrottle.kt`, which is the place to read before paraphrasing
-them. Details in [`docs/RELEASING.md`](docs/RELEASING.md) and [`PRIVACY.md`](PRIVACY.md).
+This channel can update itself afterwards, and by default it does: **Update automatically**
+is on, so a newer release is downloaded, verified and installed without a tap. Settings
+shows the installed version and that switch, and **Check for updates** stays a check you
+started. What the app will not do is interrupt a night already playing — an install
+restarts it, so a downloaded update waits, says so in a row over the app, and installs
+when sound is stopped or on the next launch. Turn the switch off and nothing downloads
+until you press **Update**.
+
+On its own it asks GitHub never sooner than fifteen minutes after any previous attempt,
+and never more often than once every six hours counted from the last successful answer —
+with no successful answer yet, the fifteen-minute floor is the only limit. A check you
+start obeys the same fifteen-minute floor. The APK it accepts must match the manifest's
+size, SHA-256, package id, version code and the certificate of the app already installed.
+No background worker, alarm or periodic wake-up exists, so an app that is not in the
+foreground never checks anything. Both pacing rules are in `CheckThrottle.kt`, and the
+playback guard is `UpdateAutomation.mayInstallNow` in `UpdateAutomation.kt` — those are
+the places to read before paraphrasing them.
+
+**What's new** in Settings → Updates lists the recent releases with their notes, from the
+copy the app already holds, so reading it asks the network for nothing. The notes come
+from the release manifest, which `tools/package_release.py` generates from this
+repository's own changelog. After the app replaces itself, the version it installed shows
+those notes once. Details in [`docs/RELEASING.md`](docs/RELEASING.md) and
+[`PRIVACY.md`](PRIVACY.md).
 
 ### The F-Droid build — buildable from source today
 
@@ -116,8 +129,11 @@ it today you build it:
 
 CI builds this channel, lints it, and runs the same nine playback-lifecycle scenarios
 against it on every push; `tools/check_release.py --fdroid-apk` asserts from the built
-dex and manifest that no updater class and no network permission survived. The Releases
-page does not publish an F-Droid-flavoured APK yet.
+dex and manifest that no updater class and no network permission survived. Every release
+now carries `Nightfall-<version>-fdroid-universal.apk`: this channel, one universal APK,
+signed with the same pinned key and published beside the update options. It is
+deliberately kept out of `release-manifest.json`, so the in-app updater never offers a
+build that cannot update itself.
 
 ### The self-hosted F-Droid repository — address reserved, not serving yet
 
@@ -161,15 +177,15 @@ remove the old package — uninstalling deletes its private data.
 The two channels differ in exactly one thing — the update check — and it is the only
 difference the copy anywhere in this project is allowed to blur.
 
-| | `github` (every APK on Releases) | `fdroid` (built from source, not published yet) |
+| | `github` (every APK on Releases) | `fdroid` (one `fdroid-universal` APK on Releases, buildable from source) |
 | --- | --- | --- |
 | Playback, generation, presets, timers, storage | identical | identical |
 | Works fully offline, radio off | yes | yes |
 | Declares `INTERNET`, `ACCESS_NETWORK_STATE` | yes | **no** |
 | Declares `REQUEST_INSTALL_PACKAGES`, `UPDATE_PACKAGES_WITHOUT_USER_ACTION` | yes | **no** |
 | Updater code in the APK | yes | **none** — no parser, fetcher or installer |
-| Talks to the network | only to read one public release manifest and, if you tap Update, download one APK | never |
-| Settings → Updates | installed version, **Check for updates**, next check time | installed version and where updates come from |
+| Talks to the network | only to read one public release manifest and download one APK, on a check you start or the app's own | never |
+| Settings → Updates | installed version, **Update automatically**, **Check for updates**, **What's new** | installed version and where updates come from |
 
 So "Nightfall has no `INTERNET` permission" is true of the F-Droid channel and false of
 every file on the Releases page. There is also no switch that turns the check off in
@@ -207,13 +223,16 @@ what no one has ever confirmed. All three columns are kept honest in
 | No bundled recording loops before three minutes, and every one loops without a seam | `AudioAcceptanceTest.noBundledRecordingLoopsBeforeThreeMinutes`, `RenderPathTest.everyFieldRecordingLoopsWithoutASeam` |
 | Every playable catalogue row renders finite, nonzero output | `AudioAcceptanceTest.entireAvailableCatalogHasRealAudibleOutput` |
 | Every catalogue source is trimmed to −18 LUFS at full layer gain, so a percentage means the same loudness for every sound | `Levels.REFERENCE_LUFS`, `LoudnessTargetTest.everyContinuousSourceReachesTheReferenceLevel` |
-| The updater refuses a foreign package id, a foreign signing certificate, a downgrade, a mismatched checksum, an address outside this repository's assets, and a truncated or oversized response | `UpdatePolicyTest`, `ReleaseManifestParserTest`, `ReleaseFetchTest` (34 tests) |
+| The updater refuses a foreign package id, a foreign signing certificate, a downgrade, a mismatched checksum, an address outside this repository's assets, and a truncated or oversized response | `UpdatePolicyTest`, `ReleaseManifestParserTest`, `ReleaseFetchTest` (part of the 51 updater tests counted below) |
+| An install the app starts itself never lands in playing audio — refused while playing, refused on an unknown playback fact, allowed only when stopped, and a night that starts in playback ends with exactly one install, at the stop | `UpdateAutomationTest` |
+| Playback that resumes while the APK is being copied never reaches the installer commit; the session is abandoned and the update goes back to waiting | `InstallWindowTest` |
+| Release notes survive a hostile or missing `log` in the manifest without changing a single trust field | `ReleaseManifestParserTest.hostileNotesNeverChangeTheTrustDecision`, `…aManifestWithNoNotesStillUpdates` |
 | Playback survives navigation, activity recreation, backgrounding, audio-focus loss and service teardown | nine Robolectric scenarios in `app/src/test`, run under both channels in CI |
 | The F-Droid APK carries no network permission and none of the fourteen updater classes | `tools/check_release.py --fdroid-apk`, on every push |
 
 How many tests: **42 in `core`** (41 run, plus the opt-in `NIGHTFALL_CALIBRATE=1`
 calibration generator, which is skipped by design), **9 playback-lifecycle scenarios**
-that run twice, once per channel, **34 updater tests**, and **33 release-tooling
+that run twice, once per channel, **51 updater tests**, and **48 release-tooling
 tests**. They run on a JVM with no device, no emulator and no network.
 
 ### Measured by a script or recorded in the repository
@@ -234,7 +253,7 @@ tests**. They run on a JVM with no device, no emulator and no network.
 | That it sounds good, or that nine layers sound right | No listening test and no acoustic measurement exists; loudness is digital gain, not a sound-pressure claim |
 | Bluetooth sleep masks and headphones, disconnect and reconnect, media buttons | Never exercised on a real device |
 | An all-night run with the screen off — underruns, battery, OEM task killers | No overnight result exists for any phone |
-| The in-app update actually installing from a published release | `PackageInstaller` sessions and the Android 12+ prompt-free path are described from Android's documentation; the tests drive a local server speaking the same protocol. Also unverified: captive portals, proxies, and how each OEM prompts |
+| The in-app update actually installing from a published release, unattended or not | `PackageInstaller` sessions and the Android 12+ prompt-free path are described from Android's documentation; the tests drive a local server speaking the same protocol. No install, no automatic restart and no post-install "What's new" has been observed on a phone. Also unverified: the waiting row and the release-log dialog rendered on a screen, the install a play-to-pause transition triggers, the commit-time deferral against Android's real installer, captive portals, proxies, and how each OEM prompts |
 | An F-Droid client adding the self-hosted repository and auto-updating | No deployment has served a request |
 | Reproducible builds on F-Droid's own buildserver | Two of our machines agree; theirs has never built it |
 
@@ -249,7 +268,7 @@ documented gate, and CI runs these three plus the rest of the list below.
 
 ```sh
 ./gradlew :core:test :app:assembleDebug :app:lintDebug   # 42 core tests, both channels, lint aborts on error
-python3 -m unittest discover -s tools/tests              # 33 release-tooling tests
+python3 -m unittest discover -s tools/tests              # 48 release-tooling tests
 python3 tools/check_release.py                           # store metadata, bundled audio, both channels
 ```
 

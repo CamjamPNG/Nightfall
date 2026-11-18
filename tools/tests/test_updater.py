@@ -31,8 +31,10 @@ checking = load("check_release")
 versioning = load("release_version")
 
 PIN = (packaging.ROOT / "docs/release-signing-certificate.sha256").read_text().strip()
-MANIFEST_KEYS = {"versionName", "versionCode", "applicationId", "minSdk", "targetSdk", "certificateSha256", "apks"}
+MANIFEST_KEYS = {"schemaVersion", "versionName", "versionCode", "applicationId", "minSdk", "targetSdk",
+                 "certificateSha256", "apks", "log"}
 APK_KEYS = {"file", "abi", "bytes", "sha256", "url"}
+LOG_KEYS = {"version", "date", "notes"}
 VERSION, CODE = "1.0.2", 5
 
 
@@ -42,9 +44,78 @@ def apks():
             for index, abi in enumerate(("universal", "arm64-v8a", "armeabi-v7a", "x86", "x86_64"))]
 
 
+def log():
+    return [dict(version="1.0.2", date="2026-11-18", notes=["feat: a newer release"])]
+
+
+class ReleaseNotesTest(unittest.TestCase):
+    """The manifest's `log` is the app's in-app changelog, generated from the written changelog."""
+
+    CHANGELOG = (
+        "# Changelog\n\n"
+        "## 1.0.2 — 2026-11-18\n\n"
+        "- feat(update): install releases on their own (#12)\n"
+        "- fix: keep the row readable when notes are missing\n\n"
+        "## 1.0.1 — 2026-11-17\n\n"
+        "- hotfix(release): verify the signing identity\n\n"
+        "## 1.0\n\n"
+        "- First public source release.\n"
+    )
+
+    def written(self, text):
+        folder = tempfile.mkdtemp()
+        path = pathlib.Path(folder) / "CHANGELOG.md"
+        path.write_text(text, encoding="utf-8")
+        return packaging.release_log(path)
+
+    def test_the_written_changelog_becomes_the_release_log(self):
+        entries = self.written(self.CHANGELOG)
+        self.assertEqual([entry["version"] for entry in entries], ["1.0.2", "1.0.1", "1.0"])
+        self.assertEqual(entries[0]["date"], "2026-11-18")
+        self.assertEqual(entries[0]["notes"], ["feat(update): install releases on their own",
+                                              "fix: keep the row readable when notes are missing"])
+        self.assertEqual("", entries[2]["date"], "a release with no date keeps an empty one")
+
+    def test_notes_are_bounded_and_stripped_of_issue_references(self):
+        lines = [f"- release {index}: " + 'x' * 500 + ' (#99)' for index in range(9)]
+        entries = self.written("# Changelog\n\n## 2.0 — 2026-01-01\n\n" + "\n".join(lines) + "\n")
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(len(entries[0]["notes"]), packaging.LOG_NOTES)
+        self.assertTrue(all(len(note) <= packaging.LOG_NOTE_CHARS for note in entries[0]["notes"]))
+        self.assertNotIn("(#99)", entries[0]["notes"][0])
+        self.assertTrue(entries[0]["notes"][0].endswith("…"))
+
+    def test_a_missing_changelog_publishes_no_notes(self):
+        self.assertEqual(self.written(""), [])
+        self.assertEqual(packaging.release_log(packaging.ROOT / "no-such-changelog.md"), [])
+
+    def test_a_repeated_version_is_listed_once(self):
+        text = "## 1.0 — 2026-01-01\n\n- first\n\n## 1.0 — 2026-01-02\n\n- second\n"
+        self.assertEqual([entry["notes"] for entry in self.written(text)], [["first"]])
+
+    def test_the_manifest_declares_the_schema_and_the_log(self):
+        manifest = packaging.release_manifest(VERSION, CODE, apks(), log=log())
+        self.assertEqual(manifest["schemaVersion"], packaging.SCHEMA)
+        self.assertEqual(manifest["log"], log())
+        self.assertEqual(set(manifest["log"][0]), LOG_KEYS)
+        self.assertEqual(json.loads(json.dumps(manifest))["log"], log())
+
+    def test_the_manifest_refuses_a_log_it_cannot_publish(self):
+        for broken in ([dict(version="1.0-beta", notes=[])], [dict(version="1.0", notes="one line")],
+                       [dict(version="1.0", notes=[1, 2])], ["1.0.2"]):
+            with self.subTest(log=broken), self.assertRaises(ValueError):
+                packaging.release_manifest(VERSION, CODE, apks(), log=broken)
+
+    def test_the_real_changelog_is_publishable(self):
+        """Whatever is committed must survive the generator the release workflow runs."""
+        manifest = packaging.release_manifest(VERSION, CODE, apks(), log=packaging.release_log())
+        self.assertTrue(manifest["log"], "the repository's own changelog produced no release notes")
+        self.assertLess(len(json.dumps(manifest["log"])), 4096, "the log is fetched over the network")
+
+
 class ReleaseManifestTest(unittest.TestCase):
     def test_manifest_carries_what_the_updater_needs(self):
-        manifest = packaging.release_manifest(VERSION, CODE, apks())
+        manifest = packaging.release_manifest(VERSION, CODE, apks(), log=log())
         self.assertEqual(set(manifest), MANIFEST_KEYS)
         self.assertEqual(manifest["applicationId"], "io.github.camjampng.nightfall")
         self.assertEqual((manifest["minSdk"], manifest["targetSdk"]), (26, 35))
@@ -59,7 +130,7 @@ class ReleaseManifestTest(unittest.TestCase):
             self.assertTrue(entry["url"].startswith("https://github.com/CamjamPNG/Nightfall/releases/"))
 
     def test_manifest_is_valid_json_that_round_trips(self):
-        manifest = packaging.release_manifest(VERSION, CODE, apks())
+        manifest = packaging.release_manifest(VERSION, CODE, apks(), log=log())
         text = json.dumps(manifest, indent=2)
         self.assertEqual(json.loads(text), manifest)
         self.assertNotIn("http://", text)
@@ -78,12 +149,12 @@ class ReleaseManifestTest(unittest.TestCase):
             with self.subTest(label=label), self.assertRaises(ValueError):
                 packaging.release_manifest(VERSION, CODE, mutate(apks()))
         with self.assertRaises(ValueError):
-            packaging.release_manifest("1.0-beta", CODE, apks())
+            packaging.release_manifest("1.0-beta", CODE, apks(), log=log())
         with self.assertRaises(ValueError):
-            packaging.release_manifest(VERSION, 0, apks())
+            packaging.release_manifest(VERSION, 0, apks(), log=log())
 
     def test_source_tag_and_published_manifest_agree(self):
-        manifest = packaging.release_manifest(VERSION, CODE, apks())
+        manifest = packaging.release_manifest(VERSION, CODE, apks(), log=log())
         for entry in manifest["apks"]:
             self.assertEqual(entry["file"], f"Nightfall-{manifest['versionName']}-{entry['abi']}.apk")
             self.assertIn(entry["abi"], {"universal", *packaging.ABIS})
