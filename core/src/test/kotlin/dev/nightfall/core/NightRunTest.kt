@@ -45,7 +45,9 @@ class NightRunTest {
         timer.start(0, sleepAfterMs.toLong(), fadeMs)
 
         val allocations = ManagementFactory.getThreadMXBean() as com.sun.management.ThreadMXBean
-        val tid = Thread.currentThread().threadId()
+        // `Thread.id` rather than `threadId()`: CI compiles this on JDK 17, where the latter does not
+        // exist, and a warning about the deprecated name is cheaper than a broken gate.
+        @Suppress("DEPRECATION") val tid = Thread.currentThread().id
         var sliceStart = 0L
         var sliceBlocks = 0L
         var sliceDirty = false
@@ -54,9 +56,9 @@ class NightRunTest {
         var allocatedPerBlock = 0.0
 
         val hourlyLufs = FloatArray(hours + 1)
-        // Five seconds of the mixer that has been running all night, captured live: a fresh mixer's
-        // first seconds would measure the same thing at hour seven as at hour one, which is the one
-        // question this test exists to answer.
+        // A minute of the mixer that has been running all night, captured live: a fresh mixer's first
+        // seconds would measure the same thing at hour seven as at hour one, which is the one question
+        // this test exists to answer.
         val capture = FloatArray(rate * CAPTURE_SECONDS)
         var captureAt = 0
         var captureHour = -1
@@ -218,7 +220,6 @@ class NightRunTest {
         /** Allocation is checked in slices of this many blocks once the warm-up is done. */
         const val SLICE_BLOCKS = 1_000L
 
-        /** Seconds of the running mixer kept for the hourly level, taken from its own output. */
         /** Seconds of the running mixer kept for the hourly level: short windows of rain vary by LU. */
         const val CAPTURE_SECONDS = 60
     }
