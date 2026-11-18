@@ -65,7 +65,7 @@ class AudioAcceptanceTest {
 
     @Test
     fun entireAvailableCatalogHasRealAudibleOutput() {
-        val assetRoot = File("../app/src/main/assets/audio")
+        val assetRoot = File("../app/src/pcm/assets/audio")
         val recordingLoader: (String) -> SampleData? = { id ->
             val file = File(assetRoot, "$id.pcm")
             if (!file.exists()) null
@@ -92,7 +92,7 @@ class AudioAcceptanceTest {
     @Test
     fun noBundledRecordingLoopsBeforeThreeMinutes() {
         for (sound in Library.all.filter { it.kind == "recording" }) {
-            val file = File("../app/src/main/assets/audio/${sound.asset}.pcm")
+            val file = File("../app/src/pcm/assets/audio/${sound.asset}.pcm")
             assertTrue("Missing ${sound.id}", file.exists())
             assertTrue(
                 "Short loop: ${sound.id}",

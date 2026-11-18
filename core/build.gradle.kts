@@ -15,3 +15,12 @@ dependencies {
     implementation(libs.serialization)
     testImplementation(libs.junit)
 }
+
+tasks.withType<Test>().configureEach {
+    useJUnit {
+        // The eight-hour night render takes about two minutes on its own. It always runs in CI, which
+        // is where the build gate lives; a local run can skip it with -PwithoutNight.
+        if (providers.gradleProperty("withoutNight").isPresent)
+            excludeCategories("dev.nightfall.core.Night")
+    }
+}

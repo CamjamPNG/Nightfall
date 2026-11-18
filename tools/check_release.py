@@ -4,6 +4,7 @@
 import argparse, hashlib, json, pathlib, re, struct, subprocess, sys, zipfile
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'tools'))
+import nfop  # noqa: E402  the container is shared with the encoder, so the checks cannot drift apart
 from release_artifact import NETWORK_PERMISSIONS, apk_manifest, build_tools, declares, fdroid_asset_name, fdroid_violation, universal_abis, updater_entry_points, updater_symbols
 p=argparse.ArgumentParser()
 p.add_argument('--apk',type=pathlib.Path,help='GitHub-channel APK, the one published for updates')
@@ -86,19 +87,39 @@ require('REQUEST_INSTALL_PACKAGES' not in [line for line in fdroid_flavor.splitl
 require('INTERNET' not in [line for line in fdroid_flavor.splitlines() if 'tools:node="remove"' not in line][0].replace('<uses-permission android:name="android.permission.INTERNET" />',''),'F-Droid channel must not request internet')
 assets=json.loads((ROOT/'docs/audio-credits.json').read_text())
 for a in assets:
-    file=ROOT/f'app/src/main/assets/audio/{a["id"]}.pcm'
-    require(file.exists(),'Missing recording: '+a['id'])
-    require(digest(file)==a['sha256'],'Recording checksum mismatch: '+a['id'])
-    require(file.stat().st_size/48000-1>=180,'Recording repeats before three minutes: '+a['id'])
+    file=ROOT/f'app/src/pcm/assets/audio/{a["id"]}.pcm'
+    encoded=ROOT/f'app/src/opus/assets/audio/{a["id"]}.nfop'
+    require(file.exists() or encoded.exists(),'Missing recording: '+a['id'])
     require(file.with_suffix('.pcm.license').exists(),'Missing asset license sidecar: '+a['id'])
+    if file.exists():
+        require(digest(file)==a['sha256'],'Recording checksum mismatch: '+a['id'])
+        require(file.stat().st_size/48000-1>=180,'Recording repeats before three minutes: '+a['id'])
+    if encoded.exists():
+        # The encoded variant is a second bundled kind, not a replacement: it must carry the same
+        # three-minute promise, and its packet table must agree with its own header.
+        seconds=nfop.verify(encoded)['seconds']
+        require(seconds-1>=180,'Encoded recording repeats before three minutes: '+a['id'])
     if args.apk:
         with zipfile.ZipFile(args.apk) as z:
-            entry=z.getinfo(f'assets/audio/{a["id"]}.pcm')
-            require(entry.compress_type==zipfile.ZIP_STORED,'PCM must remain uncompressed for memory mapping')
-            h=hashlib.sha256()
-            with z.open(entry) as f:
-                while chunk:=f.read(1024*1024):h.update(chunk)
-            require(h.hexdigest()==a['sha256'],'APK recording mismatch: '+a['id'])
+            names=set(z.namelist())
+            pcm=f'assets/audio/{a["id"]}.pcm'
+            pack=f'assets/audio/{a["id"]}.nfop'
+            require(pcm in names or pack in names,'APK is missing its recording: '+a['id'])
+            require(pcm not in names or pack not in names,'APK carries both PCM and Opus for '+a['id'])
+            if pcm in names:
+                entry=z.getinfo(pcm)
+                require(entry.compress_type==zipfile.ZIP_STORED,'PCM must remain uncompressed for memory mapping')
+                h=hashlib.sha256()
+                with z.open(entry) as f:
+                    while chunk:=f.read(1024*1024):h.update(chunk)
+                require(h.hexdigest()==a['sha256'],'APK recording mismatch: '+a['id'])
+            else:
+                # Validate the container that is actually in the APK, not the one in the checkout:
+                # a stale or truncated entry must fail here rather than at playback.
+                payload=z.read(pack)
+                seconds=nfop.verify_bytes(payload)['seconds']
+                require(seconds-1>=180,'APK encoded recording repeats before three minutes: '+a['id'])
+                require(hashlib.sha256(payload).hexdigest()==digest(encoded),'APK encoded recording differs from its source: '+a['id'])
 require('not a license condition' in (ROOT/'COMMERCIAL_COURTESY.md').read_text(),'Commercial request must remain voluntary')
 if args.fdroid_apk:
     violation=fdroid_violation(args.fdroid_apk)

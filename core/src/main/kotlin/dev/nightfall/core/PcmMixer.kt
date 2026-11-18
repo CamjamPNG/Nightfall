@@ -58,6 +58,7 @@ class PcmMixer(
         get() = active.count { !it.removed }
 
     fun reset() {
+        active.forEach { it.source.close() }
         channels.clear()
         active.clear()
         master = 0f
@@ -147,6 +148,7 @@ class PcmMixer(
             if (ch.removed && ch.life <= 0f) {
                 active.removeAt(index)
                 channels.remove(c.id)
+                ch.source.close()
                 continue
             }
             index++
@@ -158,6 +160,7 @@ class PcmMixer(
                 if (ch.removed) {
                     active.removeAt(--index)
                     channels.remove(c.id)
+                    ch.source.close()
                 }
                 continue
             }

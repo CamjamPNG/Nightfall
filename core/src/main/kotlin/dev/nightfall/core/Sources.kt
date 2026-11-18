@@ -24,6 +24,12 @@ interface Source {
     var eventEnergy: Float
 
     fun render(left: FloatArray, right: FloatArray, frames: Int, layer: Layer, settings: Settings)
+
+    /**
+     * Called once when the mixer prunes this source. It must not wait: it runs on the mixing thread, so
+     * anything a decoded source owns releases itself on that source's own worker.
+     */
+    fun close() {}
 }
 
 object Wave {
@@ -297,6 +303,18 @@ interface SampleData {
     operator fun get(index: Int): Float
 }
 
+/**
+ * Sample data that is decoded rather than memory mapped, so it can serve one read head per cursor.
+ * [unavailable] is set when the platform cannot decode the material: the layer reports it instead of
+ * quietly contributing silence.
+ */
+interface DecodedSampleData : SampleData {
+    /** An independent forward cursor with [seconds] of room ahead of its head. */
+    fun cursor(seconds: Double = 4.0): SampleData
+
+    val unavailable: String?
+}
+
 class Pcm16Data(buffer: java.nio.ByteBuffer) : SampleData {
     private val data = buffer.order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer()
     override val size = data.limit()
@@ -327,7 +345,18 @@ class RecordingSource(private val rate: Int, private val samples: SampleData, se
     private class Head {
         var position = 0.0
         var wrap = 0
+        var reader: SampleData? = null
+
+        /** The crossfade into the file's first second reads far behind [reader], so it gets its own. */
+        var origin: SampleData? = null
     }
+
+    /** Why this recording cannot be decoded, if it cannot; the host reports it to the user. */
+    val unavailable: String?
+        get() = (samples as? DecodedSampleData)?.unavailable
+
+    /** The cursors this source opened, so a pruned layer releases its decoders with it. */
+    private val opened = ArrayList<SampleData>()
 
     private val rng = RandomStream(seed or 1L)
 
@@ -346,6 +375,16 @@ class RecordingSource(private val rate: Int, private val samples: SampleData, se
     override var eventEnergy = 0f
 
     init {
+        // A decoded recording hands out one forward cursor per head; PCM serves both heads itself.
+        if (samples is DecodedSampleData)
+            heads.forEach {
+                val reader = samples.cursor()
+                val origin = samples.cursor(1.0)
+                opened += reader
+                opened += origin
+                it.reader = reader
+                it.origin = origin
+            }
         val start = (seed.ushr(1) % max(1, samples.size / 3)).toInt()
         heads[0].position = start.toDouble()
         heads[1].position =
@@ -353,6 +392,11 @@ class RecordingSource(private val rate: Int, private val samples: SampleData, se
                 .toDouble()
         heads.forEach { it.wrap = samples.size - OVERLAP - rng.index(max(1, wrapJitter)) }
         balanceCountdown = rate * (6 + rng.index(18))
+    }
+
+    override fun close() {
+        opened.forEach { (it as? CloseableSample)?.close() }
+        opened.clear()
     }
 
     companion object {
@@ -371,18 +415,19 @@ class RecordingSource(private val rate: Int, private val samples: SampleData, se
             (samples - OVERLAP - wrapJitter(samples)) / 24000.0
     }
 
-    private fun read(position: Double): Float {
-        val p = position.toInt().coerceIn(0, samples.size - 1)
+    private fun read(position: Double, reader: SampleData?): Float {
+        val data = reader ?: samples
+        val p = position.toInt().coerceIn(0, data.size - 1)
         val fraction = (position - p).toFloat()
-        return samples[p] * (1 - fraction) + samples[min(p + 1, samples.size - 1)] * fraction
+        return data[p] * (1 - fraction) + data[min(p + 1, data.size - 1)] * fraction
     }
 
     /** One head's sample, crossfading into its own start over the last second before it wraps. */
     private fun sample(head: Head): Float {
-        var v = read(head.position)
+        var v = read(head.position, head.reader)
         if (head.position >= head.wrap) {
             val x = ((head.position - head.wrap) / OVERLAP).toFloat().coerceAtMost(1f)
-            v = v * (1 - x) + read(head.position - head.wrap) * x
+            v = v * (1 - x) + read(head.position - head.wrap, head.origin) * x
         }
         return v
     }
