@@ -29,6 +29,7 @@ def load(name):
 packaging = load("package_release")
 checking = load("check_release")
 versioning = load("release_version")
+artifact = load("release_artifact")
 
 PIN = (packaging.ROOT / "docs/release-signing-certificate.sha256").read_text().strip()
 MANIFEST_KEYS = {"schemaVersion", "versionName", "versionCode", "applicationId", "minSdk", "targetSdk",
@@ -184,7 +185,7 @@ class ChannelTest(unittest.TestCase):
             with zipfile.ZipFile(fdroid_apk, "w") as z:
                 z.writestr("AndroidManifest.xml",
                            b"\x03\x00\x08\x00" + b"android.permission.POST_NOTIFICATIONS" + b"\x00\x00")
-                z.writestr("classes.dex", b"Ldev/nightfall/update/UpdateSupport;")
+                z.writestr("classes.dex", b"Ldev/nightfall/audio/AudioHost;")
             github_apk = folder / "github.apk"
             with zipfile.ZipFile(github_apk, "w") as z:
                 z.writestr("AndroidManifest.xml",
@@ -200,6 +201,31 @@ class ChannelTest(unittest.TestCase):
             for permission in checking.NETWORK_PERMISSIONS:
                 self.assertTrue(checking.declares(binary, permission), permission)
             self.assertIn("dev/nightfall/update/GithubUpdater", checking.updater_symbols(github_apk))
+
+    def test_the_updater_entry_points_are_read_from_the_directory(self):
+        """Every file in the updater package is covered, including the ones no list ever named."""
+        groups = checking.updater_entry_points()
+        written = sorted(path.stem for path in
+                         (checking.ROOT / "app/src/github/java/dev/nightfall/update").glob("*.kt"))
+        self.assertEqual(sorted(groups), written)
+        for name in ("UpdateAutomation", "UpdateLog", "InstallWindow"):
+            self.assertIn(name, groups)
+        for name, markers in groups.items():
+            self.assertTrue(markers, name)
+            for marker in markers:
+                self.assertTrue(marker.startswith("dev/nightfall/update/"), marker)
+            self.assertIn("dev/nightfall/update/" + name, markers)
+
+    def test_the_offline_claim_finds_a_class_no_list_named(self):
+        """A class added to the package is caught without anybody extending a list first."""
+        with tempfile.TemporaryDirectory() as tmp:
+            apk = pathlib.Path(tmp) / "updater.apk"
+            with zipfile.ZipFile(apk, "w") as z:
+                z.writestr("AndroidManifest.xml", b"\x03\x00\x08\x00")
+                z.writestr("classes.dex", b"Ldev/nightfall/update/UpdateAutomation;")
+            violation = artifact.fdroid_violation(apk)
+            self.assertIsNotNone(violation)
+            self.assertIn("UpdateAutomation", violation)
 
     def test_the_recipe_flavour_of_a_block_is_read_exactly(self):
         plain = "  - versionName: '1.0'\n    versionCode: 1\n    gradle:\n      - yes\n"

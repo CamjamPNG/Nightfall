@@ -3,10 +3,39 @@
 """What each published release app must prove, read out of the APK file itself."""
 import os
 import pathlib
+import re
 import zipfile
 
+ROOT = pathlib.Path(__file__).resolve().parents[1]
 NETWORK_PERMISSIONS = ('android.permission.INTERNET', 'android.permission.ACCESS_NETWORK_STATE', 'android.permission.REQUEST_INSTALL_PACKAGES', 'android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION')
-UPDATER_ENTRY_POINTS = ('dev/nightfall/update/GithubUpdater', 'dev/nightfall/update/ReleaseFetch', 'dev/nightfall/update/ReleaseManifestParser', 'dev/nightfall/update/PackageInstalls', 'dev/nightfall/update/UpdateInstallReceiver', 'dev/nightfall/update/CheckThrottle', 'dev/nightfall/update/UpdatePrefs', 'dev/nightfall/update/InstallResults', 'dev/nightfall/update/Apks', 'dev/nightfall/update/UpdatePolicy', 'dev/nightfall/update/ReleaseManifest', 'dev/nightfall/update/UpdateState', 'dev/nightfall/update/UpdateApi', 'dev/nightfall/update/UpdateUi')
+UPDATER_SOURCE = ROOT / 'app/src/github/java/dev/nightfall/update'
+# A top-level type declaration, with the modifiers Kotlin puts in front of one. Nested declarations
+# carry the enclosing class in their dex name, so the enclosing one is what the search needs.
+DECLARATION = re.compile(r'(?m)^\s*(?:@\w+\s+)*(?:public |internal |private |abstract |sealed |open |data |enum |annotation |value |fun )*(?:class|object|interface)\s+([A-Z]\w*)')
+
+
+def updater_entry_points(source=None):
+    """The updater's classes, one group per source file, read from the directory they live in.
+
+    Derived rather than remembered: a class added to the updater package is covered by the F-Droid
+    "no updater code" assertion the day it is written, instead of when somebody notices the list is
+    short. A group is the file's own name plus every type it declares, because the two names prove
+    different halves of one file: R8 keeps type names but may inline and drop a facade class, and a
+    file that declares only top-level functions has no type name of its own to look for.
+    """
+    directory = pathlib.Path(source or UPDATER_SOURCE)
+    files = sorted(directory.glob('*.kt'))
+    if not files: raise ValueError('The updater source is missing: ' + str(directory))
+    groups = {}
+    for path in files:
+        names = dict.fromkeys((path.stem, *DECLARATION.findall(path.read_text(encoding='utf-8'))))
+        groups[path.stem] = tuple('dev/nightfall/update/' + name for name in names)
+    return groups
+
+
+def updater_markers(groups=None):
+    """Every name that proves one of the updater's classes is in a build."""
+    return tuple(sorted({marker for group in (groups or updater_entry_points()).values() for marker in group}))
 
 
 def build_tools():
@@ -33,8 +62,9 @@ def declares(binary_manifest, name):
     return name.encode('utf-8') in binary_manifest or name.encode('utf-16-le') in binary_manifest
 
 
-def updater_symbols(apk, markers=UPDATER_ENTRY_POINTS):
+def updater_symbols(apk, markers=None):
     """The updater's own classes, read out of the dex string tables."""
+    markers = updater_markers() if markers is None else markers
     found = set()
     with zipfile.ZipFile(apk) as z:
         for name in z.namelist():
