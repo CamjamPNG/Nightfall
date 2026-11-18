@@ -116,9 +116,10 @@ interface OpusPackets {
  * [RecordingSource] reads two heads at unrelated offsets and each head also reads the file's first
  * second for its wrap crossfade, so it takes four cursors. Each owns a decoder and a ring buffer of
  * [seconds] of audio, decodes ahead of its head on a worker thread, and restarts its decoder at the
- * packet holding the head when the head wraps. A cursor that nobody reads for [idleMillis] releases its
- * decoder, its ring and its thread, so a removed layer cannot leave codecs behind; [close] does it at
- * once. Nothing here allocates on the audio thread's behalf beyond the ring a parked cursor restores.
+ * packet holding the head when the head wraps. A removed layer must not leave decoders behind, and a
+ * playing cursor must never be the one that pays for it: when cursors exceed [MAX_CURSORS] the one read
+ * longest ago — a retired layer's, since a live one is read every block — is closed, and [close] closes
+ * the rest.
  *
  * [onUnavailable] is called from the worker the moment a decoder cannot be created or a packet decodes
  * to nothing, so the host can report it immediately rather than at the next mix change.
@@ -127,7 +128,6 @@ class OpusRecording(
     private val file: OpusFile,
     private val decoder: (ByteArray) -> OpusPackets?,
     private val seconds: Double = 4.0,
-    private val idleMillis: Long = 30_000,
     private val onUnavailable: ((String) -> Unit)? = null,
 ) : DecodedSampleData {
     private val cursors = ArrayList<OpusCursor>()
@@ -147,10 +147,31 @@ class OpusRecording(
     override fun get(index: Int): Float = cursor()[index]
 
     override fun cursor(seconds: Double): SampleData {
-        val cursor = OpusCursor(file, decoder, if (seconds > 0) seconds else this.seconds, this, idleMillis)
-        synchronized(cursors) { cursors += cursor }
+        val cursor = OpusCursor(file, decoder, if (seconds > 0) seconds else this.seconds, this)
+        synchronized(cursors) {
+            // Only a cursor nobody has read for a while can be a retired layer's: a playing one is read
+            // every block, so it is never the victim and never pays for the release.
+            val now = System.currentTimeMillis()
+            while (cursors.size >= MAX_CURSORS) {
+                val stale =
+                    cursors
+                        .filter { now - it.lastReadAt() >= STALE_MILLIS }
+                        .minByOrNull { it.lastReadAt() } ?: break
+                cursors.remove(stale)
+                stale.close()
+            }
+            cursors += cursor
+        }
         unavailable?.let { cursor.fail(it) }
         return cursor
+    }
+
+    companion object {
+        /** Four cursors per layer, so this holds the current layer and its replacement at once. */
+        const val MAX_CURSORS = 8
+
+        /** How long a cursor must go unread before it can be retired for its decoder. */
+        const val STALE_MILLIS = 1_000L
     }
 
     internal fun report(reason: String) {
@@ -171,7 +192,6 @@ class OpusCursor(
     private val factory: (ByteArray) -> OpusPackets?,
     seconds: Double,
     private val owner: OpusRecording?,
-    private val idleMillis: Long,
 ) : SampleData {
     override val size = file.totalSamples
 
@@ -189,7 +209,6 @@ class OpusCursor(
     private var running = true
     private var lastRead = System.currentTimeMillis()
     private var started = false
-    private var parked = false
 
     @Volatile var stalls = 0
         private set
@@ -218,12 +237,7 @@ class OpusCursor(
         val target = index.coerceIn(0, size - 1)
         synchronized(lock) {
             lastRead = System.currentTimeMillis()
-            val buffer =
-                ring ?: FloatArray(window).also {
-                    ring = it
-                    parked = false
-                    lock.notifyAll()
-                }
+            val buffer = ring ?: FloatArray(window).also { ring = it }
             val deadline = System.nanoTime() + WAIT_NANOS
             while (true) {
                 if (failure != null) return 0f
@@ -263,24 +277,13 @@ class OpusCursor(
 
     private fun full() = next - start >= (ring?.size ?: 1)
 
-    private fun idle() = System.currentTimeMillis() - lastRead >= idleMillis
-
-    /** Releases everything a parked cursor can give back; the next read rebuilds it. */
-    private fun park() {
-        decoder?.close()
-        decoder = null
-        ring = null
-        parked = true
-        start = 0
-        next = 0
-        nextPacket = 0
-        lock.notifyAll()
-    }
+    /** When this cursor was last read, so a recording can retire the least recently used one. */
+    fun lastReadAt(): Long = synchronized(lock) { lastRead }
 
     private fun open(): OpusPackets? {
         synchronized(lock) {
             decoder?.let { return it }
-            if (parked) return null
+            if (failure != null) return null
         }
         val fresh = factory(file.codecConfig)
         if (fresh == null) {
@@ -298,10 +301,11 @@ class OpusCursor(
         while (true) {
             var seek = -1
             synchronized(lock) {
-                while (running && restart < 0 && (parked || full())) {
-                    if (!parked && idle() && full()) park() else lock.wait(20)
-                }
-                if (!running) return
+                // A failure is terminal: the worker exits rather than rebuilding a decoder that cannot
+                // be built, which would spin the core and hammer codec allocation on every iteration.
+                if (failure != null) return
+                while (running && restart < 0 && full()) lock.wait(20)
+                if (!running || failure != null) return
                 if (restart >= 0) {
                     seek = restart
                     restart = -1
@@ -351,12 +355,7 @@ class OpusCursor(
         val step = source.outputRate / file.sampleRate
         val out = if (step <= 1) produced else produced / step
         synchronized(lock) {
-            val buffer =
-                ring ?: FloatArray(window).also {
-                    ring = it
-                    parked = false
-                    lock.notifyAll()
-                }
+            val buffer = ring ?: FloatArray(window).also { ring = it }
             for (i in 0 until out) {
                 var value = decoded[i * step]
                 if (step > 1) {

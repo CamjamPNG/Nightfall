@@ -26,6 +26,10 @@ class AudioHost(private val runtime: NightfallRuntime) {
             .getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Nightfall:audio")
     private val monitor = Object()
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    /** Decoded recordings opened for this host, so their decoders are closed when it goes away. */
+    private val decoded = java.util.concurrent.CopyOnWriteArrayList<OpusRecording>()
     @Volatile private var running = true
     @Volatile private var resetRequested = false
     @Volatile private var playing = false
@@ -325,6 +329,7 @@ class AudioHost(private val runtime: NightfallRuntime) {
     private fun loadRecording(asset: String): SampleData? =
         if (BuildConfig.OPUS_ASSETS)
             OpusAssets.open(context, asset) { reason -> reportDecodeFailure(reason) }
+                ?.also { if (it is OpusRecording) decoded += it }
         else
             context.assets.openFd("audio/$asset.pcm").use { fd ->
                 fd.createInputStream().use { input ->
@@ -344,8 +349,12 @@ class AudioHost(private val runtime: NightfallRuntime) {
      */
     private fun reportDecodeFailure(reason: String) {
         val message = "A bundled recording cannot be decoded on this device ($reason)."
-        if (runtime.status.value.error != message)
-            runtime.status.value = runtime.status.value.copy(error = message)
+        // The main thread owns playback status; a decoder's worker reports through it rather than
+        // writing the state flow itself, which could resurrect a stale copy of `playing`.
+        mainHandler.post {
+            if (runtime.status.value.error != message)
+                runtime.status.value = runtime.status.value.copy(error = message)
+        }
     }
 
     /** A decoder that fails after the mix was built still has to reach the user. */
@@ -358,6 +367,8 @@ class AudioHost(private val runtime: NightfallRuntime) {
 
     fun release() {
         pause(true)
+        decoded.forEach { it.close() }
+        decoded.clear()
         running = false
         synchronized(monitor) { monitor.notifyAll() }
         track?.pause()

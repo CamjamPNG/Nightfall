@@ -201,16 +201,46 @@ class OpusStreamTest {
     }
 
     @Test
-    fun anIdleCursorReleasesItsDecoderAndRing() {
+    fun aRetiredLayerReleasesItsDecodersWithoutTouchingTheLiveOne() {
         val file = container()
         val before = Fake.open.get()
-        val recording = OpusRecording(file, ::decoder, idleMillis = 50)
+        val recording = OpusRecording(file, ::decoder)
+        val live = recording.cursor(4.0)
+        assertEquals(0f, live[0], 0.001f)
+        // Two layers come and go, four cursors each, which is what add-and-remove does. A retired
+        // layer's cursors stop being read, so they are the ones a new layer displaces.
+        repeat(2) {
+            val gone = List(4) { recording.cursor(4.0) }
+            gone.forEach { it[0] }
+            Thread.sleep(1_200)
+            assertEquals(480f, live[480], 0.001f)
+        }
+        assertTrue("decoders are capped rather than accumulated", Fake.open.get() - before <= 8)
+        assertEquals("the live cursor still reads", 480f, live[480], 0.001f)
+        recording.close()
+        Thread.sleep(200)
+        assertEquals("close releases everything", before, Fake.open.get())
+    }
+
+    @Test
+    fun aDecoderThatCannotBeRebuiltStopsTheWorkerInsteadOfSpinning() {
+        val file = container()
+        val builds = AtomicInteger()
+        val recording =
+            OpusRecording(
+                file,
+                { config ->
+                    if (builds.incrementAndGet() > 1) null else decoder(config)
+                },
+            )
         val cursor = recording.cursor(4.0)
         assertEquals(0f, cursor[0], 0.001f)
-        assertTrue(Fake.open.get() > before)
-        Thread.sleep(400)
-        assertEquals("an idle cursor parks its decoder", before, Fake.open.get())
-        assertEquals("and wakes up again on the next read", 0f, cursor[0], 0.001f)
+        cursor[2_000_000]
+        Thread.sleep(250)
+        val attempts = builds.get()
+        Thread.sleep(250)
+        assertEquals("the worker stops after the failure", attempts, builds.get())
+        assertNotNull(recording.unavailable)
         recording.close()
     }
 
