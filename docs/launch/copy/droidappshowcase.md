@@ -70,7 +70,7 @@ Body:
 > - **Sleep timers fade out** rather than cut, and individual layers can stop on their
 >   own schedules.
 > - **MIT licensed**, source is readable, and the audio engine is a Kotlin module with
->   no Android dependency and 68 tests, so the DSP is inspectable rather than hidden.
+>   no Android dependency and 69 tests, so the DSP is inspectable rather than hidden.
 >
 > What it isn't: there is no iOS version, no cloud sync, no widgets, no Android Auto.
 > A physical-device pass (Pixel 7, Bluetooth mask, overnight battery) is still pending

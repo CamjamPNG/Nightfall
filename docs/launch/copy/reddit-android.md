@@ -59,7 +59,7 @@ Body:
 > **How it's built.** A single 48 kHz stereo float mix feeds one `AudioTrack` from one
 > audio-priority thread, in 1024-frame blocks, with a soft limiter at the end. The
 > engine lives in a pure Kotlin module with no Android dependency, so it runs under
-> plain JUnit: 68 tests covering nine simultaneous sources, 512 allocated layers,
+> plain JUnit: 69 tests covering nine simultaneous sources, 512 allocated layers,
 > phase continuity across unrelated sources, limiters, seeded music generation, timer
 > fades, loop seams, spectral slope and click size at layer add/remove.
 >

@@ -37,7 +37,7 @@ worth showing once it exists.
 > layers — noise, weather, seven field recordings, and ambient music generated on the
 > phone. No account, no analytics, no ads. Two builds: the F-Droid one has no network
 > permission at all, the GitHub one's only network use is its own update check.
-> The mixer engine is plain Kotlin with 68 tests, and the README lists what I haven't
+> The mixer engine is plain Kotlin with 69 tests, and the README lists what I haven't
 > verified yet (a real-device overnight pass, mostly).
 > MIT. https://github.com/CamjamPNG/Nightfall
 >

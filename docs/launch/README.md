@@ -36,8 +36,9 @@ closed.
 ## Before you paste anything: two checks
 
 1. **Re-read the numbers against the release you are actually linking.** These drafts
-   name `v1.8.2`, 79 MB, 69 tests, 21 built-in mixes and six APKs, all measured on
-   18 November 2026. `gh release list --limit 1` and
+   name `v1.8.2`, 79 MB, 69 tests and six APKs, all measured on 18 November 2026. No draft
+   quotes a catalogue or preset count; if you add one, take it from the command below
+   rather than from `docs/LAUNCH.md`, which carries figures the posts do not need. `gh release list --limit 1` and
    `gh release view <tag> --json assets` are enough to confirm or correct the version
    and the sizes in under a minute; the catalogue and preset counts come from the
    compiled module:
