@@ -1,0 +1,2 @@
+- feat(update): install new releases on their own, and show what changed (#15)
+- sounds: stop the bundled recordings and the wind repeating on a fixed cycle (#17)

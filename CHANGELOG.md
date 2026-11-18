@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6 — 2026-11-18
+
+- feat(update): install new releases on their own, and show what changed (#15)
+- sounds: stop the bundled recordings and the wind repeating on a fixed cycle (#17)
+
 ## 1.5.2 — 2026-11-18
 
 - fix(build): enable R8 minification and resource shrinking (#16)
