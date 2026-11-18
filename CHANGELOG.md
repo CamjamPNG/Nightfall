@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.9 — 2026-11-18
+
+- docs: correct the public copy against v1.8.2, and the counts that moved (#28)
+- docs: re-measure the launch kit against v1.8.2 and show the real screens (#27)
+- sounds: give every water, wind and winter name its own texture (#25)
+- test: wait on the decoder counters instead of sleeping on them (#26)
+- release: publish both channels' R8 mapping files as release assets (#24)
+- test(release): read the updater entry points from the directory, not a list (#23)
+
 ## 1.8.2 — 2026-11-18
 
 - fix: stop reporting a superseded save as a failed one (#22)
