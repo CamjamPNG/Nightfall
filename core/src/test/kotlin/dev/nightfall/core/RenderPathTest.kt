@@ -68,10 +68,10 @@ class RenderPathTest {
     fun outputHasNoDcOffset() {
         val nine = M.render(Presets.all.last(), 8.0, loader)
         // Measured worst across the catalogue and the nine-layer default: 9.6e-5 (brown noise).
-        assertTrue("mix DC ${M.dcOffset(nine.mono())}", abs(M.dcOffset(nine.mono())) < 1e-3)
+        assertTrue("mix DC ${M.dcOffset(nine)}", abs(M.dcOffset(nine)) < 1e-3)
         for (id in listOf("brown", "red", "black", "pink")) {
             val s = M.render(Mix(layers = listOf(Library.layer(id, .5f, "dc-$id"))), 8.0, loader)
-            assertTrue("$id DC ${M.dcOffset(s.mono())}", abs(M.dcOffset(s.mono())) < 1e-3)
+            assertTrue("$id DC ${M.dcOffset(s)}", abs(M.dcOffset(s)) < 1e-3)
         }
     }
 

@@ -74,7 +74,7 @@ class LoudnessTargetTest {
         // exists for. Measured here so the behaviour is a documented trade, not a surprise.
         for (id in listOf("distant-thunder", "rolling-thunder", "close-thunder")) {
             val s = M.render(Mix(master = 1f, layers = listOf(Library.layer(id, 1f, "storm-$id"))), 30.0, loader)
-            val peak = M.truePeakDb(s.mono())
+            val peak = M.truePeakDb(s)
             val lufs = M.integratedLufs(s)
             println(String.format("%-16s full gain: %.1f dBTP, %.1f LUFS", id, peak, lufs))
             assertTrue("$id peak $peak dBTP", peak <= -1.0)
@@ -86,7 +86,7 @@ class LoudnessTargetTest {
     fun shippedDefaultMixIsInTheSleepBand() {
         val s = M.render(Presets.all.last(), 20.0, loader)
         val st = M.shortTermLufs(s, 3.0)
-        val peak = M.truePeakDb(s.mono())
+        val peak = M.truePeakDb(s)
         println(String.format("default preset: %.1f LUFS, %.1f dBTP", st, peak))
         assertTrue("default preset $st LUFS", st in -26.0..-20.0)
         assertTrue("default preset peak $peak dBTP", peak <= -6.0)
@@ -170,7 +170,7 @@ class LoudnessTargetTest {
             )
         for ((label, mix) in cases) {
             val s = M.render(mix, 12.0, loader)
-            val truePeak = M.truePeakDb(s.mono())
+            val truePeak = M.truePeakDb(s)
             println(String.format("%-34s %.1f dBTP, %.1f LUFS", label, truePeak, M.integratedLufs(s)))
             // Measured worst -1.2 dBTP (nine white layers, the intersample case). -1.0 dBTP leaves
             // 0.2 dB of margin.

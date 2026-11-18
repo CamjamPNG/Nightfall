@@ -37,7 +37,6 @@ class AudioHost(private val runtime: NightfallRuntime) {
     @Volatile private var meterLoad = 0f
     @Volatile private var meterUnderruns = 0
     @Volatile private var meterRemaining = 0L
-    @Volatile private var timerExpired = false
     @Volatile private var failure: String? = null
     private val attributes =
         AudioAttributes.Builder()
@@ -127,10 +126,9 @@ class AudioHost(private val runtime: NightfallRuntime) {
                 timerPaused = runtime.timer.paused,
                 timerFading = runtime.timer.active && runtime.timer.remainingMs(now) == 0L,
             )
-        if (timerExpired) {
-            timerExpired = false
-            runtime.stop()
-        }
+        // Evaluated against the live timer, so a cancel or replacement between the worker's block
+        // and this tick can never stop playback on an obsolete deadline.
+        if (runtime.timer.expired(now)) runtime.stop()
     }
 
     fun play() {
@@ -285,6 +283,10 @@ class AudioHost(private val runtime: NightfallRuntime) {
                                 }
                                 offset += written
                             }
+                            // A dead track must end the worker, not just this block: only exiting
+                            // releases it, and only a released host lets PlaybackService build a
+                            // healthy one for the next Play.
+                            if (failure != null) break
                             // Prefill 64 ms before starting/resuming to absorb cold DSP/JIT work.
                             if (
                                 playing &&
@@ -299,7 +301,6 @@ class AudioHost(private val runtime: NightfallRuntime) {
                                 meterLoad = average
                                 meterUnderruns = output.underrunCount
                                 meterRemaining = runtime.timer.remainingMs(now)
-                                timerExpired = runtime.timer.expired(SystemClock.elapsedRealtime())
                             }
                         }
                     } catch (e: Exception) {

@@ -169,6 +169,14 @@ object M {
         return 20 * log10(peak + 1e-30)
     }
 
+    /** Peak of the louder channel. Stereo noise has independent streams, so averaging cancels it. */
+    fun peakDb(s: Signal) = max(peakDb(s.left), peakDb(s.right))
+
+    /** 4x true peak of the louder channel: the figure a converter and a limiter ceiling care about. */
+    fun truePeakDb(s: Signal) = max(truePeakDb(s.left), truePeakDb(s.right))
+
+    fun dcOffset(s: Signal) = max(abs(dcOffset(s.left)), abs(dcOffset(s.right)))
+
     fun dcOffset(a: FloatArray): Double {
         var s = 0.0
         for (v in a) s += v

@@ -29,7 +29,7 @@ class ProbeMeasurementsTest {
                     "%-8s %8.2f  %10.7f\n",
                     sound.name,
                     slope,
-                    M.dcOffset(s.mono()),
+                    M.dcOffset(s),
                 )
             )
         }

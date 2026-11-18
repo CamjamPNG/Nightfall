@@ -33,8 +33,8 @@ class LoudnessReportTest {
 
     private fun row(label: String, s: M.Signal, seconds: Double): String {
         val rms = M.rmsDb(s.left) - 3.0 // single channel RMS -> per-channel level
-        val peak = M.peakDb(s.mono())
-        val tp = M.truePeakDb(s.mono())
+        val peak = M.peakDb(s)
+        val tp = M.truePeakDb(s)
         val crest = peak - rms
         val st = M.shortTermLufs(s, min(3.0, seconds))
         val il = M.integratedLufs(s)
@@ -47,7 +47,7 @@ class LoudnessReportTest {
             crest,
             st,
             il,
-            M.dcOffset(s.mono()),
+            M.dcOffset(s),
         )
     }
 
@@ -184,8 +184,8 @@ class LoudnessReportTest {
                     "%-34s %8.1f %8.1f %8.1f %8.1f %8.1f %8.2f%%%n",
                     label,
                     M.rmsDb(s.left) - 3,
-                    M.peakDb(mono),
-                    M.truePeakDb(mono),
+                    M.peakDb(s),
+                    M.truePeakDb(s),
                     M.shortTermLufs(s, 3.0),
                     M.integratedLufs(s),
                     atCeiling,

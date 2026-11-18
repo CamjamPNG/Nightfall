@@ -225,19 +225,21 @@ class PcmMixer(
     }
 
     companion object {
-        /** Samples below this pass untouched (-6.4 dBFS): the limiter works on peaks, not the mix. */
-        const val LIMIT_KNEE = .48f
+        /** Samples below this pass untouched (-6.9 dBFS): the limiter works on peaks, not the mix. */
+        const val LIMIT_KNEE = .45f
 
         /**
-         * -5.0 dBFS sample ceiling, which keeps 4x-oversampled true peaks under -1.0 dBTP.
+         * -5.5 dBFS sample ceiling, which keeps 4x-oversampled true peaks under -1.0 dBTP.
          *
          * A memoryless waveshaper cannot see the peak a converter reconstructs between two samples.
-         * White noise measured a 4x true peak 2.4 dB above its own sample peak, and nine white layers
-         * at full gain and full master is the worst case in the catalogue. The 4 dB gap between the
-         * sample ceiling and the -1.0 dBTP limit is that measurement plus margin, which is what a
-         * true-peak guarantee costs without an oversampled lookahead limiter.
+         * Measured on the louder channel rather than the mono downmix, nine white layers at full gain
+         * and full master - the worst case in the catalogue - reach 4.4 dB above the sample ceiling,
+         * because white noise's true peak runs 2.4 dB over its own sample peak and the two channels
+         * hold independent streams. The gap between the sample ceiling and the -1.0 dBTP limit is
+         * that measurement plus margin, which is what a true-peak guarantee costs without an
+         * oversampled lookahead limiter.
          */
-        const val LIMIT_CEILING = .56f
+        const val LIMIT_CEILING = .53f
 
         fun limit(x: Float): Float {
             if (!x.isFinite()) return 0f

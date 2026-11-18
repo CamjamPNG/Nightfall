@@ -8,7 +8,7 @@ import org.junit.Test
 
 /**
  * Generates the trim table in [Levels]. Every catalogue entry is rendered alone at layer gain 1.0 and
- * master 0.5 - six dB below full scale, where no source is near the limiter's knee - and its gated
+ * master 0.25 - twelve dB below full scale, where no source reaches the limiter's knee - and its gated
  * integrated loudness is measured. The trim that would bring it to [Levels.REFERENCE_LUFS] at master
  * 1.0 is printed as a Kotlin map entry.
  *
@@ -39,15 +39,17 @@ class LevelCalibrationTest {
         val trims = LinkedHashMap<String, Float>()
         for (s in Library.all.filter { it.available }) {
             val layer = Library.layer(s.id, 1f, "cal-${s.id}")
-            val signal = M.render(Mix(layers = listOf(layer), master = .5f), secondsFor(s), loader)
-            val lufs = M.integratedLufs(signal) + 6.0 // back to full master
-            val peak = M.truePeakDb(signal.mono())
+            val signal = M.render(Mix(layers = listOf(layer), master = .25f), secondsFor(s), loader)
+            // 12 dB below full master, where nothing reaches the limiter: a storm's transients would
+            // otherwise enter it and their attenuation would be folded into the correction.
+            val lufs = M.integratedLufs(signal) + 12.0
+            val peak = M.truePeakDb(signal)
             // The render already applied the current table; loudness tracks the trim 1:1 below the
             // limiter, so one pass converges instead of compounding.
             val trim = Levels.trimDb(s) + (Levels.REFERENCE_LUFS - lufs)
             val note =
-                if (peak + 6 + trim > 20 * log10(PcmMixer.LIMIT_KNEE.toDouble()))
-                    "crest %.1f dB, peaks into the limiter".format(peak + 6 - lufs)
+                if (peak + 12 + trim > 20 * log10(PcmMixer.LIMIT_KNEE.toDouble()))
+                    "crest %.1f dB, peaks into the limiter".format(peak + 12 - lufs)
                 else ""
             trims[s.id] = trim.toFloat()
             rows.append(
@@ -57,7 +59,7 @@ class LevelCalibrationTest {
                     lufs,
                     peak,
                     Levels.REFERENCE_LUFS - lufs,
-                    peak + 6,
+                    peak + 12,
                     trim,
                     note,
                 )
