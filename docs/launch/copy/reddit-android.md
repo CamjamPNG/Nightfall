@@ -40,7 +40,7 @@ is the Saturday thread, or skip r/Android entirely and take the smaller channels
 
 Suggested title:
 
-> Nightfall: I made an offline sleep-sound mixer that has no INTERNET permission, and the DSP is a testable Kotlin module
+> Nightfall: I made a sleep-sound mixer where playback needs no network at all, and the DSP is a testable Kotlin module
 
 Body:
 
@@ -49,9 +49,11 @@ Body:
 >
 > **The premise.** Sleep audio is the category where developers seem most comfortable
 > shipping something that phones home — account walls, streaming, an analytics SDK, a
-> subscription for a rain loop. So this one doesn't have the permission to do any of
-> that: no `INTERNET` in the manifest, no accounts, no ads, no tracking. Everything is
-> computed on the phone.
+> subscription for a rain loop. Nightfall ships no accounts, no ads and no tracking, and
+> it ships in two builds: the F-Droid one has no updater, no network code and no network
+> permission at all, so it cannot open a socket; the GitHub one adds an opt-in updater
+> that reads the release manifest and installs a newer APK when you tap Update, and that
+> is its only network use. Playback and music generation run entirely on the phone.
 >
 > **How it's built.** A single 48 kHz stereo float mix feeds one `AudioTrack` from one
 > audio-priority thread, in 1024-frame blocks, with a soft limiter at the end. The

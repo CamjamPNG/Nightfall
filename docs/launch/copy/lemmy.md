@@ -39,9 +39,13 @@ Body:
 > I'm the developer of Nightfall, a sleep-sound mixer for Android that I've been
 > building for a few months. Two things make it what it is.
 >
-> **It has no `INTERNET` permission.** Not "works offline" as a marketing line —
-> there is no network code in the source and nothing to phone home with. No account,
-> no analytics, no ads. The whole sound library ships in the APK.
+> **The network is an opt-in, not a feature.** It ships in two builds. The F-Droid
+> build has no updater, no network code and no network permission at all — it cannot
+> open a socket. The build on the Releases page adds an opt-in updater that reads this
+> repository's release manifest and installs a newer APK when you tap Update; that is
+> its only network use, and it never uploads anything. Playback and music generation
+> use no network in either build. No account, no analytics, no ads. The whole sound
+> library ships in the APK.
 >
 > **The engine is a plain Kotlin module.** One 48 kHz stereo float mix, 1024-frame
 > blocks, one audio-priority thread, a soft limiter at the end. It has no Android

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nightfall — an offline sleep sound mixer for Android</title>
-<meta name="description" content="Nightfall is a free Android sleep sound mixer with independent layers, original ambient music and no account, analytics or INTERNET permission. MIT licensed.">
+<meta name="description" content="Nightfall is a free Android sleep sound mixer with independent layers, original ambient music, no account and no analytics. The F-Droid build carries no network permission at all. MIT licensed.">
 <link rel="icon" href="icon.png" type="image/png">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -14,8 +14,9 @@
     <img src="icon.png" alt="" width="72" height="72" class="icon">
     <div>
       <h1>Nightfall</h1>
-      <p class="tagline">An offline sleep sound mixer for Android. Independent layers, original
-      ambient music, no account — and no <code>INTERNET</code> permission to phone home with.</p>
+      <p class="tagline">A sleep sound mixer for Android that works with no network. Independent
+      layers, original ambient music, no account, no analytics — and an F-Droid build with no
+      network permission at all.</p>
     </div>
   </div>
 </header>
@@ -30,10 +31,10 @@
     gain, mute, solo, pan, high- and low-pass filters, three-band EQ and fades, and the layers
     stay independent of each other: soloing rain does not restart the other eight.</p>
 
-    <p>It is a native app — Kotlin and Jetpack Compose, Android 8.0 and later — with one
-    deliberate constraint. Playback, generation, presets and timers need no network. The
-    application declares no <code>INTERNET</code> permission, has no analytics SDK, no
-    advertising, no account and no purchase.</p>
+    <p>It is a native app — Kotlin and Jetpack Compose, Android 8.0 and later — and it ships in
+    two builds that differ in exactly one respect. Playback, generation, presets and timers need
+    no network in either of them, and neither build has an analytics SDK, advertising, an
+    account or a purchase.</p>
 
     <ul class="facts">
       <li><strong>Any number of layers.</strong> There is no fixed cap. The app measures its own
@@ -47,6 +48,10 @@
       layers can stop on their own schedules.</li>
       <li><strong>A testable engine.</strong> The mixer is a Kotlin module with no Android
       dependency and 42 JVM tests, including zero per-block allocation inside the render path.</li>
+      <li><strong>Two builds.</strong> The F-Droid build has no updater, no network code and no
+      network permission — it cannot open a socket. The GitHub build adds an opt-in updater that
+      reads this repository's release manifest and installs a newer APK when you tap Update;
+      that is its only network use, and it never uploads anything.</li>
     </ul>
   </section>
 
@@ -67,9 +72,14 @@
   <section id="install">
     <h2>Install</h2>
     <p>Signed APKs are attached to <a href="https://github.com/CamjamPNG/Nightfall/releases">GitHub
-    Releases</a>. Nightfall is not on Google Play, and it is not in F-Droid or IzzyOnDroid yet:
-    nothing has been submitted to either, so treat any listing you find elsewhere with
-    suspicion.</p>
+    Releases</a>. Every file there is the <strong>GitHub build</strong>: it can update itself, and
+    that is why it asks for <code>INTERNET</code>. The <strong>F-Droid build</strong> — no updater,
+    no network code, no network permission, updates arrive by installing a new APK yourself — is
+    built from the same source and is not attached to a release yet, so there is nothing to
+    download for it today.</p>
+
+    <p>Nightfall is not on Google Play. It is not in F-Droid or IzzyOnDroid either: nothing has
+    been submitted to either, so treat any listing you find elsewhere with suspicion.</p>
 
     <table>
       <caption>Options in the current release (1.2), with what each one costs you.</caption>
@@ -93,9 +103,16 @@
           <td>You do not know which one you need. It contains every architecture.</td>
         </tr>
         <tr>
-          <th scope="row">F-Droid / IzzyOnDroid</th>
+          <th scope="row">F-Droid build</th>
+          <td>~87&nbsp;MB</td>
+          <td>Not attached to a release yet. When it is, choose it if you want the app with no
+          network permission at all; you will update it by installing newer APKs yourself.</td>
+        </tr>
+        <tr>
+          <th scope="row">F-Droid / IzzyOnDroid store</th>
           <td>—</td>
-          <td>Not available. Not submitted, and the size limit is the open question.</td>
+          <td>Not available. Not submitted; the size rule and a stated policy against
+          AI-generated code are both open questions.</td>
         </tr>
       </tbody>
     </table>
@@ -106,11 +123,13 @@
     about 100&nbsp;KB, not hundreds of megabytes. If 87&nbsp;MB is too much, this app is not the
     right tool for you yet — the honest alternatives are smaller and stream their audio.</p>
 
-    <p class="note"><strong>Signatures.</strong> The GitHub APKs are signed with one release
-    certificate, published with the release as
-    <code>nightfall-release-certificate.pem</code>. If Nightfall ever appears in another store,
-    that store's build will carry a different signature and Android will refuse to update across
-    the two, so exporting your presets as JSON before switching is worth the minute.</p>
+    <p class="note"><strong>Signatures.</strong> The APKs are signed with one release certificate,
+    published with each release as <code>nightfall-release-certificate.pem</code>. A store that
+    <em>mirrors</em> that APK — as IzzyOnDroid does — keeps the same signature, and Android will
+    update happily between the two. A store that <em>rebuilds and re-signs</em> the app, as F-Droid
+    does, produces a differently signed install; Android refuses to update across that boundary,
+    so installing one over the other means uninstalling first, and uninstalling deletes your
+    presets. Export them as JSON before switching, and only then if you ever need to.</p>
 
     <p class="note"><strong>Releases are verified, not guaranteed.</strong> Each release ships
     <code>SHA256SUMS.txt</code>; compare it if you want to. Publishing is automated and refuses to
@@ -133,8 +152,16 @@
           <td><code>core/src/test</code>, runs in seconds with <code>./gradlew :core:test</code></td>
         </tr>
         <tr>
-          <td>No <code>INTERNET</code>, <code>RECORD_AUDIO</code> or ad-ID permission</td>
-          <td><code>app/src/main/AndroidManifest.xml</code>; the release script fails if one appears</td>
+          <td>The F-Droid build declares no network or install permission</td>
+          <td><code>app/src/fdroid/AndroidManifest.xml</code> removes <code>INTERNET</code>,
+          <code>ACCESS_NETWORK_STATE</code>, <code>REQUEST_INSTALL_PACKAGES</code> and
+          <code>UPDATE_PACKAGES_WITHOUT_USER_ACTION</code>, and the release script fails the build
+          if either build's permissions drift</td>
+        </tr>
+        <tr>
+          <td>The GitHub build's updater verifies before installing</td>
+          <td>size and SHA-256 against the published manifest, package id, version code, and the
+          same signing certificate as the installed app; nothing installs without a tap</td>
         </tr>
         <tr>
           <td>Every bundled recording cycles for at least 180&nbsp;seconds</td>
@@ -183,13 +210,15 @@
 
   <section id="privacy">
     <h2>Privacy</h2>
-    <p>There is nothing to collect it with. No account, no analytics, no advertising identifier,
-    no usage history, no microphone. Mixes, presets and settings live in the app's private storage
-    and are removed when you uninstall. Export to JSON uses Android's file picker and writes
-    wherever you point it. The
+    <p>There is no account, no analytics, no advertising identifier, no usage history and no
+    microphone. Mixes, presets and settings live in the app's private storage and are removed when
+    you uninstall. Export to JSON uses Android's file picker and writes wherever you point it. The
+    app reads the selected audio route so it can name your output. The only network request
+    anywhere in the product is the GitHub build's update check, which fetches one public file from
+    github.com at most once every six hours while the app is open and sends no identifier,
+    account, device name, app list, listening history or mix data. The
     <a href="https://github.com/CamjamPNG/Nightfall/blob/main/PRIVACY.md">privacy note</a> states
-    all of this in the same words, including what the app does read — the selected audio route,
-    so it can name the output.</p>
+    all of this in the same words.</p>
   </section>
 
   <section id="source">

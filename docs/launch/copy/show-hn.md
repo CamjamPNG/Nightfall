@@ -61,9 +61,19 @@ evaluate is the engine and the testing record, with the APK as an optional extra
   commenter asks about reproducible builds, that is the honest answer including the
   part that doesn't flatter the project.
 - **The size trade-off is real and discussable.** 87 MB, of which 74 MB is
-  uncompressed 16-bit PCM memory-mapped by the mixer, and the release build does not
-  enable R8. HN will find this interesting rather than disqualifying, if it is stated
-  before someone discovers it in the download.
+  uncompressed 16-bit mono 24 kHz PCM memory-mapped by the mixer, and the release
+  build does not enable R8, so 47 MB of the download is unshrunk dex. HN will find
+  this interesting rather than disqualifying, if it is stated before someone
+  discovers it in the download.
+- **The network decision is a design argument, not a slogan.** Two product flavours
+  (`app/src/github`, `app/src/fdroid`): the F-Droid build removes `INTERNET`,
+  `ACCESS_NETWORK_STATE`, `REQUEST_INSTALL_PACKAGES` and
+  `UPDATE_PACKAGES_WITHOUT_USER_ACTION` and compiles a stub instead of the updater;
+  the GitHub build carries a ten-file updater that verifies SHA-256, package id,
+  version code and the installed app's signing certificate before handing an APK to
+  Android's installer. "Remove the capability from the build that does not need it"
+  is the sort of thing this audience argues about productively, and the honest
+  caveat is that the GitHub APK does declare `INTERNET`.
 
 ## The conditions before posting
 

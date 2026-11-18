@@ -36,7 +36,7 @@ established posting history, which is why this channel comes before r/Android.
 
 Suggested title (no editorialising, no invented numbers):
 
-> Nightfall — an offline sleep-sound mixer with independent layers, no account and no INTERNET permission
+> Nightfall — a sleep-sound mixer with independent layers, no account, no analytics and no network permission in the F-Droid build
 
 Body:
 
@@ -53,8 +53,14 @@ Body:
 >
 > Some details I care about:
 >
-> - **No accounts, no analytics, no ads, and no INTERNET permission at all.** Nothing
->   to phone home with. All playback and music generation run on the phone.
+> - **No accounts, no analytics, no ads, no trackers.** All playback and music generation
+>   run on the phone.
+>
+> - **Two builds, and the difference is the network.** The F-Droid build has no updater, no
+  network code and no network permission at all — it cannot open a socket. The build on
+  the Releases page adds an opt-in updater: it reads this repository's release manifest
+  and installs a newer APK when you tap Update, and that is its only network use. It
+  never uploads anything. Playback and music generation use no network in either build.
 > - **No layer cap.** It measures its own render load and warns you when the device is
 >   struggling, rather than refusing a tenth layer.
 > - **Recordings loop for at least three minutes** before repeating, so the loop isn't

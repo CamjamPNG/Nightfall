@@ -32,22 +32,43 @@ release on 18 November 2026. Copy that contradicts it is wrong.
 
 | Fact | Value | Where |
 | --- | --- | --- |
-| Latest release | `v1.2`, versionCode 9, published 2026-11-18 | `gh release list`; `CHANGELOG.md` |
-| Published APK options | five: `arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64`, `universal` | release assets for `v1.2` |
-| `arm64-v8a` size | 91,129,860 bytes (86.9 MiB) | release asset metadata |
-| `universal` size | 91,228,684 bytes (87.0 MiB) | release asset metadata |
+| Latest release | `v1.3`, versionCode 11, published 2026-11-18 | `gh release list`; `app/build.gradle.kts`; `CHANGELOG.md` |
+| Builds | two: `github` (updater, network permission) and `fdroid` (neither) | `app/build.gradle.kts` `flavorDimensions += "channel"` |
+| Published APK options | five, all of them the **`github`** channel: `arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64`, `universal` | `.github/workflows/release.yml` packages `assembleGithubRelease` |
+| `arm64-v8a` size | 91,162,628 bytes (86.9 MiB) | release asset metadata for `v1.3` |
+| `universal` size | 91,261,452 bytes (87.0 MiB) | release asset metadata for `v1.3` |
 | Payload split | 77.45 MB of PCM under `assets/audio`, 47.26 MB of dex, 17 KB of native libs | `unzip -l` of the `arm64-v8a` APK |
 | Audio format | 7 recordings, 16-bit mono, 24 kHz, cycles 180.5–240 s, resampled into the 48 kHz mix | `Sources.kt:299` (`RecordingSource`); `docs/audio-credits.json` |
-| Permissions | no `INTERNET`, no `RECORD_AUDIO`; background service, notifications, wake lock — checked on the published `v1.2` APK's manifest, not only in source | `app/src/main/AndroidManifest.xml`; `strings -el` on the APK's `AndroidManifest.xml` |
+| Permissions, `github` | `INTERNET`, `ACCESS_NETWORK_STATE`, `REQUEST_INSTALL_PACKAGES`, `UPDATE_PACKAGES_WITHOUT_USER_ACTION`, plus foreground service, notifications, wake lock — confirmed on the published `v1.3` APK | `app/src/github/AndroidManifest.xml`; `strings -el` on the APK's `AndroidManifest.xml` |
+| Permissions, `fdroid` | the same four network and install permissions are `tools:node="remove"`d; no updater code — **no `fdroid` APK is published**, it is built and checked in CI only | `app/src/fdroid/AndroidManifest.xml`; `tools/check_release.py --fdroid-apk` |
 | Tests | 42 `@Test` in `core/src/test`, no Android dependency | `grep -c @Test`; `docs/TESTING.md` |
 | Licence | MIT code; recordings CC BY / CC BY-SA / CC0 | `LICENSE`, `AUDIO_LICENSES.md` |
 | Not verified | anything on hardware: Pixel 7 pass, Bluetooth, loudness, overnight battery | `docs/TESTING.md` |
+
+### The two builds, in the words the copy has to use
+
+`README.md` and `PRIVACY.md` describe this properly and the launch copy must not
+drift from it. The `github` build replaces itself in place from this repository's
+releases — that update check is its only network use, it is a download and never an
+upload, nothing installs without a tap, and it stores two things locally: when it
+last checked and what the installer said. The `fdroid` build contains no updater, no
+network code and no network permission, and "cannot open a socket"
+(`PRIVACY.md`). Playback, generation, presets and timers never touch the network in
+either build.
+
+What that means for public copy: the sentence "no INTERNET permission" is **true of
+the F-Droid channel and false of every APK on the Releases page**. The honest
+version is "the build you download here can update itself, and that is the only
+thing it uses the network for; the F-Droid build has no network permission at all."
 
 The size is the number that decides two of the channels below, and it is worth
 being precise about why it is 87 MiB. Native libraries are not the cause: all five
 per-ABI APKs are within 100 KB of each other. The payload is 74 MB of uncompressed
 PCM (`noCompress += "pcm"` in `app/build.gradle.kts`, so the mixer can map the
-files) and 47 MB of dex from a release build that sets no `minifyEnabled`.
+files) and 47 MB of dex from a release build that sets no `minifyEnabled`. **The dex
+is the largest non-audio cost and it is unshrunk**: minification is not configured
+today, so no APK in this project is as small as it could be, and any copy that
+implies the download is at its floor is wrong.
 
 ## Channels, with the rule that actually bites
 
@@ -91,7 +112,8 @@ ready-to-paste request. Short version, in the order the blockers matter:
    "Dominant – Most code or content was 'AI'-generated" option. Nightfall's code
    was written largely by AI coding agents under Camden's direction. This is
    Camden's call to make, not a copy problem to be worked around, and the form
-   must not be filed with "None".
+   must not be filed with "None". Both versions of the request are drafted:
+   `docs/launch/izzyondroid-request.md` defaults to the honest disclosure.
 2. **Size.** 30 MB rule of thumb, and the contributing page states plainly: "We
    cannot currently accept APK files over 30 MB." Every published APK is ~87 MiB.
    Per-ABI splits are their usual remedy and are already in place, so they cannot
@@ -101,7 +123,11 @@ ready-to-paste request. Short version, in the order the blockers matter:
    `docs/launch/izzyondroid-request.md` for the measurements and what is left.
 3. **They ship our APK, not their build.** Their FAQ: "App Source — APK provided
    by the app's dev team". Reproducible-build verification is optional trust on
-   top, so our `apksigcopier` gap does not block inclusion.
+   top, so our `apksigcopier` gap does not block inclusion. The catch is *which*
+   APK: every file on our Releases page is the `github` channel, which declares
+   `INTERNET` and carries the updater. A request that points at them ships a
+   self-updater. It has to point at an `fdroid`-channel APK, and **none has ever
+   been published** — CI builds and checks it but does not upload it.
 4. **Submission is a Codeberg issue**, using the `App Inclusion Request` form in
    `IzzyOnDroid/repodata`. That needs a Codeberg account, which only Camden can
    create.
@@ -144,14 +170,15 @@ Each claim is checkable in the repository and each has its limit stated next to 
 
 | Claim | Evidence | What it does not mean |
 | --- | --- | --- |
-| No internet permission in the app | `app/src/main/AndroidManifest.xml`; `tools/check_release.py` fails the release if `INTERNET`, `RECORD_AUDIO` or the ad ID permission appears | Says nothing about your device's other apps |
+| Playback needs no network, in either build | `PRIVACY.md`; the `fdroid` channel removes `INTERNET`, `ACCESS_NETWORK_STATE`, `REQUEST_INSTALL_PACKAGES` and `UPDATE_PACKAGES_WITHOUT_USER_ACTION` (`app/src/fdroid/AndroidManifest.xml`), and `tools/check_release.py` fails a release if either channel's permissions drift | The GitHub APK *does* have `INTERNET`, for its own update check; the claim is about playback and about the F-Droid build, not about every download |
+| The update channel is opt-in and bounded | `README.md` "Updates"; `PRIVACY.md`: one manifest read at most every six hours while open, no upload, nothing installed without a tap | It is still a network call from an app whose selling point is not making them |
 | A DSP core with real tests | 42 deterministic JVM tests in `core/src/test/`, free of Android dependencies | Tests prove signal behavior, not that it sounds good to you |
 | No layer-count cap, and measured capacity instead | `MixerTest` no-cap case; the render-budget warning on Home | Your phone has finite CPU; a heavy mix can still underrun |
 | Bundled recordings loop for at least 180 seconds | `docs/audio-credits.json` cycle lengths; enforced by `tools/prepare_audio.py` and `tools/check_release.py` | Long loops are not the same as a well-recorded loop |
 | Synthesis is labeled as synthesis | Catalogue descriptions; "distant household ambience" is declared unavailable rather than faked | Some sounds are interpretations, not recordings of that place |
 | MIT licence, voluntary commercial courtesy | `LICENSE`, `COMMERCIAL_COURTESY.md` | The courtesy request is not a licence condition |
 | Two local release builds are byte-identical | `docs/verification/reproducibility.json`, tag `v1.0.1.2` | Not an independent F-Droid build, and not a signature reproduction |
-| Five per-architecture APKs plus `SHA256SUMS.txt` | release assets for `v1.2` | The APKs are 87 MiB each; the size is the reason two stores said no |
+| Five per-architecture APKs plus `SHA256SUMS.txt` | release assets for `v1.3` | They are all the `github` channel, they are 87 MiB each, and the release dex is not minified |
 
 **Never say:** "clinically proven", "improves sleep quality", "scientifically
 tuned", "500,000 users", "rated 4.8", "bestseller", "tested on hundreds of

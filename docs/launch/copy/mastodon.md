@@ -35,9 +35,10 @@ worth showing once it exists.
 
 > I've been building Nightfall: a sleep-sound mixer for Android with independent
 > layers — noise, weather, seven field recordings, and ambient music generated on the
-> phone. No account, no analytics, and no INTERNET permission at all, so there is
-> nothing to phone home with. The mixer engine is plain Kotlin with 42 tests and the
-> README lists what I haven't verified yet (a real-device overnight pass, mostly).
+> phone. No account, no analytics, no ads. Two builds: the F-Droid one has no network
+> permission at all, the GitHub one's only network use is its opt-in update check.
+> The mixer engine is plain Kotlin with 42 tests, and the README lists what I haven't
+> verified yet (a real-device overnight pass, mostly).
 > MIT. https://github.com/CamjamPNG/Nightfall
 >
 > #FOSS #Android
