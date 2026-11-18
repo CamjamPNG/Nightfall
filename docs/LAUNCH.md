@@ -49,12 +49,18 @@ release on 18 November 2026. Copy that contradicts it is wrong.
 
 `README.md` and `PRIVACY.md` describe this properly and the launch copy must not
 drift from it. The `github` build replaces itself in place from this repository's
-releases — that update check is its only network use, it is a download and never an
-upload, nothing installs without a tap, and it stores two things locally: when it
-last checked and what the installer said. The `fdroid` build contains no updater, no
-network code and no network permission, and "cannot open a socket"
-(`PRIVACY.md`). Playback, generation, presets and timers never touch the network in
-either build.
+releases, and that is its only network use: it is a download and never an upload. The
+details any privacy sentence has to keep, because a summary that drops them is an
+overclaim: it reads one public `release-manifest.json` on its own at most every six
+hours, measured from the last successful answer (`CheckThrottle.INTERVAL_MS`); a
+press of *Check for updates* may ask at any time but never twice within fifteen
+minutes (`CheckThrottle.FLOOR_MS`); tapping *Update* downloads that one APK from the
+release asset, so GitHub sees that request too; GitHub sees the request IP and the
+`Nightfall-Updater` user agent; nothing installs without a tap; and it stores two
+things locally, when it last checked and what the installer reported. There is no
+background worker, alarm or wake-up. The `fdroid` build contains no updater, no
+network code and no network permission, and "cannot open a socket" (`PRIVACY.md`).
+Playback, generation, presets and timers never touch the network in either build.
 
 What that means for public copy: the sentence "no INTERNET permission" is **true of
 the F-Droid channel and false of every APK on the Releases page**. The honest

@@ -213,12 +213,21 @@
     <p>There is no account, no analytics, no advertising identifier, no usage history and no
     microphone. Mixes, presets and settings live in the app's private storage and are removed when
     you uninstall. Export to JSON uses Android's file picker and writes wherever you point it. The
-    app reads the selected audio route so it can name your output. The only network request
-    anywhere in the product is the GitHub build's update check, which fetches one public file from
-    github.com at most once every six hours while the app is open and sends no identifier,
-    account, device name, app list, listening history or mix data. The
-    <a href="https://github.com/CamjamPNG/Nightfall/blob/main/PRIVACY.md">privacy note</a> states
-    all of this in the same words.</p>
+    app reads the selected audio route so it can name your output.</p>
+
+    <p>The GitHub build's updater is the only network code in the product, and it is a download,
+    never an upload. It reads one public file, <code>release-manifest.json</code>, from this
+    repository's latest release: on its own at most once every six hours while the app is open and
+    the device is online — measured from the last successful answer — and when you press
+    <em>Check for updates</em>, never more than once per 15 minutes for any reason. When you tap
+    <em>Update</em> it downloads that one APK, checks its size, SHA-256 and signing certificate
+    against the manifest, and hands it to Android's installer. As with any download, GitHub sees the
+    request's IP address and the user agent <code>Nightfall-Updater</code>; nothing else is sent —
+    no identifier, account, device name, app list, listening history or mix data — and there is no
+    background worker, alarm or wake-up, so an app that is not in the foreground asks nothing. The
+    F-Droid build contains none of this. The
+    <a href="https://github.com/CamjamPNG/Nightfall/blob/main/PRIVACY.md">privacy note</a> is the
+    full statement.</p>
   </section>
 
   <section id="source">
