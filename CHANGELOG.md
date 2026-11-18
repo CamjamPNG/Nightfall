@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.1 — 2026-11-18
+
+- docs: rewrite the README as a front door whose every claim is checkable (#14)
+
 ## 1.5 — 2026-11-18
 
 - feat(release): publish the F-Droid flavour APK beside the update options (#13)

@@ -1,0 +1,1 @@
+- docs: rewrite the README as a front door whose every claim is checkable (#14)
