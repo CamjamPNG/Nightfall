@@ -145,12 +145,15 @@ class ChannelTest(unittest.TestCase):
         text = (packaging.ROOT / "fdroid/metadata/io.github.camjampng.nightfall.yml").read_text()
         blocks = re.split(r"(?m)^  - versionName:", text)[1:]
         self.assertTrue(blocks)
+        verified = 0
         for block in blocks:
             tag = re.search(r"commit:\s*(\S+)", block)[1]
             source = checking.tag_source(tag)
             if source is None:
                 continue
+            verified += 1
             self.assertEqual(checking.selects_fdroid(block), "productFlavors" in source, tag)
+        self.assertGreater(verified, 0, "no release tag could be read, so nothing was verified")
 
     def test_utf16_manifest_strings_are_also_recognised(self):
         self.assertTrue(checking.declares("x".encode() + "android.permission.INTERNET".encode("utf-16-le"),

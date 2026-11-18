@@ -66,7 +66,9 @@ class GithubUpdater(context: Context) : UpdateApi {
             return
         }
         // Only a state without an answer of its own may be replaced by a check nobody asked for.
-        if (current !is UpdateState.Idle && current !is UpdateState.UpToDate) return
+        // A recent-check notice holds no answer, so it passes; the intervals still decide.
+        if (current !is UpdateState.Idle && current !is UpdateState.UpToDate && current !is UpdateState.RecentCheck)
+            return
         check(manual = false)
     }
 

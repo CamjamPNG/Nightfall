@@ -11,7 +11,7 @@ args=p.parse_args()
 def require(condition,message):
     if not condition:raise ValueError(message)
 NETWORK_PERMISSIONS=('android.permission.INTERNET','android.permission.ACCESS_NETWORK_STATE','android.permission.REQUEST_INSTALL_PACKAGES','android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION')
-UPDATER_ENTRY_POINTS=('dev/nightfall/update/GithubUpdater','dev/nightfall/update/ReleaseFetch','dev/nightfall/update/ReleaseManifestParser','dev/nightfall/update/PackageInstalls','dev/nightfall/update/UpdateInstallReceiver')
+UPDATER_ENTRY_POINTS=('dev/nightfall/update/GithubUpdater','dev/nightfall/update/ReleaseFetch','dev/nightfall/update/ReleaseManifestParser','dev/nightfall/update/PackageInstalls','dev/nightfall/update/UpdateInstallReceiver','dev/nightfall/update/CheckThrottle','dev/nightfall/update/UpdatePrefs','dev/nightfall/update/InstallResults','dev/nightfall/update/Apks','dev/nightfall/update/UpdatePolicy','dev/nightfall/update/ReleaseManifest','dev/nightfall/update/UpdateState','dev/nightfall/update/UpdateApi','dev/nightfall/update/UpdateUi')
 def apk_manifest(apk):
     with zipfile.ZipFile(apk) as z:
         return z.read('AndroidManifest.xml')
@@ -75,11 +75,13 @@ def tag_source(tag):
 # A block may select the fdroid flavour only if the tag it pins defines the flavours; a block
 # pinned to a tag from before the split must keep the default build, which has no flavor task.
 # Tags missing from this checkout are left to the release-tool tests, which pin the template.
+checked_tags=[]
 for block in re.split(r'(?m)^  - versionName:', text)[1:]:
     tag = re.search(r'commit:\s*(\S+)', block)
     if not tag: continue
     source = tag_source(tag[1])
     if source is None: continue
+    checked_tags.append(tag[1])
     flavoured = 'productFlavors' in source
     fdroid = selects_fdroid(block)
     if flavoured:
@@ -124,4 +126,4 @@ if args.github_apk or args.apk:
     for permission in NETWORK_PERMISSIONS:
         require(declares(binary,permission),'GitHub APK is missing the updater permission: '+permission)
     require('dev/nightfall/update/GithubUpdater' in updater_symbols(updater_apk),'GitHub APK has no updater code')
-print(json.dumps({'result':'pass','applicationId':appid,'versionName':version,'versionCode':code,'recordings':len(assets),'screenshots':len(shots),'codeLicense':'MIT','commercialCourtesy':'voluntary','apkChecked':str(args.apk) if args.apk else None,'fdroidApkChecked':str(args.fdroid_apk) if args.fdroid_apk else None,'updaterCode':bool(args.github_apk or args.apk)},indent=2))
+print(json.dumps({'result':'pass','applicationId':appid,'versionName':version,'versionCode':code,'recordings':len(assets),'screenshots':len(shots),'codeLicense':'MIT','commercialCourtesy':'voluntary','apkChecked':str(args.apk) if args.apk else None,'fdroidApkChecked':str(args.fdroid_apk) if args.fdroid_apk else None,'updaterCode':bool(args.github_apk or args.apk),'recipeTagsChecked':checked_tags},indent=2))
