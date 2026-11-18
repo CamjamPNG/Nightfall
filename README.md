@@ -126,7 +126,7 @@ it today you build it:
 # app/build/outputs/apk/fdroid/debug/app-fdroid-debug.apk
 ```
 
-CI builds this channel, lints it, and runs the same nine playback-lifecycle scenarios
+CI builds this channel, lints it, and runs the same ten playback-lifecycle scenarios
 against it on every push; `tools/check_release.py --fdroid-apk` asserts from the built
 dex and manifest that no updater class and no network permission survived. Every release
 now carries `Nightfall-<version>-fdroid-universal.apk`: this channel, one universal APK,
@@ -226,11 +226,11 @@ what no one has ever confirmed. All three columns are kept honest in
 | An install the app starts itself never lands in playing audio — refused while playing, refused on an unknown playback fact, allowed only when stopped, and a night that starts in playback ends with exactly one install, at the stop | `UpdateAutomationTest` |
 | Playback that resumes while the APK is being copied never reaches the installer commit; the session is abandoned and the update goes back to waiting | `InstallWindowTest` |
 | Release notes survive a hostile or missing `log` in the manifest without changing a single trust field | `ReleaseManifestParserTest.hostileNotesNeverChangeTheTrustDecision`, `…aManifestWithNoNotesStillUpdates` |
-| Playback survives navigation, activity recreation, backgrounding, audio-focus loss and service teardown | nine Robolectric scenarios in `app/src/test`, run under both channels in CI |
+| Playback survives navigation, activity recreation, backgrounding, audio-focus loss and service teardown | ten Robolectric scenarios in `app/src/test`, run under both channels in CI |
 | The F-Droid APK carries no network permission and none of the fourteen updater classes | `tools/check_release.py --fdroid-apk`, on every push |
 
 How many tests: **42 in `core`** (41 run, plus the opt-in `NIGHTFALL_CALIBRATE=1`
-calibration generator, which is skipped by design), **9 playback-lifecycle scenarios**
+calibration generator, which is skipped by design), **10 playback-lifecycle scenarios**
 that run twice, once per channel, **51 updater tests**, and **48 release-tooling
 tests**. They run on a JVM with no device, no emulator and no network.
 
@@ -243,7 +243,7 @@ tests**. They run on a JVM with no device, no emulator and no network.
 | Two machines building the same tag produce byte-identical APKs | `docs/verification/reproducibility.json` and `docs/FDROID.md` |
 | The F-Droid recipe parses, rewrites to canonical form, lints clean, and its source scanner reports no errors | `docs/verification/fdroid-source-scan.json`, `fdroid-apk-scan.log` |
 | No GMS, Firebase, billing, advertising or tracking SDK is in the resolved dependency graph | `docs/verification/dependency-audit.json` |
-| The APK sizes above, and the 77,449,472 bytes of PCM | release asset records for v1.3.1; `app/src/main/assets/audio` |
+| The APK sizes above, and the 77,449,472 bytes of PCM | release asset records for v1.3.1; `app/src/pcm/assets/audio` |
 
 ### Never checked on hardware
 

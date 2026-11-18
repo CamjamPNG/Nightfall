@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.8.1 — 2026-11-18
+
+- test: prove an eight-hour night through the real render path (#21)
+
+## 1.8 — 2026-11-18
+
+- sounds: add the Opus decode path behind a build flag, off by default (#20)
+
 ## 1.7.1 — 2026-11-18
 
 - test(screenshots): render the real screens to PNGs on the JVM, and make them the store set (#19)

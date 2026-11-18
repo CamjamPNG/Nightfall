@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 """Reproduce offline audio assets with ffmpeg; third-party source licenses are retained."""
-import argparse,concurrent.futures,hashlib,html,json,pathlib,re,subprocess,urllib.request
+import argparse,concurrent.futures,hashlib,html,json,pathlib,re,subprocess,sys,urllib.request
 ROOT=pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/'tools'))
+import nfop  # noqa: E402  the encoder for the container the app reads
 p=argparse.ArgumentParser();p.add_argument('--cache',type=pathlib.Path,default=ROOT/'.audio-cache');args=p.parse_args();args.cache.mkdir(parents=True,exist_ok=True)
-assets=json.loads((ROOT/'docs/audio-sources.json').read_text());out=ROOT/'app/src/main/assets/audio';out.mkdir(parents=True,exist_ok=True)
+assets=json.loads((ROOT/'docs/audio-sources.json').read_text());out=ROOT/'app/src/pcm/assets/audio';out.mkdir(parents=True,exist_ok=True)
 def prepare(asset):
     inputs=[];filters=[]
     for j,s in enumerate(asset['sources']):
@@ -23,7 +25,12 @@ def prepare(asset):
     cycle=dest.stat().st_size/48000-1
     assert cycle>=180,(asset['id'],cycle)
     asset['cycleSeconds']=cycle;asset['sha256']=hashlib.sha256(dest.read_bytes()).hexdigest()
-    print(asset['id'],f'{cycle:.2f} seconds before repeating',flush=True)
+    # The encoded variant ships behind the Opus build flag until the decode path has been heard on a
+    # device. Writing it here keeps a regeneration from silently dropping it, and nfop.verify fails
+    # the run if the container's own duration falls under three minutes.
+    encoded=nfop.encode(dest,ROOT/'app/src/opus/assets/audio'/(asset['id']+'.nfop'))
+    assert nfop.verify(ROOT/'app/src/opus/assets/audio'/(asset['id']+'.nfop'))['seconds']-1>=180
+    print(asset['id'],f'{cycle:.2f} seconds before repeating, {encoded["bytes"]} bytes encoded',flush=True)
     return asset
 with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:assets=list(pool.map(prepare,assets))
 (ROOT/'docs/audio-credits.json').write_text(json.dumps(assets,indent=2))
