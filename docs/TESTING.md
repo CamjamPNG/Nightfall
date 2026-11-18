@@ -8,8 +8,9 @@
   every trust refusal (`UpdatePolicy`), version-name ordering, and the downloader
   against a local socket server (redirect following, progress ordering, a
   response larger than the manifest allows, and a connection that dies mid-file).
-  17 release-tool tests include the manifest generator's schema, URLs and
-  rejection cases, and the F-Droid recipe now selects the `fdroid` flavor.
+  The release-tool suite covers the manifest generator's schema, URLs and
+  rejection cases, and asserts that each F-Droid recipe block selects the flavour
+  its own tag defines.
 - `UpdateChannelStateTest` pins the channel's two pacing rules (a fifteen-minute
   floor for every request, a six-hour interval only for the app's own check, a
   failed attempt never starting that interval, a corrected clock treated as
@@ -26,7 +27,7 @@
   reads `app/build.gradle.kts` at each pinned tag, and the CI job fetches tags so
   that comparison runs instead of being skipped.
 
-- 10 release-tool tests cover all four version levels, ordering and resets,
+- The release-tool suite covers all four version levels, ordering and resets,
   classification of mixed changes, synchronized Android/store/F-Droid metadata,
   rejection of duplicate versions and preservation of code/audio in ABI options.
   Signed APK variants are additionally checked with Android's apksigner, aapt,
