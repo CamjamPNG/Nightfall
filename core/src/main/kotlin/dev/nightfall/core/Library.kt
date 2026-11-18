@@ -155,28 +155,27 @@ object Library {
             .forEachIndexed { i, (n, bright, intensity) ->
                 add(entry(n, "Wind", "wind", i, intensity = intensity, brightness = bright))
             }
-        val water = "Filtered-noise water bed; this variant does not model flowing or falling water"
-        listOf("Ocean waves", "Beaches", "Streams", "Rivers", "Waterfalls", "Lakes")
-            .forEachIndexed { i, n ->
-                add(
-                    entry(
-                        n,
-                        "Nature",
-                        "water",
-                        i,
-                        description =
-                            if (i <= 1) "Filtered-noise surf with a slow swell under the whole family"
-                            else water,
-                    )
-                )
+        listOf(
+                "Ocean waves" to
+                    "Rolling surf: a slow swell, a long low wash and a little spray",
+                "Beaches" to "Wash on sand: a faster swell with more spray than open surf",
+                "Streams" to "Fast shallow water: mostly midband hiss with a quick flutter",
+                "Rivers" to "Wider water moving slowly: a low body with a gentle roll",
+                "Waterfalls" to "Falling water: a heavy low roar under a dense bright spray",
+                "Lakes" to "Still water: a soft low body with ripples barely moving",
+            )
+            .forEachIndexed { i, (n, description) ->
+                add(entry(n, "Nature", "water", i, description = description))
             }
         listOf(
                 Triple("Wind in leaves", .70f, .45f),
                 Triple("Caves", .02f, .40f),
                 Triple("Mountain ambience", .50f, .60f),
             )
+            // Variants 8 to 10: these three shared the first three slots with the breeze, the strong
+            // wind and the pines, which made them nearly the same texture with a different filter.
             .forEachIndexed { i, (n, bright, intensity) ->
-                add(entry(n, "Nature", "wind", i, intensity = intensity, brightness = bright))
+                add(entry(n, "Nature", "wind", i + 8, intensity = intensity, brightness = bright))
             }
         listOf("Campfires" to .25f, "Crackling wood" to .85f).forEachIndexed { i, (n, rate) ->
             add(entry(n, "Nature", "fire", i, eventRate = rate))
@@ -411,7 +410,7 @@ object Presets {
                 .at(.52f),
             p("Space Drift", "440-hz-ambient-music" to .79f, "soft-synth-pads" to .68f).at(.48f),
             p("Airplane Sleep", "airplane-cabin" to .94f, "brown" to .28f).at(.49f),
-            p("Mountain Stream", "rivers" to .80f, "wind-through-pine-trees" to .60f).at(.49f),
+            p("Mountain Stream", "rivers" to .80f, "wind-through-pine-trees" to .60f).at(.53f),
             p("Piano Rain", "soft-piano" to .64f, "rain-on-window" to .74f).at(.50f),
             p("Night Library", "quiet-library" to .59f, "moderate-rain" to .79f).at(.50f),
             p("Midnight Fire", "fireplace" to .79f, "minimalist-piano" to .53f).at(.51f),
@@ -423,8 +422,8 @@ object Presets {
             p("Coffee Shop", "soft-coffee-shop-ambience" to .73f, "quiet-library" to .51f, "distant-city-rain" to .37f)
                 .at(.48f),
             p("Dawn Birds", "forest-birds" to .90f, "wind-in-leaves" to .68f).at(.42f),
-            p("Binaural Drift", "binaural" to .69f, "432-hz-ambient-music" to .79f).at(.48f),
-            p("Piano Only", "soft-piano" to .90f).at(.57f),
+            p("Binaural Drift", "binaural" to .69f, "432-hz-ambient-music" to .79f).at(.46f),
+            p("Piano Only", "soft-piano" to .90f).at(.54f),
             p(
                 "Nine-Layer Dream",
                 "lo-fi-sleep-music" to .45f,

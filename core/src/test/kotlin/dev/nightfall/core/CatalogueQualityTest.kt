@@ -19,17 +19,19 @@ class CatalogueQualityTest {
 
     private val loader = M.assetLoader()
 
-    /**
-     * Entries that intentionally run the same synthesis, and say so in their description: two pairs of
-     * synonyms for one noise spectrum, and one water bed shared by six names.
-     */
+    /** Entries that intentionally run the same synthesis, and say so in their description. */
     private val documentedAliases =
         listOf(
             setOf("brown", "red"),
             setOf("violet", "purple"),
-            setOf("ocean-waves", "beaches"),
-            setOf("streams", "rivers", "waterfalls", "lakes"),
         )
+
+    /**
+     * Pairs of names that are byte-identical on purpose. It was nine while the six water names shared
+     * one texture and three wind names shared their variants; each water and wind name is now its own,
+     * so only the two noise synonyms remain.
+     */
+    private val documentedAliasPairs = 2
 
     private fun documented(a: String, b: String) = documentedAliases.any { a in it && b in it }
 
@@ -64,9 +66,31 @@ class CatalogueQualityTest {
         assertTrue("Undocumented identical entries: $undocumented", undocumented.isEmpty())
         assertEquals(
             "The catalogue changed shape; the identical set must stay documented: $identical",
-            9,
+            documentedAliasPairs,
             identical.size,
         )
+    }
+
+    @Test
+    fun namesInOneFamilyAreNotTheSameTextureBehindADifferentFilter() {
+        // Water, wind and winter names used to share one texture apiece: four water names were
+        // byte-identical and the closest wind pair differed by 0.033.
+        for (family in listOf("water", "wind", "winter")) {
+            val ids = Library.all.filter { it.kind == family }.map { it.id }
+            val rendered = ids.associateWith { CatalogueMetrics.solo(it, 2.0) }
+            var closest = "" to 1.0
+            for (i in ids.indices) {
+                for (j in i + 1 until ids.size) {
+                    val d = CatalogueMetrics.relativeDifference(rendered.getValue(ids[i]), rendered.getValue(ids[j]))
+                    if (d < closest.second) closest = "${ids[i]}~${ids[j]}" to d
+                    assertTrue(
+                        "$family: ${ids[i]} and ${ids[j]} differ by only ${CatalogueMetrics.fmt(d)}",
+                        d >= .1,
+                    )
+                }
+            }
+            println("$family closest pair ${closest.first} ${CatalogueMetrics.fmt(closest.second, 3)}")
+        }
     }
 
     @Test

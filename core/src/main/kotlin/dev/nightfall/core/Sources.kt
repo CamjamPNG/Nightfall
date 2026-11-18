@@ -152,6 +152,7 @@ class EnvironmentSource(
     private var eventPan = 0f
     private var untilEvent = (rate * .5).toInt()
     private var phase = 0.0
+    private var rustlePhase = 0.0
     private var ring = 0f
     private var ringPhase = 0.0
     private var eventDecay = .9999f
@@ -168,8 +169,157 @@ class EnvironmentSource(
         layer: Layer,
         settings: Settings,
     ) {
-        val cutoff =
+        val baseCutoff =
             if (kind == "wind" || kind == "winter") .008f + layer.brightness * .025f else .06f
+        // Each water name is its own bed rather than one shared texture with two slopes: swell rate
+        // and depth, how much of the band is body against hiss, a flutter on top, and a low wash. The
+        // constants are chosen once per block, not per sample, so the loop stays free of branches.
+        val swellRate =
+            when (variant) {
+                0 -> .085
+                1 -> .132
+                2 -> .55
+                3 -> .031
+                4 -> .74
+                5 -> .011
+                else -> .09
+            }
+        val swellDepth =
+            when (variant) {
+                0 -> .62f
+                1 -> .5f
+                2 -> .18f
+                3 -> .42f
+                4 -> .3f
+                5 -> .08f
+                else -> .5f
+            }
+        val body =
+            when (variant) {
+                0 -> 1.25f
+                1 -> .95f
+                2 -> .55f
+                3 -> .68f
+                4 -> 1.5f
+                5 -> .34f
+                else -> 1.2f
+            }
+        val hiss =
+            when (variant) {
+                0 -> .18f
+                1 -> .34f
+                2 -> .42f
+                3 -> .24f
+                4 -> .52f
+                5 -> .1f
+                else -> .2f
+            }
+        val flutterRate =
+            when (variant) {
+                0 -> 3.1
+                1 -> 5.7
+                2 -> 2.3
+                3 -> 1.4
+                4 -> 7.9
+                5 -> 1.1
+                else -> 3.0
+            }
+        val flutterDepth =
+            when (variant) {
+                0 -> .06f
+                1 -> .09f
+                2 -> .16f
+                3 -> .07f
+                4 -> .2f
+                5 -> .03f
+                else -> .06f
+            }
+        // Wind and winter names differ by the band they rustle in, the sub they carry and whether they
+        // whistle, on top of the gust that all of them share.
+        val rustle =
+            when (variant) {
+                0 -> .03f
+                1 -> .2f
+                2 -> .34f
+                3 -> .18f
+                4 -> .08f
+                5 -> .24f
+                6 -> .04f
+                7 -> .42f
+                8 -> .3f
+                9 -> .02f
+                else -> .12f
+            }
+        val rustleRate =
+            when (variant) {
+                0 -> 1.7
+                1 -> .8
+                2 -> 3.3
+                3 -> 2.4
+                4 -> .6
+                5 -> 1.1
+                6 -> .45
+                7 -> 4.1
+                8 -> 2.9
+                else -> 1.5
+            }
+        val whistle =
+            when (variant) {
+                0 -> .0f
+                1 -> .0f
+                2 -> .01f
+                3 -> .004f
+                4 -> .0f
+                5 -> .008f
+                6 -> .0f
+                7 -> .05f
+                8 -> .02f
+                else -> 0f
+            }
+        val sub =
+            when (variant) {
+                4 -> .8f
+                10 -> .95f
+                6 -> .7f
+                0 -> .05f
+                9 -> .6f
+                1 -> .35f
+                else -> .22f
+            }
+        // The band a name lives in, on top of the layer's own brightness: a cabin is muffled, a
+        // howling wind is bright, a cave is dark and long.
+        val tilt =
+            if (kind == "winter")
+                when (variant) {
+                    0 -> 1.15f
+                    1 -> .55f
+                    2 -> .95f
+                    3 -> 1.45f
+                    4 -> 1.05f
+                    5 -> 1.3f
+                    6 -> 1.25f
+                    else -> .65f
+                }
+            else
+                when (variant) {
+                    0 -> .75f
+                    1 -> 1.2f
+                    2 -> 1.05f
+                    3 -> .88f
+                    4 -> .5f
+                    5 -> .8f
+                    6 -> .3f
+                    7 -> 1.5f
+                    8 -> 1.12f
+                    9 -> .26f
+                    else -> .62f
+                }
+        val cutoff = if (kind == "wind" || kind == "winter") baseCutoff * tilt else baseCutoff
+        // Hail and ice crackle: only the winter names that carry ice, and only at their own rate.
+        val hard = kind == "winter" && variant in 3..5
+        val ringChance = (18 + layer.eventRate * 150) / rate
+        // Gentle snowfall is meant to be barely there; everything else in these families sits at one level.
+        val bedAmount = if (kind == "winter") (if (variant == 1) .18f else .8f) else 1f
         val storm = kind == "thunder"
         val thunderInterval = rate * (6f + (1 - layer.eventRate) * 65f)
         val transition =
@@ -244,9 +394,8 @@ class EnvironmentSource(
                     l = (w * .55f + low * .7f) * weight + drop * .4f
                     r = (w2 * .55f + low2 * .7f) * weight + drop * .3f
                 }
-                "winter" -> {
-                    val hard = variant in 3..5
-                    if (hard && rng.unit() < (18 + layer.eventRate * 150) / rate) {
+                "wind", "winter" -> {
+                    if (hard && rng.unit() < ringChance) {
                         ring = .1f + rng.unit() * .3f
                         ringPhase = rng.unit().toDouble()
                     }
@@ -254,24 +403,27 @@ class EnvironmentSource(
                     ringPhase += .09 + variant * .014
                     val hit =
                         ring * Wave.sin(ringPhase) * (if (settings.lowDistraction) .65f else 1f)
-                    val amount = if (variant == 1) .18f else .8f
-                    l = (low * gustLevel * 3f + w * .07f) * amount + hit
-                    r = (low2 * gustLevel * 3f + w2 * .07f) * amount + hit * .65f
-                }
-                "wind" -> {
-                    l = low * gustLevel * 3.2f
-                    r = low2 * gustLevel * 3.2f
-                    if (variant == 7) {
-                        l += Wave.sin(t * (120 + gustLevel * 35)) * .018f * gustLevel
-                        r += Wave.sin(t * (121 + gustLevel * 35)) * .018f * gustLevel
+                    // The rustle's rate and phase ride the same random walk as the gust, so no sine in
+                    // this branch can return on a fixed period across a night. The phase accumulates
+                    // from the current rate rather than multiplying elapsed time by it: a rate that
+                    // moves under a running clock would otherwise sweep the rustle upward all night.
+                    rustlePhase += rustleRate * (.75 + .5 * gustLevel) / rate
+                    if (rustlePhase > 2 * PI) rustlePhase -= 2 * PI
+                    val rustleWave = .5f + .5f * Wave.sin(rustlePhase + gustLevel * 5.3 + variant)
+                    val bed = gustLevel * (1f + rustle * rustleWave) * bedAmount
+                    l = (low * (1f + sub) * bed * 3.2f + (w - low) * rustle * rustleWave * .55f) + hit
+                    r = (low2 * (1f + sub) * bed * 3.2f + (w2 - low2) * rustle * rustleWave * .55f) +
+                        hit * .65f
+                    if (whistle > 0f) {
+                        l += Wave.sin(t * (120 + gustLevel * 35)) * whistle * gustLevel
+                        r += Wave.sin(t * (121 + gustLevel * 35)) * whistle * gustLevel
                     }
                 }
                 "water" -> {
-                    val swell =
-                        if (variant <= 1) .4f + .6f * (.5f + .5f * Wave.sin(t * .09)).pow(2)
-                        else .8f
-                    l = (low * 1.2f + w * .2f) * swell
-                    r = (low2 * 1.2f + w2 * .2f) * swell
+                    val swell = .4f + swellDepth * (.5f + .5f * Wave.sin(t * swellRate)).pow(2)
+                    val flutter = 1f + flutterDepth * Wave.sin(t * flutterRate + variant)
+                    l = (low * body + w * hiss) * swell * flutter
+                    r = (low2 * body + w2 * hiss) * swell * flutter
                 }
                 "clock" -> {
                     val tick = (t % 1.0)
