@@ -36,6 +36,8 @@ def main():
     expected = {"release-manifest.json", "nightfall-release-certificate.pem", "SHA256SUMS.txt"}
     for apk in manifest["apks"]:
         assert apk["file"] == f'Nightfall-{manifest["versionName"]}-{apk["abi"]}.apk'
+        assert apk["url"] == ('https://github.com/CamjamPNG/Nightfall/releases/download/v'
+                              f'{manifest["versionName"]}/{apk["file"]}'), "Manifest download URL is not this release's asset"
         expected.add(apk["file"])
     public_notes = {"release-notes.md"} if (folder / "release-notes.md").exists() else set()
     assert {p.name for p in folder.iterdir()} == expected | public_notes, "Unexpected/missing release files"

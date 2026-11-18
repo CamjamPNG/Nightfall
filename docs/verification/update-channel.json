@@ -1,0 +1,70 @@
+{
+  "change": "in-app updater for the github release channel, two build flavours",
+  "date": "2026-11-18",
+  "build_gate": {
+    "command": "./gradlew :core:test :app:testGithubDebugUnitTest :app:testFdroidDebugUnitTest :app:assembleDebug :app:lintDebug :app:assembleGithubRelease :app:assembleFdroidRelease :app:lintRelease",
+    "result": "BUILD SUCCESSFUL",
+    "tasks": 201,
+    "lint_variants": [
+      "githubDebug",
+      "fdroidDebug",
+      "githubRelease",
+      "fdroidRelease"
+    ],
+    "lint": "zero errors, abortOnError = true"
+  },
+  "tests": {
+    "core": {
+      "count": 18,
+      "failures": 0,
+      "note": "unchanged MixerTest and AudioAcceptanceTest"
+    },
+    "app_unit_github": {
+      "count": 29,
+      "failures": 0,
+      "classes": [
+        "ReleaseManifestParserTest",
+        "UpdatePolicyTest",
+        "ReleaseFetchTest"
+      ],
+      "covers": [
+        "manifest parsing of untrusted documents: wrong types, unknown and duplicate ABIs, non-repository download addresses, oversized input",
+        "every trust refusal: foreign package, downgrade, replay, older version name, foreign certificate digest, low API level, missing architecture",
+        "downloaded APK checks: size, checksum, package, version code, single signer, signer equalling the installed app, native architectures",
+        "version-name ordering across the four-level policy",
+        "downloader against a local socket server: redirect following, monotonic progress, oversized response, connection dying mid-file"
+      ]
+    },
+    "release_tools": {
+      "count": 17,
+      "failures": 0,
+      "note": "includes the manifest generator's schema, URLs and rejection cases"
+    }
+  },
+  "channel_apks": {
+    "github": {
+      "file": "app/build/outputs/apk/github/release/app-github-release-unsigned.apk",
+      "permissions_added": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.REQUEST_INSTALL_PACKAGES",
+        "android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION"
+      ],
+      "updater_code": "present"
+    },
+    "fdroid": {
+      "file": "app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk",
+      "network_permissions": [],
+      "source_urls": "none",
+      "updater_code": "absent (no GithubUpdater, ReleaseFetch, ReleaseManifestParser, PackageInstalls or UpdateInstallReceiver in any dex)"
+    }
+  },
+  "not_verified": [
+    "PackageInstaller install path on a device or emulator: this machine has no /dev/kvm",
+    "STATUS_PENDING_USER_ACTION confirmation dialog and the post-install restart",
+    "the 'install unknown apps' screen",
+    "a download of a real published release from GitHub (tests use a local HTTP server)",
+    "behaviour behind captive portals, proxies or per-OEM installer prompts",
+    "the settings banner and row rendered on a screen; no emulator is available"
+  ]
+}

@@ -10,6 +10,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.AndroidViewModel
 import dev.nightfall.core.*
+import dev.nightfall.update.UpdateApi
+import dev.nightfall.update.UpdateSupport
 import java.util.UUID
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -19,6 +21,9 @@ private val Context.dataStore by preferencesDataStore("nightfall")
 class NightfallApp : Application() {
     lateinit var runtime: NightfallRuntime
         private set
+
+    /** The update channel for this build: the GitHub updater, or the F-Droid build's inert one. */
+    val updates: UpdateApi by lazy { UpdateSupport.of(this) }
 
     override fun onCreate() {
         super.onCreate()
@@ -197,4 +202,5 @@ class NightfallViewModel(app: Application) : AndroidViewModel(app) {
     val runtime = (app as NightfallApp).runtime
     val saved = runtime.saved
     val status = runtime.status
+    val updates = (app as NightfallApp).updates
 }

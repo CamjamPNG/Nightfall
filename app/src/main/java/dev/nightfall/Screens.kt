@@ -18,6 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.nightfall.core.*
+import dev.nightfall.update.UpdateSettings
+import dev.nightfall.update.rememberUpdateApi
 import kotlin.math.roundToInt
 
 @Composable
@@ -628,6 +630,7 @@ fun SettingsScreen(
     onCredits: () -> Unit,
 ) {
     val s = saved.settings
+    val updates = rememberUpdateApi()
     LazyColumn(
         contentPadding = PaddingValues(22.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -715,6 +718,8 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        item { SectionLabel("Updates") }
+        item { UpdateSettings(updates) }
         item { SectionLabel("Your data & audio") }
         item {
             Text(
@@ -735,7 +740,7 @@ fun SettingsScreen(
         }
         item {
             Text(
-                "Nightfall 1.0\nFree forever. A small space for a quieter night.",
+                "Nightfall ${updates.installedVersion}\nFree forever. A small space for a quieter night.",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(vertical = 20.dp),
