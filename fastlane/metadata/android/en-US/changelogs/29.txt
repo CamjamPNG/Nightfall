@@ -1,0 +1,1 @@
+- feat: add the hidden, opt-in diagnostics journal (#37)

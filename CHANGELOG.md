@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.10 — 2026-11-19
+
+- feat: add the hidden, opt-in diagnostics journal (#37)
+
 ## 1.9.5 — 2026-11-19
 
 - fix: give the two counts that can be one a plural form (#34)
