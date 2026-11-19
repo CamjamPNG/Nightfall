@@ -107,13 +107,14 @@
   rejection of duplicate versions and preservation of code/audio in ABI options.
   Signed APK variants are additionally checked with Android's apksigner, aapt,
   zipalign and source-tag audio hashes before publication.
-- 97 deterministic JVM/core tests pass (96 executed, 1 skipped by design: the
+- 98 deterministic JVM/core tests pass (97 executed, 1 skipped by design: the
   opt-in `NIGHTFALL_CALIBRATE=1` level-calibration generator). Two of them render
   a whole eight-hour night through the real render path. They cover nine
   simultaneous non-silent sources, 512 allocated layers, unrelated-source phase
   continuity, independent gain/master/mute/solo, limiting, colored-noise
   behavior, musical tuning/seeds, local-state serialization, timers and fades,
-  plus the loudness ledger and per-source level calibration, true-peak ceiling,
+  plus the loudness ledger and per-source level calibration, which re-measures every
+  catalogue entry and fails when a stored trim has drifted from it, true-peak ceiling,
   zero per-block allocation, click size at layer add/remove, loop seams on the
   bundled recordings, spectral slope, DC offset and tuning in cents.
 - Endless night is measured rather than described. Its schedule is a function of rendered frames, so
