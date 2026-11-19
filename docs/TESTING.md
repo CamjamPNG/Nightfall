@@ -107,7 +107,7 @@
   rejection of duplicate versions and preservation of code/audio in ABI options.
   Signed APK variants are additionally checked with Android's apksigner, aapt,
   zipalign and source-tag audio hashes before publication.
-- 97 deterministic JVM/core tests pass (96 executed, 1 skipped by design: the
+- 93 deterministic JVM/core tests pass (92 executed, 1 skipped by design: the
   opt-in `NIGHTFALL_CALIBRATE=1` level-calibration generator). Two of them render
   a whole eight-hour night through the real render path. They cover nine
   simultaneous non-silent sources, 512 allocated layers, unrelated-source phase
