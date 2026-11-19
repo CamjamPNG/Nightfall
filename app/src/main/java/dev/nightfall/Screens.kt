@@ -21,6 +21,7 @@ import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import dev.nightfall.core.*
+import dev.nightfall.diagnostics.DiagnosticsSurface
 import dev.nightfall.update.UpdateSettingsSection
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
@@ -869,13 +870,19 @@ fun SettingsScreen(
             }
         }
         item {
-            Text(
-                stringResource(R.string.settings_about, appTitle),
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(vertical = 20.dp),
-                lineHeight = 22.sp,
-            )
+            val about = stringResource(R.string.settings_about, appTitle)
+            Column {
+                // The version row. It still reads as the app's name and version; five taps inside
+                // three seconds reveal the diagnostics section below it, and nothing hints at that.
+                Text(
+                    about,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = DiagnosticsSurface.VersionTap(Modifier.padding(vertical = 20.dp)),
+                    lineHeight = 22.sp,
+                )
+                DiagnosticsSurface.Section()
+            }
         }
     }
 }

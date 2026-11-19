@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.nightfall.diagnostics.DiagnosticsSurface
 import dev.nightfall.update.UpdateForegroundEffect
 import dev.nightfall.update.UpdateOverlay
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -40,6 +41,7 @@ class MainActivity : ComponentActivity() {
             // needs, and collecting the whole status here would invalidate the screen beside it.
             val playing = remember(vm) { vm.status.map { it.playing }.distinctUntilChanged() }
             NightfallTheme(saved.settings.light) {
+                DiagnosticsSurface.Host(vm.runtime)
                 Box(Modifier.fillMaxSize()) {
                     NightfallScreen(vm)
                     UpdateOverlay(Modifier.align(Alignment.TopCenter).statusBarsPadding())
