@@ -92,7 +92,7 @@ This is the command a change has to survive, and the same one CI runs in
 ./gradlew :core:test :app:assembleDebug :app:lintDebug
 ```
 
-- `:core:test` — the 69 deterministic JVM tests (68 run; one calibration generator is
+- `:core:test` — the 73 deterministic JVM tests (72 run; one calibration generator is
   opt-in): nine simultaneous sources,
   independent gain/mute/solo, phase continuity when layers are added or removed,
   limiting, colored-noise spectra, musical tuning, timers and fades, JSON
@@ -163,9 +163,10 @@ persistence, say plainly in the PR what you ran on a device and what you did not
 | Path | What lives there |
 | --- | --- |
 | `core/src/main/kotlin/dev/nightfall/core/` | Android-free DSP: `Library.kt` catalogue, `Sources.kt` renderers, `MusicSource.kt`, `PcmMixer.kt`, `Models.kt` state and JSON |
-| `core/src/test/kotlin/` | The 69 JVM tests (68 run; one calibration generator is opt-in) |
+| `core/src/test/kotlin/` | The 73 JVM tests (72 run; one calibration generator is opt-in) |
 | `app/src/main/java/dev/nightfall/` | Compose UI, `AudioHost` (the single output stream), `PlaybackService` (Media3), DataStore persistence |
-| `app/src/pcm/assets/audio/` | Bundled 24 kHz mono PCM recordings plus `.pcm.license` sidecars |
+| `app/src/opus/assets/audio/` | Bundled 24 kHz mono Opus containers, one per field recording |
+| `app/src/pcm/assets/audio/` | The raw PCM capture those containers were encoded from plus its `.pcm.license` sidecars: read by the host measurement tests, no longer an asset source, so no build packs it |
 | `docs/` | Architecture, testing record, release process, verification JSON, pinned public certificate |
 | `tools/` | Release and audio tooling (Python, stdlib only) |
 | `fdroid/` | Prepared F-Droid recipe and submission notes |
@@ -258,8 +259,10 @@ else's licence.
 4. Register the sound in `Library.kt` with `kind = "recording"` and `asset = "<id>"`.
 5. `python3 tools/check_release.py` verifies that every credited recording exists,
    matches its hash, cycles for at least three minutes and has a licence sidecar.
-   It also asserts PCM stays uncompressed in the APK — the assets are memory
-   mapped by `AudioHost`, so `noCompress += "pcm"` must never be removed.
+   It also asserts the release APK carries the `.nfop` container for every
+   recording, that the container inside the APK is the one in the checkout, and
+   that an APK never carries both kinds. `OpusAssetDecodeTest` then decodes each
+   container with an independent Opus decoder in the gate.
 6. Do not reload a full recording into a float array, and do not shorten the loop
    for download size. The three-minute minimum is a stated product property and
    is enforced in three places.

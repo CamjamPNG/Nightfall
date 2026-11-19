@@ -13,12 +13,44 @@ import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
+import nfop  # noqa: E402  the container is the shipped form, so the same rules apply
 import release_artifact  # noqa: E402
 
 ABIS = {"arm64-v8a", "armeabi-v7a", "x86", "x86_64"}
 
 
-def verify_apk(file, abis, version, code, credits, pin, levels):
+def verify_audio(z, credits, revision):
+    """Every recording is present once, as the bytes the tagged source builds.
+
+    A release may carry the containers or, for a tag older than the swap, the raw PCM: the credits'
+    sha256 pins the capture, which only the PCM entry can be compared with, so a container is checked
+    by parsing it and by comparing it with the file at the tagged revision instead.
+    """
+    names = set(z.namelist())
+    for asset in credits:
+        pcm = f'assets/audio/{asset["id"]}.pcm'
+        pack = f'assets/audio/{asset["id"]}.nfop'
+        assert pcm in names or pack in names, "Missing recording: " + asset["id"]
+        assert not (pcm in names and pack in names), "APK carries both PCM and Opus for " + asset["id"]
+        if pcm in names:
+            entry = z.getinfo(pcm)
+            assert entry.compress_type == zipfile.ZIP_STORED and entry.file_size / 48000 - 1 >= 180
+            with z.open(entry) as stream:
+                assert hashlib.file_digest(stream, "sha256").hexdigest() == asset["sha256"], "Audio differs from source tag"
+        else:
+            payload = z.read(pack)
+            try:
+                seconds = nfop.verify_bytes(payload)["seconds"]
+            except Exception:
+                raise AssertionError("Encoded recording is not a valid container: " + asset["id"])
+            assert seconds - 1 >= 180, "Encoded recording repeats before three minutes: " + asset["id"]
+            source = subprocess.check_output(
+                ["git", "show", f'{revision}:app/src/opus/assets/audio/{asset["id"]}.nfop'], cwd=ROOT)
+            assert hashlib.sha256(payload).digest() == hashlib.sha256(source).digest(), (
+                "Encoded recording differs from its source tag: " + asset["id"])
+
+
+def verify_apk(file, abis, version, code, credits, pin, levels, revision):
     """Prove one published APK's signer, alignment, identity, architecture and audio payloads."""
     sdk = release_artifact.build_tools()
     certificate = subprocess.check_output([str(sdk / "apksigner"), "verify", "--verbose", "--print-certs", str(file)], text=True)
@@ -31,11 +63,7 @@ def verify_apk(file, abis, version, code, credits, pin, levels):
         "Wrong SDK levels: " + file.name)
     with zipfile.ZipFile(file) as z:
         assert release_artifact.universal_abis(file) == abis, "Wrong architecture in " + file.name
-        for asset in credits:
-            entry = z.getinfo(f'assets/audio/{asset["id"]}.pcm')
-            assert entry.compress_type == zipfile.ZIP_STORED and entry.file_size / 48000 - 1 >= 180
-            with z.open(entry) as stream:
-                assert hashlib.file_digest(stream, "sha256").hexdigest() == asset["sha256"], "Audio differs from source tag"
+        verify_audio(z, credits, revision)
 
 
 def main():
@@ -99,11 +127,11 @@ def main():
     for apk in manifest["apks"]:
         file = folder / apk["file"]
         assert apk["sha256"] == sums[apk["file"]] and apk["bytes"] == file.stat().st_size
-        verify_apk(file, ABIS if apk["abi"] == "universal" else {apk["abi"]}, version, code, credits, pin, levels)
+        verify_apk(file, ABIS if apk["abi"] == "universal" else {apk["abi"]}, version, code, credits, pin, levels, f"refs/tags/{args.tag}")
         print("Validated", file.name, flush=True)
     if fdroid_asset in expected:
         file = folder / fdroid_asset
-        verify_apk(file, ABIS, version, code, credits, pin, levels)
+        verify_apk(file, ABIS, version, code, credits, pin, levels, f"refs/tags/{args.tag}")
         violation = release_artifact.fdroid_violation(file)
         assert violation is None, "F-Droid asset " + violation
         print("Validated", file.name, "without network permission or updater code", flush=True)

@@ -83,17 +83,22 @@ them, and what they cannot show.
 3. Open the APK on the phone and allow installs from your file manager when Android
    asks.
 
-The `arm64-v8a` APK is **79,190,898 bytes (75.5 MiB)** and the universal one
-**79,289,722 bytes**. That is still a large download, and what is left of it is the
-sound library: 77,449,472 bytes are the recordings shipped as uncompressed PCM (so the
-mixer can memory-map them instead of copying them into RAM), which is 97.8% of the file.
-The code is no longer the problem it was — R8 minification and resource shrinking landed
-in 1.5.2 and cut the dex from 47,367,428 bytes to 2,933,096, which is why the APK fell
-from 91 MB to 79 MB. The remaining route to a much smaller APK is the Opus re-encode of
-the recordings, which exists in the repository behind `-PnightfallOpus=true` and ships
-off by default because it has not been heard on a device yet; the arithmetic is in
-`docs/launch/izzyondroid-request.md`. Until it ships, the size above is real and the
-reduction is not.
+The seven field recordings ship as Opus containers, 10,089,142 bytes for the set
+against 77,449,472 bytes as raw PCM. Measured on one machine at the commit that made
+the swap, the unsigned universal build is **11,662,953 bytes (11.1 MiB)** release and
+**30,374,368 bytes (29.0 MiB)** debug on the `github` channel, and 11,589,077 and
+30,292,276 on `fdroid`. The same builds carrying the PCM were 79,371,423 and
+98,083,910 bytes. The recordings are still most of the download — 10,089,142 bytes of
+11,662,953 — but the number they are most of is now 14.7% of what it was. R8
+minification and resource shrinking, which landed in 1.5.2, are what keep the rest
+small: 2,933,096 bytes of dex in 1.8.2.
+
+**What that switch costs in certainty, stated plainly:** the containers are verified by a
+test that decodes every one of the seven with an independent, conformant Opus decoder,
+so the container layout, packet framing and payload are real Opus and not just bytes our
+own loader agrees with. Nothing has decoded them through Android's own decoder on a
+phone: that binding is untested. If a phone refuses Opus, the app says so when it starts
+rather than playing silence, and every earlier release stays published and installable.
 
 This channel can update itself afterwards, and by default it does: **Update automatically**
 is on, so a newer release is downloaded, verified and installed without a tap. Settings
@@ -239,11 +244,11 @@ what no one has ever confirmed. All three columns are kept honest in
 | The widget's button is inside its own surface and its label is not cut, at one cell and at two, in both themes | `WidgetLayoutTest`, `WidgetRenderTest` (PNGs in `build/screenshots/github`) |
 | The F-Droid APK carries no network permission and no class from the updater package, and the GitHub APK carries code from every updater source file | `tools/check_release.py --fdroid-apk` and `--apk`, on every push |
 
-How many tests: **69 in `core`** (68 run, plus the opt-in `NIGHTFALL_CALIBRATE=1`
+How many tests: **73 in `core`** (72 run, plus the opt-in `NIGHTFALL_CALIBRATE=1`
 calibration generator, which is skipped by design), **33 Robolectric scenarios** in
 `app/src/test` (11 playback-lifecycle, 20 widget, 2 Android 16) that run twice, once
-per channel, **51 updater tests** in
-`app/src/testGithub/java/dev/nightfall/update`, and **53 release-tooling tests**. The
+per channel, plus 3 decoder-fallback tests, **51 updater tests** in
+`app/src/testGithub/java/dev/nightfall/update`, and **66 release-tooling tests**. The
 six render classes in `app/src/testGithub/java/dev/nightfall/render` are not
 updater tests and are not counted there. They all run on a JVM with no device, no
 emulator and no network. Recount them with:
@@ -264,13 +269,15 @@ python3 -m unittest discover -s tools/tests
 | Two machines building the same tag produce byte-identical APKs | `docs/verification/reproducibility.json` and `docs/FDROID.md` |
 | The F-Droid recipe parses, rewrites to canonical form, lints clean, and its source scanner reports no errors | `docs/verification/fdroid-source-scan.json`, `fdroid-apk-scan.log` |
 | No GMS, Firebase, billing, advertising or tracking SDK is in the resolved dependency graph | `docs/verification/dependency-audit.json` |
-| The APK sizes above, and the 77,449,472 bytes of PCM | release asset records for v1.8.2; `app/src/pcm/assets/audio` |
+| The APK sizes above, and the 10,089,142 bytes of Opus containers | `ls -l` and `unzip -l` of the unsigned universal release and debug builds; `app/src/opus/assets/audio`; `OpusAssetDecodeTest` decodes every container with Concentus |
 
 ### Never checked on hardware
 
 | Gap | What is missing |
 | --- | --- |
 | That it sounds good, or that nine layers sound right | No listening test and no acoustic measurement exists; loudness is digital gain, not a sound-pressure claim |
+| That the bundled recordings decode and play on a phone | The containers are verified against a conformant pure-Java Opus decoder in the test suite, which proves the format and says nothing about Android's `MediaCodec` binding to it. No device has decoded one, so the actual sound of all seven is unverified. A platform that refuses Opus is reported when the app starts instead of playing silence |
+| Whether a platform decoder wants initialization data beyond the identification header | The identification header is supplied as `csd-0` when the decoder accepts it and omitted when it does not, so both platform behaviours are handled by construction; no device has exercised either path. The containers carry no OpusTags or codec-delay bytes, because the encoder never produced them, and whether any decoder needs those to emit audio rather than only for gapless metadata is not established. A decoder that accepts a packet and yields nothing ends that read head with a visible "cannot be decoded" message instead of waiting forever |
 | Bluetooth sleep masks and headphones, disconnect and reconnect, media buttons | Never exercised on a real device |
 | An all-night run with the screen off — underruns, battery, OEM task killers | No overnight result exists for any phone |
 | The in-app update actually installing from a published release, unattended or not | `PackageInstaller` sessions and the Android 12+ prompt-free path are described from Android's documentation; the tests drive a local server speaking the same protocol. No install, no automatic restart and no post-install "What's new" has been observed on a phone. Also unverified: the waiting row and the release-log dialog rendered on a screen, the install a play-to-pause transition triggers, the commit-time deferral against Android's real installer, captive portals, proxies, and how each OEM prompts |
@@ -287,8 +294,8 @@ Needs JDK 17 and Android SDK 35 with build-tools 35.0.0. These three commands ar
 documented gate, and CI runs these three plus the rest of the list below.
 
 ```sh
-./gradlew :core:test :app:assembleDebug :app:lintDebug   # 69 core tests, both channels, lint aborts on error
-python3 -m unittest discover -s tools/tests              # 53 release-tooling tests
+./gradlew :core:test :app:assembleDebug :app:lintDebug   # 73 core tests, both channels, lint aborts on error
+python3 -m unittest discover -s tools/tests              # 66 release-tooling tests
 python3 tools/check_release.py                           # store metadata, bundled audio, both channels
 ```
 

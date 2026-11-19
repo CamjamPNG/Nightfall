@@ -326,6 +326,77 @@ class OpusStreamTest {
         println("unavailable: ${recording.unavailable}")
     }
 
+    /**
+     * A read in the final second leaves the ring unable to fill again, which used to make the worker
+     * call `step()` forever: no decode, no wait, one core at 100%. Decodes cannot see that, so this
+     * measures the worker's own CPU time over a quiet interval. A waiting worker spends nearly none;
+     * a spinning one spends a full interval's worth.
+     */
+    @Test
+    fun aCursorInTheLastSecondWaitsInsteadOfSpinning() {
+        val bean = java.lang.management.ManagementFactory.getThreadMXBean()
+        assertTrue("this JVM cannot measure thread CPU time", bean.isThreadCpuTimeSupported)
+        val before = Thread.getAllStackTraces().keys.map { it.id }.toSet()
+        val file = container()
+        val decodes = AtomicInteger()
+        val recording =
+            OpusRecording(
+                file,
+                { _ ->
+                    object : OpusPackets {
+                        override val outputRate = 24000
+
+                        override fun decode(packet: ByteArray, length: Int, out: FloatArray): Int {
+                            decodes.incrementAndGet()
+                            for (j in 0 until packetSamples) out[j] = 0f
+                            return packetSamples
+                        }
+                    }
+                },
+            )
+        val cursor = recording.cursor(1.0)
+        assertEquals(0f, cursor[file.totalSamples - 1], 0f)
+        Thread.sleep(500)
+        val workers =
+            Thread.getAllStackTraces().keys.filter { it.name == "Nightfall opus" && it.id !in before }
+        assertTrue("the cursor started no worker", workers.isNotEmpty())
+        val ids = workers.map { it.id }.toLongArray()
+        fun cpu() = ids.sumOf { id -> bean.getThreadCpuTime(id).coerceAtLeast(0L) }
+        val settled = decodes.get()
+        val spent = cpu()
+        Thread.sleep(QUIET_SECONDS * 1_000)
+        val burned = cpu() - spent
+        assertEquals("the worker kept decoding at the end", settled, decodes.get())
+        assertTrue(
+            "the worker burned ${burned / 1_000_000} ms of CPU in ${QUIET_SECONDS}s at the end of the file",
+            burned < 200_000_000L,
+        )
+        recording.close()
+    }
+
+    /** A platform decoder that throws must reach the person, not kill the worker silently. */
+    @Test
+    fun aDecoderThatThrowsIsReportedInsteadOfSilence() {
+        val recording =
+            OpusRecording(
+                container(),
+                { _ ->
+                object : OpusPackets {
+                    override val outputRate = 24000
+
+                    override fun decode(packet: ByteArray, length: Int, out: FloatArray): Int =
+                        throw IllegalStateException("codec torn down")
+                    }
+                },
+            )
+        assertEquals(0f, recording.cursor()[0], 0f)
+        awaitUnavailable(recording)
+        val reason = recording.unavailable
+        assertNotNull(reason)
+        assertTrue("the failure says nothing useful: $reason", reason!!.contains("Opus decoder stopped"))
+        recording.close()
+    }
+
     @Test
     fun aRecordingHoldsABoundedAmountOfMemory() {
         val file = container()

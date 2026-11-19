@@ -95,8 +95,9 @@ for a in assets:
         require(digest(file)==a['sha256'],'Recording checksum mismatch: '+a['id'])
         require(file.stat().st_size/48000-1>=180,'Recording repeats before three minutes: '+a['id'])
     if encoded.exists():
-        # The encoded variant is a second bundled kind, not a replacement: it must carry the same
-        # three-minute promise, and its packet table must agree with its own header.
+        # The containers are what ships; the PCM capture is kept as the reference the host
+        # measurement tests read. Both must carry the same three-minute promise, and a container's
+        # packet table must agree with its own header.
         seconds=nfop.verify(encoded)['seconds']
         require(seconds-1>=180,'Encoded recording repeats before three minutes: '+a['id'])
     if args.apk:

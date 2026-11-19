@@ -5,7 +5,6 @@ import android.content.*
 import android.media.*
 import android.os.*
 import dev.nightfall.core.*
-import java.nio.channels.FileChannel
 import kotlin.math.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -327,32 +326,20 @@ class AudioHost(private val runtime: NightfallRuntime) {
         get() = worker.isAlive
 
     /**
-     * One bundled recording, either decoded from its Opus container or memory mapped from PCM. The
-     * asset kind is a build flag, so a build either carries the encoded recordings or the originals,
-     * never both.
+     * One bundled recording: its Opus container, decoded on demand. A build carries only the
+     * containers; the raw capture is no longer an asset.
      */
     private fun loadRecording(asset: String): SampleData? =
-        if (BuildConfig.OPUS_ASSETS)
-            OpusAssets.open(context, asset) { reason -> reportDecodeFailure(reason) }
-                ?.also { if (it is OpusRecording) decoded += it }
-        else
-            context.assets.openFd("audio/$asset.pcm").use { fd ->
-                fd.createInputStream().use { input ->
-                    Pcm16Data(
-                        input.channel.map(
-                            FileChannel.MapMode.READ_ONLY,
-                            fd.startOffset,
-                            fd.length,
-                        )
-                    )
-                }
-            }
+        OpusAssets.open(context, asset) { reason -> reportDecodeFailure(reason) }
+            ?.also { if (it is OpusRecording) decoded += it }
 
     /**
      * A recording this device cannot decode must be reported: a layer that contributes silence without
      * saying so is the worst failure a mixer can have.
      */
     private fun reportDecodeFailure(reason: String) {
+        // The opt-in diagnostics journal records a `failure` event for anything that lands here: it
+        // observes status.error and keeps a closed token, never this message's text.
         val message = context.getString(R.string.error_recording_undecodable, reason)
         // The main thread owns playback status; a decoder's worker reports through it rather than
         // writing the state flow itself, which could resurrect a stale copy of `playing`.

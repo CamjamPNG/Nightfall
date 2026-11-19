@@ -25,6 +25,7 @@ class NightfallApp : Application() {
     override fun onCreate() {
         super.onCreate()
         runtime = NightfallRuntime(this)
+        runtime.probeDecodeSupport()
     }
 }
 
@@ -107,6 +108,23 @@ class NightfallRuntime(
                     status.value.copy(error = context.getString(R.string.error_restore_failed, e.message))
             }
             ready.value = true
+        }
+    }
+
+    /**
+     * Answers once, when the app starts, whether this platform can decode the bundled recordings at
+     * all. It is a property of the device, not of one recording and not of the audio host, so it is
+     * reported before a mix is built rather than when playback begins — and the message says what is
+     * wrong, that the other layers still work, and that every published release stays installable.
+     */
+    fun probeDecodeSupport() {
+        scope.launch {
+            val reason = withContext(Dispatchers.IO) { OpusAssets.probe(context) } ?: return@launch
+            // Reaching status.error is what the opt-in diagnostics journal reports, as a `failure`
+            // event with a closed token; the platform's own words stay out of the journal.
+            if (status.value.error == null)
+                status.value =
+                    status.value.copy(error = context.getString(R.string.error_opus_unsupported))
         }
     }
 

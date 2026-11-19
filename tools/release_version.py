@@ -119,6 +119,12 @@ def main():
             "stores and installers that refuse a self-updating build.\n\n"
             "Use the same GitHub signing channel for updates. Export mixes before "
             "switching from the earlier dev.nightfall package or another signing channel.\n\n"
+            "The seven field recordings now ship as Opus and are decoded by the phone's own "
+            "decoder, which takes the download from 79 MB to about 12 MB. The containers are "
+            "verified by a test that decodes every one of them with an independent Opus decoder, "
+            "but playback through Android's decoder has not been exercised on a device: no phone "
+            "has played them. If a phone cannot decode Opus the app says so at launch rather than "
+            "playing silence, and every earlier release stays published and installable.\n\n"
             "Physical Pixel 7 / Bluetooth / overnight validation remains pending. "
             "See docs/TESTING.md for executed checks.\n"
         )
