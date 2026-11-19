@@ -63,13 +63,14 @@ Body:
 >
 > 2.0 added four things worth naming. An **endless night** switch, so the mix evolves
 > over hours instead of looping one bed — companion layers drift in and out, and every
-> layer's tone drifts around its setting; on eight-hour renders the worst hour-to-hour
-> level move was 0.22 LU. A **home-screen play/pause widget** that drives the app's own
-> media session. A **hidden, opt-in diagnostics journal** (five taps on the version row,
-> bounded, fixed tokens, nothing transmitted, and absent entirely from the F-Droid
-> build). And **Android 16 targeting**, with the app's own suite run on an API 36
-> runtime in CI. Every UI string is in resources now with a build guard against the
-> next literal, though nothing has been translated yet.
+> layer's tone drifts around its setting; on eight-hour renders the largest level gap
+> between the night on and the night off at the same hour was 0.22 LU. A **home-screen
+> play/pause widget** that drives the app's own media session. A **hidden, opt-in
+> diagnostics journal** (five taps on the version row, bounded, fixed tokens, nothing
+> transmitted, and absent entirely from the F-Droid build). And **Android 16 targeting**,
+> with the app's own suite run on an API 36 runtime in CI. Every UI string is in
+> resources now with a build guard against the next literal, though nothing has been
+> translated yet.
 >
 > Honest limits: a physical-device pass (Pixel 7, Bluetooth, overnight battery) is
 > still pending and the README says so; the widget has never been placed on a real

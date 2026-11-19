@@ -78,11 +78,12 @@ Body:
 >
 > **What 2.0 added.** An endless-night switch, so the mix evolves across hours instead of
 > looping one bed: companion layers from the same families drift in and out, and every
-> layer's tone drifts around its setting. On eight-hour renders of one preset, the worst
-> hour-to-hour move in level was 0.22 LU — a level measurement, not a claim about how it
-> sounds. A home-screen play/pause widget that drives the app's own media session. A
-> hidden diagnostics journal behind five taps on the version row: bounded, fixed tokens,
-> no free text, nothing transmitted, and absent from the F-Droid build entirely. And an
+> layer's tone drifts around its setting. On eight-hour renders of one preset, the largest
+> level difference between the night on and the night off at the same sampled hour was
+> 0.22 LU — a level measurement, not a claim about how it sounds. A home-screen
+> play/pause widget that drives the app's own media session. A hidden diagnostics
+> journal behind five taps on the version row: bounded, fixed tokens, no free text,
+> nothing transmitted, and absent from the F-Droid build entirely. And an
 > Android 16 target with the app's own suite executing on an API 36 runtime in CI. Every
 > UI string moved into resources with a build guard against the next literal, so the app
 > is translatable-ready — though English is still the only locale.

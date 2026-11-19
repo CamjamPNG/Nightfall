@@ -75,8 +75,9 @@ evaluate is the engine and the testing record, with the APK as an optional extra
   which proves the format and says nothing about Android's `MediaCodec`. A platform
   that refuses Opus gets a message at start-up instead of silence.
 - **Five new things in 2.0, each with its own unverified edge.** An endless-night mode
-  that evolves a mix over hours (measured: 0.22 LU worst hour-to-hour level move on
-  eight-hour renders; not listened to on hardware). A home-screen play/pause widget
+  that evolves a mix over hours (measured: 0.22 LU largest level difference between
+  night on and night off at the same hour, across eight-hour renders; not listened to on
+  hardware). A home-screen play/pause widget
   driving the app's own media session (20 Robolectric scenarios; never placed on a
   launcher). A hidden, opt-in diagnostics journal behind five taps on the version row —
   bounded to 200 entries / 64 KB / 30 days, fixed tokens, no free text, nothing
