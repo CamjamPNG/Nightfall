@@ -74,13 +74,14 @@ class PhraseInterpreterTest {
             Expect("storm", listOf("thunderstorm" to .5f)),
             Expect("thunderstorm and hail", listOf("thunderstorm" to .5f, "hail" to .5f)),
             Expect("brown noise with fan on low", listOf("brown" to .5f, "box-fan" to .35f)),
-            Expect("soft piano and rain on window", listOf("soft-piano" to .5f, "rain-on-window" to .5f)),
+            Expect("soft piano and rain on window", listOf("soft-piano" to .35f, "rain-on-window" to .5f)),
             Expect("quiet piano", listOf("soft-piano" to .35f)),
             Expect("fireplace and crickets", listOf("fireplace" to .5f, "crickets" to .5f)),
             Expect("coffee shop", listOf("soft-coffee-shop-ambience" to .5f)),
+            Expect("distant city rain", listOf("distant-city-rain" to .35f)),
             Expect(
                 "city rain with a distant train",
-                listOf("distant-city-rain" to .35f, "distant-train" to .35f),
+                listOf("distant-city-rain" to .5f, "distant-train" to .35f),
             ),
             Expect(
                 "crickets and frogs at night",
@@ -104,7 +105,13 @@ class PhraseInterpreterTest {
                 listOf("airplane-cabin" to .5f),
                 substitutions = listOf("helicopter" to "airplane-cabin"),
             ),
+            // A two-word intensity phrase outranks a catalogue name that shares one of its words.
+            Expect("very quiet room", listOf("quiet-room" to .25f)),
+            Expect("very soft piano", listOf("soft-piano" to .25f)),
+            Expect("very loud thunder", listOf("rolling-thunder" to 1f)),
             // Negation.
+            Expect("rain, don't play thunder", listOf("moderate-rain" to .5f)),
+            Expect("rain and don’t play thunder", listOf("moderate-rain" to .5f)),
             Expect("rain without thunder", listOf("moderate-rain" to .5f)),
             Expect("no thunder, just rain", listOf("moderate-rain" to .5f)),
             Expect("no music"),
@@ -116,6 +123,10 @@ class PhraseInterpreterTest {
             Expect("half an hour of fan", listOf("box-fan" to .5f), timer = 30),
             Expect("rain for 30m", listOf("moderate-rain" to .5f), timer = 30),
             Expect("eight hours of brown noise", listOf("brown" to .5f), timer = 480),
+            // Nonsense durations are clamped to the timer's own 24-hour ceiling, never multiplied
+            // past what an Int holds.
+            Expect("rain for 100000 minutes", listOf("moderate-rain" to .5f), timer = 1440),
+            Expect("rain for 2147483648m", listOf("moderate-rain" to .5f), timer = 1440),
             // Contradictions are refused, not resolved.
             Expect(
                 "loud rain, silent",

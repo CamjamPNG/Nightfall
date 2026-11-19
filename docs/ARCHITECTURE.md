@@ -73,9 +73,10 @@ down to the music seeds.
 The vocabulary is the catalogue plus aliases ("tin roof" is rain on metal roof, "fan" is a box fan,
 "thunder" is rolling thunder), matched longest-first and left to right so a surface is one sound
 rather than "rain" plus something. Intensity words set one of five documented levels and therefore a
-layer gain (25 / 35 / 50 / 71 / 100%, about 3 LU a step); a catalogue name that carries an amount word
-carries its level too, while an entry like "Soft piano" carries the sound's timbre and not a request
-for quiet. A negation word suppresses the term after it ("rain without thunder"), a named duration
+layer gain (25 / 35 / 50 / 71 / 100%, about 3 LU a step). Intensity comes only from words the
+person typed: "heavy rain" is level 4 and "distant city rain" is level 2, while "city rain" is level 3
+even though that entry's own name begins with "Distant", because our description of a recording is
+not the person's instruction. A negation word suppresses the term after it ("rain without thunder"), a named duration
 becomes the sleep timer, and a concept the catalogue does not hold is reported with the closest real
 entry rather than substituted silently. A phrase that contradicts itself — "loud rain, silent" — is
 refused with both words named; a phrase that names nothing is refused and points at the Library. The

@@ -89,10 +89,12 @@ interface PhraseInterpreter {
  * | 4     | loud, heavy, strong, hard, full, dense, intense         | .71  | −3.0 dB        |
  * | 5     | deafening, maximum, very loud, as loud as possible      | 1.00 | 0 dB           |
  *
- * A catalogue name that already carries an amount word carries its level too, which is why "Heavy
- * rain" lands louder than "Moderate rain" without the person saying anything else. Timbre words in a
- * name do not: "Soft piano" is the sound of a piano, not a request for a quiet one, so it plays at
- * level 3 and "quiet piano" plays at level 2. An explicit word always wins over the name.
+ * Intensity comes only from words the person typed. "City rain" is that sound at level 3, because
+ * the "distant" in the entry's own name *Distant city rain* is our description of the recording and
+ * not their instruction; "distant city rain" said in full is level 2, because then they said it.
+ * The same rule reads a catalogue name the person typed ("heavy rain" is level 4) and an alias they
+ * typed ("loud thunder" is level 4). Intensity never comes from the name of the entry a phrase
+ * resolves to.
  *
  * The scale changes gain, never the sound: "gentle thunder" is rolling thunder at 35%, not another
  * entry. A chip that says something the person did not ask for is worse than a quiet version of
@@ -107,20 +109,20 @@ object LocalPhraseInterpreter : PhraseInterpreter {
         val words =
             raw.filterIndexed { i, w -> !timer.consumed[i] && w !in PhraseVocabulary.ARTICLES }
         val consumed = BooleanArray(words.size)
+        // "very quiet room" is one request, not "very" plus the Quiet room entry: a two-word
+        // intensity phrase is read before any catalogue name can claim one of its words.
+        val longModifiers = PhraseVocabulary.modifiers(words, consumed, minWords = 2)
         val heard = PhraseVocabulary.terms(words, consumed)
         val silence = PhraseVocabulary.silence(words, consumed)
         val negated = PhraseVocabulary.negated(words, heard)
-        val modifiers = PhraseVocabulary.modifiers(words, consumed)
+        val modifiers = longModifiers + PhraseVocabulary.modifiers(words, consumed, minWords = 1)
         val assigned = PhraseVocabulary.assign(modifiers, heard)
         val kept = heard.indices.filter { !negated[it] }
 
         val layers =
             kept.mapNotNull { index ->
                 val id = heard[index].term.soundId
-                val level =
-                    assigned[index]?.level
-                        ?: if (heard[index].term.substitution) 3
-                        else PhraseVocabulary.NAME_LEVEL[id] ?: 3
+                val level = assigned[index]?.level ?: heard[index].term.level ?: 3
                 PhraseLayer(id, PhraseVocabulary.GAIN_BY_LEVEL[level] ?: .5f)
             }.distinctBy { it.soundId }
 
@@ -196,6 +198,7 @@ internal object PhraseVocabulary {
                 "loudly" to 4,
                 "heavy" to 4,
                 "heavily" to 4,
+                "howling" to 4,
                 "strong" to 4,
                 "strongly" to 4,
                 "hard" to 4,
@@ -233,30 +236,6 @@ internal object PhraseVocabulary {
             "hrs", "h", "m", "timer",
         )
 
-    /** Catalogue names whose own words carry an intensity, and the level they carry. */
-    private val LOUD_NAME_WORDS =
-        setOf("heavy", "strong", "howling", "close", "severe", "tropical", "bonfire", "intense")
-
-    private val SOFT_NAME_WORDS =
-        setOf("light", "gentle", "distant", "quiet", "faint", "drizzle", "breeze", "lapping",
-              "embers")
-
-    /**
-     * The level a catalogue name implies, read from the entry's own name so it cannot drift from the
-     * catalogue. An entry with neither kind of word is neutral.
-     */
-    val NAME_LEVEL: Map<String, Int> by lazy {
-        Library.all.associate { sound ->
-            val tokens = normalize(sound.name).split(' ').toSet()
-            sound.id to
-                when {
-                    tokens.any { it in LOUD_NAME_WORDS } -> 4
-                    tokens.any { it in SOFT_NAME_WORDS } -> 2
-                    else -> 3
-                }
-        }
-    }
-
     /**
      * One thing a person can name. [asked] is the words they used, empty when the term is a
      * catalogue name; [substitution] marks a concept the catalogue lacks.
@@ -266,6 +245,13 @@ internal object PhraseVocabulary {
         val soundId: String,
         val asked: String,
         val substitution: Boolean = false,
+        /**
+         * The level this term's own words ask for. It is read from the matched text — what the
+         * person actually typed — and never from the entry's name in the catalogue, which is why
+         * "city rain" is neutral even though the entry's name says "Distant city rain". A
+         * substitution carries no level: it is not the sound the person named.
+         */
+        val level: Int? = null,
     ) {
         val size get() = tokens.size
     }
@@ -637,15 +623,25 @@ internal object PhraseVocabulary {
         for (sound in Library.all) {
             if (!sound.available) continue
             val tokens = tokensOf(sound.name)
-            all.putIfAbsent(tokens.joinToString(" "), Term(tokens, sound.id, asked = ""))
+            all.putIfAbsent(
+                tokens.joinToString(" "),
+                Term(tokens, sound.id, asked = "", level = levelOfText(tokens)),
+            )
         }
         for ((text, id) in ALIASES) {
             if (Library.byId[id]?.available != true) continue
-            all.putIfAbsent(text, Term(tokensOf(text), id, asked = text))
+            val tokens = tokensOf(text)
+            all.putIfAbsent(
+                text,
+                Term(tokens, id, asked = text, level = levelOfText(tokens)),
+            )
         }
         for ((text, id) in SUBSTITUTIONS) {
             if (Library.byId[id]?.available != true) continue
-            all.putIfAbsent(text, Term(tokensOf(text), id, asked = text, substitution = true))
+            all.putIfAbsent(
+                text,
+                Term(tokensOf(text), id, asked = text, substitution = true),
+            )
         }
         all.values
             .groupBy { it.tokens.first() }
@@ -663,11 +659,31 @@ internal object PhraseVocabulary {
 
     fun normalize(text: String): String =
         text.lowercase(Locale.ROOT)
+            // Dropped rather than split: "don't" must become the negation word "dont", not "don t".
+            .replace("'", "")
+            .replace("\u2019", "")
             .map { if (it.isLetterOrDigit()) it else ' ' }
             .joinToString("")
             .split(' ')
             .filter { it.isNotEmpty() }
             .joinToString(" ")
+
+    /** The first intensity phrase in a term's own text, longest phrase first. */
+    private fun levelOfText(tokens: List<String>): Int? {
+        var i = 0
+        while (i < tokens.size) {
+            val match =
+                INTENSITY.filter { (text, _) ->
+                        val parts = text.split(' ')
+                        i + parts.size <= tokens.size &&
+                            parts.indices.all { tokens[i + it] == parts[it] }
+                    }
+                    .maxByOrNull { it.first.split(' ').size }
+            if (match != null) return match.second
+            i++
+        }
+        return null
+    }
 
     class TimerResult(val minutes: Int?, val consumed: BooleanArray)
 
@@ -689,6 +705,13 @@ internal object PhraseVocabulary {
             "eighty" to 80, "ninety" to 90,
         )
 
+    /**
+     * Minutes for a count and a unit, clamped before multiplying so no input can overflow into a
+     * negative or absurd timer. The sleep timer's own range is 1 minute to 24 hours.
+     */
+    private fun minutes(value: Long, unit: Long): Int =
+        if (value >= 1440L) 1440 else (value * unit).coerceIn(1L, 1440L).toInt()
+
     /** A number at [index], and how many words it took. */
     private fun number(words: List<String>, index: Int): Pair<Int, Int>? {
         val token = words.getOrNull(index) ?: return null
@@ -703,12 +726,10 @@ internal object PhraseVocabulary {
         val consumed = BooleanArray(words.size)
         for (i in words.indices) {
             GLUED.matchEntire(words[i])?.let { match ->
-                val unit = UNITS.getValue(match.groupValues[2])
+                val unit = UNITS.getValue(match.groupValues[2]).toLong()
+                val value = match.groupValues[1].toLongOrNull() ?: return@let
                 consumed[i] = true
-                return TimerResult(
-                    (match.groupValues[1].toInt() * unit).coerceIn(1, 1440),
-                    consumed,
-                )
+                return TimerResult(minutes(value, unit), consumed)
             }
             if (words[i] == "half" && words.getOrNull(i + 1) in setOf("hour", "an", "a")) {
                 val unitIndex = if (words.getOrNull(i + 1) == "hour") i + 1 else i + 2
@@ -723,7 +744,7 @@ internal object PhraseVocabulary {
             val unitIndex = i + length
             val perUnit = UNITS[words.getOrNull(unitIndex)] ?: continue
             for (k in i..unitIndex) consumed[k] = true
-            return TimerResult((value * perUnit).coerceIn(1, 1440), consumed)
+            return TimerResult(minutes(value.toLong(), perUnit.toLong()), consumed)
         }
         return TimerResult(null, consumed)
     }
@@ -804,8 +825,12 @@ internal object PhraseVocabulary {
         return out
     }
 
-    /** Intensity words anywhere a term did not already claim them, longest phrase first. */
-    fun modifiers(words: List<String>, consumed: BooleanArray): List<Intensity> {
+    /**
+     * Intensity words anywhere a term did not already claim them, longest phrase first. [minWords]
+     * lets the caller read every multiword phrase before the catalogue names run, and the single
+     * words after them.
+     */
+    fun modifiers(words: List<String>, consumed: BooleanArray, minWords: Int): List<Intensity> {
         val out = ArrayList<Intensity>()
         var i = 0
         while (i < words.size) {
@@ -816,7 +841,10 @@ internal object PhraseVocabulary {
             val match =
                 INTENSITY.filter { (text, _) ->
                         val tokens = text.split(' ')
-                        i + tokens.size <= words.size &&
+                        val size = tokens.size
+                        val wanted = if (minWords == 1) size == 1 else size >= minWords
+                        wanted &&
+                            i + size <= words.size &&
                             tokens.indices.all { !consumed[i + it] && words[i + it] == tokens[it] }
                     }
                     .maxByOrNull { it.first.split(' ').size }

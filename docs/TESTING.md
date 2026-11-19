@@ -367,12 +367,17 @@ then 31% of its height; 14% on a phone) has enough list left are judgements no J
 ## Describe-a-mix phrase interpreter (core, JVM; screen, Robolectric)
 
 `core/src/test/kotlin/dev/nightfall/core/PhraseInterpreterTest.kt`: the interpreter is a parser, so it
-is held to a corpus rather than to a claim. 61 phrases are tabulated with the exact layers and gains
+is held to a corpus rather than to a claim. 68 phrases are tabulated with the exact layers and gains
 each must become, and the table is compared as one assertion that names every phrase that parsed
 wrong instead of stopping at the first. The corpus covers the brief's own examples, each intensity
-word on its own and on two layers at once, names that carry their own intensity, surfaces that would
+word on its own and on two layers at once, names the person typed that carry their own intensity,
+surfaces that would
 otherwise be read as "rain" plus something, negation, timers in five spellings, a sound the catalogue
 lacks (reported with the closest entry), a contradiction, and phrases that must produce nothing.
+Three rows are regressions from review: `very quiet room` (a two-word intensity phrase must outrank
+the catalogue name that shares one of its words), `rain, don't play thunder` in both apostrophe
+styles (a contraction is one word, not "don t"), and `rain for 2147483648m` (a nonsense duration is
+clamped to the timer's own 24-hour ceiling before it can multiply into an overflow).
 
 Three more assertions guard the table rather than a phrase: every available catalogue entry resolves
 to itself when asked for by its own name (which is what catches an alias shadowing a name), every gain
