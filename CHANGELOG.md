@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.1 — 2026-11-19
+
+- docs: bring the site and launch copy up to Nightfall 2.0 (#42)
+
 ## 2.1 — 2026-11-19
 
 - sounds: add four fire and four water entries, regenerate the level trims (#41)

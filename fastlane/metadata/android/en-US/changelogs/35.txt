@@ -1,0 +1,1 @@
+- docs: bring the site and launch copy up to Nightfall 2.0 (#42)
