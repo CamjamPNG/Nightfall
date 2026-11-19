@@ -16,6 +16,21 @@
         <item quantity="other">%1$d seconds</item>
     </plurals>
 
+    <!--
+        Both counts reach one on a real device: the library count is what a search or a category
+        filter leaves, and the saved count is how many mixes the person has made. English reads the
+        same at every quantity, so this exists for languages that inflect the noun.
+    -->
+    <plurals name="library_available">
+        <item quantity="one">%1$d available</item>
+        <item quantity="other">%1$d available</item>
+    </plurals>
+
+    <plurals name="presets_saved">
+        <item quantity="one">%1$d saved</item>
+        <item quantity="other">%1$d saved</item>
+    </plurals>
+
     <plurals name="home_layer_count">
         <item quantity="one">%1$d layer · hold the grip to reorder</item>
         <item quantity="other">%1$d layers · hold the grip to reorder</item>

@@ -169,7 +169,6 @@
     <string name="library_a11y_search">Search sounds</string>
     <string name="library_category_all">All</string>
     <string name="library_section_explore">Explore sounds</string>
-    <string name="library_available">%1$d available</string>
     <string name="library_unavailable">Recording not bundled</string>
     <string name="library_kind_recording">Field recording · offline</string>
     <string name="library_kind_music">Original generative music</string>
@@ -183,8 +182,8 @@
     <string name="presets_action_import">Import JSON</string>
     <string name="presets_action_favorites">Favorites</string>
     <string name="presets_section_yours">Your mixes</string>
-    <string name="presets_saved">%1$d saved</string>
     <string name="presets_section_builtin">Nightfall collection</string>
+    <!-- Always the built-in collection's size: a compile-time constant, never one. -->
     <string name="presets_soundscapes">%1$d soundscapes</string>
     <string name="presets_a11y_favorite">Favorite %1$s</string>
     <string name="presets_a11y_options">Options for %1$s</string>
