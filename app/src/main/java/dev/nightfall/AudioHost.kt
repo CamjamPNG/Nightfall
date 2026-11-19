@@ -5,8 +5,8 @@ import android.content.*
 import android.media.*
 import android.os.*
 import dev.nightfall.core.*
-import java.nio.channels.FileChannel
 import kotlin.math.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -101,6 +101,13 @@ class AudioHost(private val runtime: NightfallRuntime) {
             androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED,
         )
         manager.registerAudioDeviceCallback(devices, Handler(Looper.getMainLooper()))
+        // A platform with no Opus decoder must say so at launch: discovered only when a layer is added
+        // and read, it would be a mix that plays silence with no explanation. Off the main thread,
+        // because building a codec is not free and this runs while the app draws its first frame.
+        runtime.scope.launch(Dispatchers.Default) {
+            val reason = OpusAssets.probe(context) ?: return@launch
+            reportUnsupportedDecoder(reason)
+        }
         runtime.scope.launch {
             while (isActive && running) {
                 delay(250)
@@ -327,37 +334,41 @@ class AudioHost(private val runtime: NightfallRuntime) {
         get() = worker.isAlive
 
     /**
-     * One bundled recording, either decoded from its Opus container or memory mapped from PCM. The
-     * asset kind is a build flag, so a build either carries the encoded recordings or the originals,
-     * never both.
+     * One bundled recording: its Opus container, decoded on demand. A build carries only the
+     * containers; the raw capture is no longer an asset.
      */
     private fun loadRecording(asset: String): SampleData? =
-        if (BuildConfig.OPUS_ASSETS)
-            OpusAssets.open(context, asset) { reason -> reportDecodeFailure(reason) }
-                ?.also { if (it is OpusRecording) decoded += it }
-        else
-            context.assets.openFd("audio/$asset.pcm").use { fd ->
-                fd.createInputStream().use { input ->
-                    Pcm16Data(
-                        input.channel.map(
-                            FileChannel.MapMode.READ_ONLY,
-                            fd.startOffset,
-                            fd.length,
-                        )
-                    )
-                }
-            }
+        OpusAssets.open(context, asset) { reason -> reportDecodeFailure(reason) }
+            ?.also { if (it is OpusRecording) decoded += it }
 
     /**
      * A recording this device cannot decode must be reported: a layer that contributes silence without
      * saying so is the worst failure a mixer can have.
      */
     private fun reportDecodeFailure(reason: String) {
+        // TODO(CAM-48): when the opt-in diagnostics journal lands, this is where a `decode_failure`
+        // event with `reason` is recorded. Nothing to call yet, so the seam is this line.
         val message = context.getString(R.string.error_recording_undecodable, reason)
         // The main thread owns playback status; a decoder's worker reports through it rather than
         // writing the state flow itself, which could resurrect a stale copy of `playing`.
         mainHandler.post {
             if (runtime.status.value.error != message)
+                runtime.status.value = runtime.status.value.copy(error = message)
+        }
+    }
+
+    /**
+     * The whole decode path is unavailable on this platform, not one recording: say what is wrong and
+     * that every earlier release still installs from GitHub Releases, which is where a person who
+     * would rather have the recordings has to get them — the release before this one carries them as
+     * PCM and needs no Opus decoder.
+     */
+    private fun reportUnsupportedDecoder(reason: String) {
+        // TODO(CAM-48): the opt-in diagnostics journal records a `decode_failure` event with `reason`
+        // here too, so a person who turned logging on can say what the platform refused.
+        val message = context.getString(R.string.error_opus_unsupported)
+        mainHandler.post {
+            if (runtime.status.value.error == null)
                 runtime.status.value = runtime.status.value.copy(error = message)
         }
     }

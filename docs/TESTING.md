@@ -107,7 +107,7 @@
   rejection of duplicate versions and preservation of code/audio in ABI options.
   Signed APK variants are additionally checked with Android's apksigner, aapt,
   zipalign and source-tag audio hashes before publication.
-- 69 deterministic JVM/core tests pass (68 executed, 1 skipped by design: the
+- 71 deterministic JVM/core tests pass (70 executed, 1 skipped by design: the
   opt-in `NIGHTFALL_CALIBRATE=1` level-calibration generator). One of them renders
   a whole eight-hour night through the real render path. They cover nine
   simultaneous non-silent sources, 512 allocated layers, unrelated-source phase
@@ -121,8 +121,20 @@
   reads/rendering and can resume with a new schedule.
 - Every available library entry produces finite, nonzero output in the core
   catalogue test. This is a signal test, not a listening-quality certification.
-- Every bundled recording cycle exceeds three minutes after overlap; asset
-  hashes and the release APK's uncompressed PCM entries are validated.
+- Every bundled recording cycle exceeds three minutes after overlap; the raw
+  capture's hashes and the containers' packet tables are validated.
+- Every bundled Opus container decodes with a conformant decoder that is not
+  ours. `OpusAssetDecodeTest` reads the NFOP layout on its own, without
+  `OpusFile`, and decodes all seven containers with Concentus, a pure-Java port
+  of the reference `libopus`, in test scope only so no APK carries it. Measured
+  on 19 November 2026: 9,076 to 12,051 packets each, 181.5 to 241.0 seconds,
+  decoded sample counts equal to each header's total, RMS -46.0 to -22.8 dBFS,
+  peak 0.409 to 0.571, 7.4 seconds for the suite. That proves the container
+  layout, packet table, identification header and payload are decodable Opus. It
+  does not prove Android's `MediaCodec` binding to them, which no device has
+  run, and the actual sound of all seven recordings remains unheard. The asset
+  directories are declared inputs of `:core:test`, so a changed or truncated
+  container re-runs the suite instead of leaving an up-to-date green behind.
 - Debug and unsigned release APKs build. Release lint reports zero errors;
   remaining warnings include dependency-version advisories and intentional
   foreground-media/wake-lock patterns.

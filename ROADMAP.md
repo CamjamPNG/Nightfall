@@ -14,7 +14,7 @@ though it is the least fun.
 Shipping today: a working offline mixer with no `INTERNET` permission, no layer
 cap, 21 built-in presets, local preset storage and JSON exchange, sleep timers
 with per-layer stop schedules, a Media3 foreground media session with lock-screen
-and Bluetooth controls, 69 deterministic core tests (68 run by default; one
+and Bluetooth controls, 71 deterministic core tests (70 run by default; one
 calibration generator is opt-in), 53 release-tooling tests and 11 playback-lifecycle
 scenarios. Signed GitHub releases with a pinned certificate. `docs/TESTING.md` records
 exactly what was executed and what was not.
@@ -149,7 +149,8 @@ import is not included. Letting users add their own recordings is the most-reque
 shape of feature for this kind of app and the largest scope change on this list:
 file pickers, format decoding, long-file streaming, storage size, and a policy for
 what happens to imported files when a mix is exported. It is also the change most
-likely to break the memory-mapped PCM model that makes the current engine cheap.
+likely to break the decode model that makes the current engine cheap, where each
+read head decodes its own stream ahead of itself instead of loading a file.
 
 **Done when:** someone decides it is worth the architectural cost. Until then it
 stays a documented absence rather than a half-built path.

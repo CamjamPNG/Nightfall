@@ -317,6 +317,7 @@
     <string name="error_background_start_failed">Background playback could not start: %1$s</string>
     <string name="error_audio_focus_unavailable">Audio focus is unavailable. Try again after the other audio ends.</string>
     <string name="error_recording_undecodable">A bundled recording cannot be decoded on this device (%1$s).</string>
+    <string name="error_opus_unsupported">This phone cannot decode Opus audio, so the bundled field recordings cannot play. Every other layer still works. Every published release stays on GitHub Releases, so an earlier version can still be downloaded and installed.</string>
 
     <!--
         Home-screen widget. The action a tap takes reuses home_action_play/home_action_pause, so the

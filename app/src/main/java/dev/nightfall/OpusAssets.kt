@@ -102,6 +102,29 @@ private class MediaCodecOpus(private val config: ByteArray) : OpusPackets {
 
 object OpusAssets {
     /**
+     * Builds one decoder from a bundled container's identification header and releases it, so a
+     * platform that refuses Opus is known when the app starts rather than when a layer first reads.
+     * Returns the platform's reason, or null when the format was accepted.
+     *
+     * Off the main thread: codec creation is not free, and this only needs to answer once.
+     */
+    fun probe(context: Context): String? {
+        val name =
+            runCatching { context.assets.list("audio")?.firstOrNull { it.endsWith(".nfop") } }
+                .getOrNull() ?: return null
+        val config =
+            runCatching {
+                context.assets.open("audio/$name").use { OpusFile.parse(it.readBytes()).codecConfig }
+            }
+                .getOrNull() ?: return null
+        return runCatching {
+                MediaCodecOpus(config).close()
+                null
+            }
+            .getOrElse { it.message ?: it.javaClass.simpleName }
+    }
+
+    /**
      * A bundled recording decoded on demand, or null when the asset is missing. A device without an
      * Opus decoder still gets a recording object: its cursor reports why it cannot sound, so the app
      * can say the layer is unavailable instead of playing silence.

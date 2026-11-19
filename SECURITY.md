@@ -21,10 +21,12 @@ what remains rather than implying the project is too small to have one.
    DataStore as versioned JSON and restored at startup. A file or state that
    bricks startup, or that restores a stale timer deadline as a live one, is in
    scope.
-3. **Bundled asset handling.** The seven field recordings are memory mapped from
-   the APK as raw PCM and decoded by the app's own `Pcm16Data`. A path that
-   reads outside a mapping, or a missed bounds check on a short or truncated
-   asset, is in scope.
+3. **Bundled asset handling.** The seven field recordings ship as Opus containers
+   parsed by the app's own `OpusFile` and decoded by the platform's `MediaCodec`.
+   A truncated or malformed container that reads outside the packet table or
+   crashes the app, or a decoder buffer the loader hands out wrongly, is in
+   scope. The container is bounds-checked when parsed; the raw PCM capture is
+   not shipped in any APK.
 4. **Release integrity and signing.** Release signing is the update path: Android
    replaces an installed app only when the new APK carries the same certificate.
    The pinned SHA-256 of the release certificate is in

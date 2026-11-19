@@ -23,7 +23,7 @@ an app cannot phone home, and they notice when a mixer labels synthesized rain a
 a field recording.
 
 The secondary audience reads or changes the DSP: the audio engine is a Kotlin
-module with no Android dependency and 69 JVM tests. Most of them finish in seconds;
+module with no Android dependency and 71 JVM tests. Most of them finish in seconds;
 one renders a whole eight-hour night through the real render path and takes a couple
 of minutes.
 
@@ -42,11 +42,11 @@ command that produced it, because a number without one is a number nobody re-che
 | `universal` size | 79,289,722 bytes (75.6 MiB) | release asset metadata for `v1.8.2` |
 | `fdroid-universal` size | 79,232,378 bytes (75.6 MiB) | release asset metadata for `v1.8.2` |
 | Payload split | 77,449,472 bytes of PCM under `assets/audio` (73.9 MiB; 77,453,797 with the seven `.license` sidecars), 2,933,096 bytes of dex (2.8 MiB, R8-minified), 17,208 bytes of native libraries | `unzip -l Nightfall-1.8.2-arm64-v8a.apk` summed per entry type |
-| Audio format | 7 recordings, 16-bit mono, 24 kHz, cycles 180.5–240 s with a 1 s overlap, resampled into the 48 kHz mix | PCM entry sizes in the published APK; `Sources.kt` (`RecordingSource`, `OVERLAP`) |
+| Audio format | 7 recordings, mono 24 kHz, cycles 180.5–240 s with a 1 s overlap, resampled into the 48 kHz mix. Shipped as Opus containers from 19 November 2026 (`OpusFile` parses them, `MediaCodec` decodes each read head), PCM in the v1.8.2 assets above | PCM entry sizes in the published APK; `Sources.kt` (`RecordingSource`, `OVERLAP`); `OpusStream.kt` |
 | Permissions, `github` | `INTERNET`, `ACCESS_NETWORK_STATE`, `REQUEST_INSTALL_PACKAGES`, `UPDATE_PACKAGES_WITHOUT_USER_ACTION`, plus foreground service, media-playback foreground type, notifications and wake lock — read out of the published `v1.8.2` `arm64-v8a` APK | `strings -el` on the APK's `AndroidManifest.xml`; `app/src/github/AndroidManifest.xml` |
 | Permissions, `fdroid` | the same four are `tools:node="remove"`d, and the published `fdroid-universal` APK declares none of them and carries no class from the updater package | `tools/check_release.py`'s `fdroid_violation()` and `updater_symbols()` on the downloaded asset — both empty |
 | Mapping files | the release workflow now attaches one R8 `mapping.txt` per channel; `v1.8.2` predates that step, so its assets have none and the next release will | `.github/workflows/release.yml` upload line; `git show v1.8.2:.github/workflows/release.yml` has no mapping step |
-| Tests | 69 `@Test` in `core/src/test` (68 execute; the level-calibration generator is skipped unless `NIGHTFALL_CALIBRATE=1`), 11 playback scenarios that run under both channels, 51 updater tests in `app/src/testGithub/java/dev/nightfall/update`, 53 release-tooling tests | `grep -rhA2 '@Test' core/src/test --include=*.kt \| grep -c 'fun '`; the same grep per suite; `python3 -m unittest discover -s tools/tests` |
+| Tests | 71 `@Test` in `core/src/test` (70 execute; the level-calibration generator is skipped unless `NIGHTFALL_CALIBRATE=1`), 11 playback scenarios that run under both channels, 51 updater tests in `app/src/testGithub/java/dev/nightfall/update`, 53 release-tooling tests | `grep -rhA2 '@Test' core/src/test --include=*.kt \| grep -c 'fun '`; the same grep per suite; `python3 -m unittest discover -s tools/tests` |
 | Licence | MIT code; recordings CC BY / CC BY-SA / CC0 | `LICENSE`, `AUDIO_LICENSES.md` |
 | Not verified | anything on hardware: Pixel 7 pass, Bluetooth, loudness, overnight battery, and an update actually installing on a phone | `docs/TESTING.md` |
 
@@ -96,10 +96,14 @@ APK delta as the download. What is left
 is almost entirely the sound library: 77,449,472 bytes of uncompressed PCM
 (`noCompress += "pcm"`, so the mixer can map the files), which is 97.8% of the download.
 Native libraries are not the cause and never were: all five per-ABI APKs are within
-103 KB of each other. **The one remaining size lever is the recordings, not the code:**
-an Opus decode path exists behind `-PnightfallOpus=true` and ships off by default (1.8),
-so no published APK has been encoded smaller, and any copy that implies the download is
-at its floor is still wrong.
+103 KB of each other. **The size lever was the recordings, not the code.** An Opus decode
+path landed behind `-PnightfallOpus=true` and shipped off by default in 1.8, so no
+published APK at the time of this kit had been encoded smaller. It was switched on and
+the PCM left the build on 19 November 2026: measured on one machine, the unsigned
+universal release build is 11,662,953 bytes and the universal debug build 30,374,368,
+down from 79,371,423 and 98,083,910 bytes for the same two builds carrying the PCM. The
+payload rows above stay the v1.8.2 record they are sourced to, and the launch copy that
+quotes 79 MB is historical copy.
 
 ## Channels, with the rule that actually bites
 
@@ -150,11 +154,12 @@ ready-to-paste request. Short version, in the order the blockers matter:
    79,186,790 bytes — 75.5 MiB, which is 2.6× that ceiling. Per-ABI splits are their
    usual remedy and are already in place, so they cannot help: native libraries are
    17 KB and the bulk is 77,449,472 bytes of raw recordings. R8 has since landed
-   (1.5.2) and took the dex from 47.26 MB to 2.93 MB, which is why the APK is 79 MB
-   instead of 91 MB — but the recordings dominate it, and the Opus decode path that
-   would shrink them ships behind a build flag that is off by default (1.8), so
-   **no published APK is under 75 MiB**. See `docs/launch/izzyondroid-request.md` for
-   the measurements and what is left.
+   (1.5.2) and took the dex from 47.26 MB to 2.93 MB, which is why the APK was 79 MB
+   instead of 91 MB. The recordings were the rest of it, and from 19 November 2026 they
+   ship as Opus: the unsigned universal release build measures 11,662,953 bytes, under
+   that 30 MB ceiling. **No published APK was under 75 MiB**, which is what this kit was
+   written against; the first release carrying the containers settles the size blocker,
+   and `docs/launch/izzyondroid-request.md` keeps the measurements it was drafted from.
 3. **They ship our APK, not their build.** Their FAQ: "App Source — APK provided
    by the app's dev team". Reproducible-build verification is optional trust on
    top, so our `apksigcopier` gap does not block inclusion. This used to be blocked
@@ -168,8 +173,9 @@ ready-to-paste request. Short version, in the order the blockers matter:
    `IzzyOnDroid/repodata`. That needs a Codeberg account, which only Camden can
    create.
 
-So IzzyOnDroid has moved from three blockers to two — the AI policy and the 30 MB
-ceiling — both of which are Camden's call rather than a drafting problem.
+So IzzyOnDroid has moved from three blockers to one, and the last is Camden's call rather
+than a drafting problem: from 19 November 2026 the size ceiling is met by the Opus
+containers, leaving the AI-use disclosure.
 
 ### F-Droid
 
@@ -226,7 +232,7 @@ Each claim is checkable in the repository and each has its limit stated next to 
 | --- | --- | --- |
 | Playback needs no network, in either build | `PRIVACY.md`; the `fdroid` channel removes `INTERNET`, `ACCESS_NETWORK_STATE`, `REQUEST_INSTALL_PACKAGES` and `UPDATE_PACKAGES_WITHOUT_USER_ACTION` (`app/src/fdroid/AndroidManifest.xml`), and `tools/check_release.py` fails a release if either channel's permissions drift | The GitHub APK *does* have `INTERNET`, for its own update check; the claim is about playback and about the F-Droid build, not about every download |
 | The update channel is bounded, and it never interrupts a night | `README.md` "Updates"; `PRIVACY.md`: one manifest read at most every six hours after a successful check and never more than once every fifteen minutes, no upload; an install is refused while audio is playing or while playback state is unknown (`UpdateAutomation.mayInstallNow`) and waits for the stop | Installing needs no tap by default. The automatic check can be switched off, but *Check for updates* stays, so a check is always something the app can be made to do; it is still a network call from an app whose selling point is not making them, and no automatic update has been watched on a phone |
-| A DSP core with real tests | 69 JVM tests in `core/src/test/` (68 execute; the calibration generator is opt-in), free of Android dependencies, one of which renders an eight-hour night | Tests prove signal behavior, not that it sounds good to you |
+| A DSP core with real tests | 71 JVM tests in `core/src/test/` (70 execute; the calibration generator is opt-in), free of Android dependencies, one of which renders an eight-hour night | Tests prove signal behavior, not that it sounds good to you |
 | No layer-count cap, and measured capacity instead | `MixerTest` no-cap case; the render-budget warning on Home | Your phone has finite CPU; a heavy mix can still underrun |
 | Bundled recordings loop for at least 180 seconds | `docs/audio-credits.json` cycle lengths; enforced by `tools/prepare_audio.py` and `tools/check_release.py` | Long loops are not the same as a well-recorded loop |
 | Synthesis is labeled as synthesis | Catalogue descriptions; "distant household ambience" is declared unavailable rather than faked | Some sounds are interpretations, not recordings of that place |
