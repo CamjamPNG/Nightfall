@@ -8,9 +8,105 @@ on:
 permissions:
   contents: read
 jobs:
-  release:
+  # The release tooling is stdlib-only Python and needs neither the Android SDK nor an APK, so it
+  # has no reason to queue behind a Gradle build. Ten tests, seconds to run.
+  tools:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The F-Droid recipe test reads the build file at each release tag, so it fails on a checkout
+      # with no tags: "no release tag could be read, so nothing was verified".
+      - name: Fetch release tags for the F-Droid recipe check
+        run: git fetch --depth=1 origin '+refs/tags/*:refs/tags/*'
+      - name: Release tooling tests
+        run: python3 -m unittest discover -s tools/tests -v
+  # The core module has no Android dependency: `:core:test` configures and runs with no
+  # ANDROID_HOME and no local.properties, so this job installs no SDK packages.
+  core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          gradle-version: '8.11.1'
+      - name: Core JVM tests
+        run: ./gradlew --no-daemon :core:test
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: core-test-reports
+          path: |
+            core/build/reports/tests/test/
+            core/build/test-results/test/
+          retention-days: 14
+  # Both channels' scenarios, on the API 35 sandbox that ships. This is also where the store
+  # screenshots are rendered, so they upload from here.
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          gradle-version: '8.11.1'
+      - name: Install Android SDK packages
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;35.0.0"'
+      - name: App unit tests, both channels
+        run: ./gradlew --no-daemon :app:testGithubDebugUnitTest :app:testFdroidDebugUnitTest
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: app-test-reports
+          path: |
+            app/build/screenshots/
+            app/build/reports/tests/
+            app/build/test-results/
+          retention-days: 14
+  # `lintDebug` compiles the debug variant, and `assembleDebug` packages what that compilation
+  # already produced, so the build gate's APK costs one more task here rather than a whole job.
+  # lint `abortOnError = true` makes this a gate, not advice.
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          gradle-version: '8.11.1'
+      - name: Install Android SDK packages
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;35.0.0"'
+      - name: Assemble the debug APK and lint it
+        run: ./gradlew --no-daemon :app:assembleDebug :app:lintDebug
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: lint-and-debug-build
+          path: |
+            app/build/reports/lint-results-*.html
+            app/build/reports/lint-results-*.txt
+            app/build/reports/lint-results-*.xml
+            app/build/outputs/apk/*/debug/*.apk
+          retention-days: 14
+  # Both release APKs are built and validated in one job, so `check_release.py` reads the APKs this
+  # job just produced rather than downloading them from another one. It needs the release tags: the
+  # F-Droid recipe block for a new release is checked against the build file at each tag.
+  release-apks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
@@ -24,29 +120,42 @@ jobs:
         run: git fetch --depth=1 origin '+refs/tags/*:refs/tags/*'
       - name: Install Android SDK packages
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;35.0.0"'
-      - name: Test, build unsigned release and lint
-        run: |
-          python3 -m unittest discover -s tools/tests -v
-          ./gradlew --no-daemon :core:test :app:testGithubDebugUnitTest :app:testFdroidDebugUnitTest :app:assembleDebug :app:lintDebug :app:assembleGithubRelease :app:assembleFdroidRelease
+      - name: Assemble both channels' unsigned release APKs
+        run: ./gradlew --no-daemon :app:assembleGithubRelease :app:assembleFdroidRelease
       - name: Validate store metadata, bundled audio and both channels
         run: python3 tools/check_release.py --apk app/build/outputs/apk/github/release/app-github-release-unsigned.apk --fdroid-apk app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
-          name: release-checks
-          path: |
-            app/build/outputs/apk/*/release/*.apk
-            app/build/screenshots/
-            core/build/reports/tests/test/
-            app/build/reports/tests/
-            app/build/reports/lint-results-release.*
+          name: release-apks
+          path: app/build/outputs/apk/*/release/*.apk
           retention-days: 14
+  # The check named `release` is the one that existed before this workflow was split, and branch
+  # protection may require it by name. It still means "everything above is green": it fails, rather
+  # than being skipped, when any of the jobs it needs did not succeed.
+  release:
+    needs: [tools, core, unit, lint, release-apks]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every check above passed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS"
+          FAILED=$(printf '%s' "$RESULTS" | python3 -c 'import json,sys; print(" ".join(sorted(k for k,v in json.load(sys.stdin).items() if v["result"] != "success")))')
+          if [ -n "$FAILED" ]; then
+            echo "::error::These jobs did not succeed: $FAILED"
+            exit 1
+          fi
+          echo "tools, core, unit, lint and release-apks all succeeded"
   # The same app unit tests, on Android 16's own platform runtime. Robolectric's API 36 sandbox
   # refuses to start on the Temurin 17 that `release` and the F-Droid recipe build with ("Android SDK
-  # 36 requires Java 21"), so `release` runs the suite on the API 35 sandbox with a 36 target and this
+  # 36 requires Java 21"), so `unit` runs the suite on the API 35 sandbox with a 36 target and this
   # job is the only place the behaviour targeting 36 turns on is executed rather than read: predictive
   # back reported through OnBackInvokedDispatcher, and edge-to-edge insets on a 36 window. It runs the
-  # app unit tests only — no APK assemblies, no lint — restores the same Gradle cache as `release`,
+  # app unit tests only — no APK assemblies, no lint — restores the same Gradle cache as `unit`,
   # and nothing depends on it.
   api36:
     runs-on: ubuntu-latest
