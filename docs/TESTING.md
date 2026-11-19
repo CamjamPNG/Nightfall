@@ -139,11 +139,11 @@
   inventory has no GMS, Firebase, billing, ad or tracking SDK from the checked
   denylist. F-Droid's independent review remains necessary.
 
-- 32 Robolectric scenarios pass in both channels (see below), plus the three GitHub-only
+- 33 Robolectric scenarios pass in both channels (see below), plus the three GitHub-only
   diagnostics gesture scenarios described above: eleven
   playback-lifecycle ones, which replace the instrumented attempt that never went
   green, two Android 16 assertions that need the API 36 sandbox CI now runs
-  (`Android16RuntimeTest`), and nineteen for the home-screen widget.
+  (`Android16RuntimeTest`), and twenty for the home-screen widget.
 
 Machine-readable results: `docs/verification/update-channel.json`,
 `release-checks.json`, `dependency-audit.json`, `reproducibility.json`, and
