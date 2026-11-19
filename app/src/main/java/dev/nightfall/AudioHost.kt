@@ -314,8 +314,19 @@ class AudioHost(private val runtime: NightfallRuntime) {
                     } catch (e: Exception) {
                         if (running) failure = e.message ?: e.javaClass.simpleName
                     } finally {
-                        track?.release()
+                        // This thread built the track, so this is the only place that may ask it to
+                        // change state or release it; no other thread is handed the object. Unpublish
+                        // first, so a reader of `track` cannot reach an AudioTrack that is being
+                        // released: pause() on one throws "called on uninitialized AudioTrack".
+                        val stopping = track
                         track = null
+                        if (stopping != null) {
+                            if (stopping.playState == AudioTrack.PLAYSTATE_PLAYING) {
+                                stopping.pause()
+                                stopping.flush()
+                            }
+                            stopping.release()
+                        }
                     }
                 },
                 "Nightfall PCM",
@@ -361,8 +372,9 @@ class AudioHost(private val runtime: NightfallRuntime) {
         pause(true)
         running = false
         synchronized(monitor) { monitor.notifyAll() }
-        track?.pause()
-        track?.flush()
+        // Teardown asks and waits; it never touches the track. `running = false` above is the very
+        // signal that lets the PCM thread leave its loop, so a pause() here would be racing that
+        // thread's own pause-and-release of a track it owns.
         worker.interrupt()
         worker.join(1500)
         // Only once the mixing worker has stopped: closing a recording under a block in flight would
