@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.2 — 2026-11-19
+
+- test: run the app suite on an API 36 runtime in CI (#30)
+
 ## 1.9.1 — 2026-11-18
 
 - fix: target Android 16, and prove what an API 36 target turns on (#29)
