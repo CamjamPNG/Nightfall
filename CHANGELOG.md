@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.3 — 2026-11-19
+
+- feat: type what you want and get a mix, resolved on the device (#47)
+
 ## 2.2.2 — 2026-11-19
 
 - fix: give decoder failures their own journal event (#46)

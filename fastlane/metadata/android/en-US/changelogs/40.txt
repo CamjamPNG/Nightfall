@@ -1,0 +1,1 @@
+- feat: type what you want and get a mix, resolved on the device (#47)
