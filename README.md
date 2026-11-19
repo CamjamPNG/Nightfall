@@ -142,7 +142,7 @@ copy yourself. It also builds from source:
 # app/build/outputs/apk/fdroid/debug/app-fdroid-debug.apk
 ```
 
-CI builds this channel, lints it, and runs the same eleven playback-lifecycle scenarios
+CI builds this channel, lints it, and runs the same twelve playback-lifecycle scenarios
 and the widget's twenty against it on every push; `tools/check_release.py --fdroid-apk`
 asserts from the built dex and manifest that no updater class and no network permission
 survived.
