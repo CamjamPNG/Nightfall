@@ -1,0 +1,1 @@
+- sounds: add four fire and four water entries, regenerate the level trims (#41)

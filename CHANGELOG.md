@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1 — 2026-11-19
+
+- sounds: add four fire and four water entries, regenerate the level trims (#41)
+
 ## 2.0 — 2026-11-19
 
 - feat!: Nightfall 2.0 (#39)
