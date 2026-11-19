@@ -1,0 +1,1 @@
+- feat: home-screen play/pause widget with a configurable tap (#36)

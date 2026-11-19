@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.11 — 2026-11-19
+
+- feat: home-screen play/pause widget with a configurable tap (#36)
+
 ## 1.10 — 2026-11-19
 
 - feat: add the hidden, opt-in diagnostics journal (#37)
