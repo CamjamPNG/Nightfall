@@ -21,7 +21,14 @@ class PcmMixer(
         val source: Source,
         val trim: Float,
         val music: Boolean,
+        /** An endless-night companion: not the person's layer, and not theirs to see or count. */
+        val companion: Boolean,
     ) {
+        /** Stable per-layer seed for the night's tone drift, from the id the mix gives the layer. */
+        val driftSalt: Int = layer.id.hashCode()
+
+        /** This block's endless level for the layer, 1 when endless night is off. */
+        var endless = 1f
         var removed = false
         var gain = 0f
         var life = 0f
@@ -45,6 +52,12 @@ class PcmMixer(
     private val accumR = FloatArray(blockSize)
     private val smoothing = (1 - exp(-1.0 / (sampleRate * .025))).toFloat()
     var settings = Settings()
+
+    /** The night this mix is living, or null when endless night is off. */
+    private var plan: NightPlan? = null
+
+    /** Frames rendered since the night began: the schedule's only clock, and not the wall clock. */
+    private var nightFrames = 0L
     private var masterTarget = .5f
     private var master = .0f
     private var duck = 1f
@@ -55,12 +68,14 @@ class PcmMixer(
         private set
 
     val channelCount
-        get() = active.count { !it.removed }
+        get() = active.count { !it.removed && !it.companion }
 
     fun reset() {
         active.forEach { it.source.close() }
         channels.clear()
         active.clear()
+        plan = null
+        nightFrames = 0L
         master = 0f
         duck = 1f
         smoothedExternal = 1f
@@ -68,52 +83,47 @@ class PcmMixer(
     }
 
     fun sync(mix: Mix) {
-        // Nested scan rather than a temporary set: sync runs on the audio thread, so it allocates
-        // nothing beyond the case where a layer is genuinely new.
-        for (n in 0 until active.size) {
-            val id = active[n].layer.id
-            var present = false
-            for (layer in mix.layers)
-                if (layer.id == id) {
-                    present = true
-                    break
-                }
-            active[n].removed = !present
-        }
-        for (layer in mix.layers) {
-            val existing = channels[layer.id]
-            if (existing != null) {
-                existing.layer = layer
-                existing.removed = false
-            } else {
-                val s = Library.byId.getValue(layer.soundId)
-                require(s.available) { "This recording is not bundled" }
-                // Keep both seed and identity; XORing two identical default hashes cancels to zero.
-                val seed = layer.music.seed xor (layer.id.hashCode().toLong() shl 32)
-                val source: Source =
-                    when (s.kind) {
-                        "noise" -> NoiseSource(sampleRate, seed, s.variant)
-                        "music" -> MusicSource(sampleRate, layer.music.seed, s.variant)
-                        "binaural" -> BinauralSource(sampleRate)
-                        "recording" ->
-                            RecordingSource(
-                                sampleRate,
-                                requireNotNull(recordings(s.asset!!)) {
-                                    "Recording missing: ${s.asset}"
-                                },
-                                seed,
-                            )
-                        else -> EnvironmentSource(sampleRate, seed, s.kind, s.variant)
-                    }
-                val channel = Channel(layer, source, Levels.trim(s), s.music)
-                channels[layer.id] = channel
-                active.add(channel)
-            }
-        }
+        // The mix's layer set is the person's layers plus, with endless night on, the companions its
+        // own families earned. Companions keep fixed ids, so a night's roster is stable across syncs
+        // and a changed seed retires the old companion through the ordinary crossfade.
+        plan = NightPlan.of(mix)
+        for (n in 0 until active.size) active[n].removed = true
+        for (layer in mix.layers) attach(layer, false)
+        val roster = plan?.companions
+        if (roster != null) for (i in roster.indices) attach(roster[i], true)
         masterTarget = mix.master
     }
 
-    fun activeIds() = active.filter { !it.removed }.map { it.layer.id }
+    private fun attach(layer: Layer, companion: Boolean) {
+        val existing = channels[layer.id]
+        if (existing != null) {
+            existing.layer = layer
+            existing.removed = false
+            return
+        }
+        val s = Library.byId.getValue(layer.soundId)
+        require(s.available) { "This recording is not bundled" }
+        // Keep both seed and identity; XORing two identical default hashes cancels to zero.
+        val seed = layer.music.seed xor (layer.id.hashCode().toLong() shl 32)
+        val source: Source =
+            when (s.kind) {
+                "noise" -> NoiseSource(sampleRate, seed, s.variant)
+                "music" -> MusicSource(sampleRate, layer.music.seed, s.variant)
+                "binaural" -> BinauralSource(sampleRate)
+                "recording" ->
+                    RecordingSource(
+                        sampleRate,
+                        requireNotNull(recordings(s.asset!!)) { "Recording missing: ${s.asset}" },
+                        seed,
+                    )
+                else -> EnvironmentSource(sampleRate, seed, s.kind, s.variant)
+            }
+        val channel = Channel(layer, source, Levels.trim(s), s.music, companion)
+        channels[layer.id] = channel
+        active.add(channel)
+    }
+
+    fun activeIds() = active.filter { !it.removed && !it.companion }.map { it.layer.id }
 
     fun layerGain(id: String) = channels[id]?.gain ?: 0f
 
@@ -140,6 +150,47 @@ class PcmMixer(
             duckStep = (1 - exp(-frames.toDouble() / (sampleRate * .6))).toFloat()
         }
         duck += (duckTarget - duck) * duckStep
+        // The night, computed once per block: each layer's endless level, and the one compensation
+        // factor the whole mix shares. Costs a handful of integer hashes per layer, no allocation.
+        val night = plan
+        val seconds = if (night != null) nightFrames.toDouble() / sampleRate else 0.0
+        var comp = 1f
+        if (night != null) {
+            val depth = night.config.depth
+            val ramp = Endless.ramp(seconds)
+            var user = 0f
+            var total = 0f
+            for (n in 0 until count) {
+                val ch = active[n]
+                val c = ch.layer
+                // A layer on its way out is outside both sums, so removing one still lowers the mix
+                // the way an unnormalised sum says it does; only the companions are compensated.
+                if (ch.removed) {
+                    ch.endless = if (ch.companion) 0f else 1f
+                    continue
+                }
+                if (ch.companion) {
+                    val e =
+                        if (c.enabled && !c.mute && (!solo || c.solo))
+                            Endless.envelope(ch.driftSalt xor night.salt, seconds, depth, ramp)
+                        else 0f
+                    ch.endless = e
+                    total += c.gain * c.gain * e * e
+                } else {
+                    ch.endless = 1f
+                    if (c.enabled && !c.mute && (!solo || c.solo)) {
+                        total += c.gain * c.gain
+                        user += c.gain * c.gain
+                    }
+                }
+            }
+            // Levels already holds every source at one reference loudness, so a companion that enters
+            // adds exactly its own power: scaling the whole mix by sqrt(user power / total power)
+            // keeps the night's loudness at the mix the person set, whether a source is coming or
+            // going. It is never above 1, so endless night cannot make a mix louder or push the
+            // limiter where the plain mix did not.
+            comp = if (user > 1e-9f && total > 1e-9f) sqrt(user / total).coerceIn(.25f, 1f) else 1f
+        }
         var index = 0
         // active.size, not the pre-scan count: retiring a channel shrinks the list underneath us.
         while (index < active.size) {
@@ -169,18 +220,43 @@ class PcmMixer(
                 ch.gain = 0f
                 ch.life = 0f
             }
-            ch.source.render(scratchL, scratchR, frames, c, settings)
             val audible = c.enabled && !c.mute && (!solo || c.solo)
-            val target = if (audible) c.gain else 0f
+            // A companion whose gate is shut renders nothing at all, the way an expired layer does:
+            // two absent beds cost no synthesis for the hours they are away. The residual gain is
+            // below -80 dBFS by the time this trips, so snapping it to zero cannot be heard.
+            if (ch.companion && !ch.removed && ch.endless <= 0f && ch.gain <= 1e-4f) {
+                ch.gain = 0f
+                continue
+            }
+            ch.source.render(scratchL, scratchR, frames, c, settings)
+            val target = if (audible) c.gain * ch.endless * comp else 0f
+            var tilt = c.tilt
+            var bright = c.brightness
+            var width = c.width
+            var pan = c.pan
+            if (night != null) {
+                // Tone drift, around the layer's own settings rather than instead of them, so the
+                // slider still means what it says while the night moves. Tilt, brightness, width and
+                // pan are all level-neutral by construction, which is why the drift cannot quietly
+                // undo the compensation above.
+                val amp = night.config.depth
+                val salt = ch.driftSalt xor night.salt
+                val sweep = Endless.wobble(salt xor 0x51ED, seconds) * amp
+                val spread = Endless.wobble(salt xor 0x2F79, seconds) * amp
+                tilt = (c.tilt + sweep * .18f).coerceIn(-1f, 1f)
+                bright = (c.brightness + sweep * .10f).coerceIn(0f, 1f)
+                width = (c.width + spread * .15f).coerceIn(0f, 1f)
+                pan = (c.pan + spread * .12f).coerceIn(-1f, 1f)
+            }
             val hp = (1 - exp(-2 * PI * c.highPass / sampleRate)).toFloat()
             val lp = (1 - exp(-2 * PI * c.lowPass / sampleRate)).toFloat()
             val low = (1 - exp(-2 * PI * 250 / sampleRate)).toFloat()
             val high = (1 - exp(-2 * PI * 4000 / sampleRate)).toFloat()
-            val bass = 10f.pow((c.bass + c.tilt * -4) / 20).toFloat()
+            val bass = 10f.pow((c.bass + tilt * -4) / 20).toFloat()
             val mid = 10f.pow(c.mid / 20).toFloat()
-            val treble = 10f.pow((c.treble + c.tilt * 4 + (c.brightness - .5f) * 6) / 20).toFloat()
-            val leftPan = sqrt((1 - c.pan) * .5f)
-            val rightPan = sqrt((1 + c.pan) * .5f)
+            val treble = 10f.pow((c.treble + tilt * 4 + (bright - .5f) * 6) / 20).toFloat()
+            val leftPan = sqrt((1 - pan) * .5f)
+            val rightPan = sqrt((1 + pan) * .5f)
             val musicDuck = if (ch.music && settings.ducking) duck else 1f
             val lifecycleStep = 1f / (sampleRate * c.fadeSeconds.coerceAtLeast(.05f))
             val scale = ch.trim
@@ -195,8 +271,8 @@ class PcmMixer(
                 var l = scratchL[i]
                 var r = scratchR[i]
                 val center = (l + r) * .5f
-                l = center + (l - center) * c.width
-                r = center + (r - center) * c.width
+                l = center + (l - center) * width
+                r = center + (r - center) * width
                 ch.hpL += hp * (l - ch.hpL)
                 ch.hpR += hp * (r - ch.hpR)
                 l -= ch.hpL
@@ -225,6 +301,7 @@ class PcmMixer(
             output[i * 2 + 1] = r
             peak = max(peak, max(abs(l), abs(r)))
         }
+        if (night != null) nightFrames += frames
     }
 
     companion object {

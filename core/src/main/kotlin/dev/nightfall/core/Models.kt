@@ -57,6 +57,11 @@ data class Mix(
     val layers: List<Layer> = emptyList(),
     val master: Float = .5f,
     val favorite: Boolean = false,
+    /**
+     * Endless night, off by default. A mix saved before this existed decodes as off, which is the
+     * behaviour it was saved with: the layers exactly as set, and nothing evolving.
+     */
+    val endless: EndlessConfig = EndlessConfig(),
 )
 
 @Serializable
@@ -99,9 +104,11 @@ object PresetJson {
             "Mix needs a name of 1–200 characters"
         }
         require(mix.master.isFinite())
+        require(mix.endless.depth.isFinite())
         val ids = HashSet<String>()
         return mix.copy(
             master = mix.master.coerceIn(0f, 1f),
+            endless = mix.endless.copy(depth = mix.endless.depth.coerceIn(0f, 1f)),
             layers =
                 mix.layers.map { l ->
                     require(ids.add(l.id) && l.id.length <= 200) { "Duplicate or invalid layer ID" }

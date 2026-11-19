@@ -16,6 +16,46 @@ The mixer renders 1024-frame blocks into reused arrays. Independent enable/mute/
 
 Rendering uses a 4-block minimum output buffer (about 85 ms at 48 kHz), or Android's minimum if larger. This favors reliable sleep audio over instrument-like latency. AudioTrack underruns and moving-average render time as a fraction of the block budget are shown in Settings. At 65% render budget or more than three underruns, Home displays a warning. No fixed source cap is substituted for measuring device capacity. Source buffers and music voice pools allocate on layer creation; the sample loops avoid object allocation. The number of notes inside a music source is bounded for predictable CPU; the number of independent layers is not.
 
+## Endless night
+
+A mix carries an `endless` setting, off by default — and what a mix saved before the setting existed
+decodes to, so an old JSON keeps exactly the behaviour it was saved with. Turned on, the mixer earns
+up to two **companion** beds and drifts the tone of every layer. The person's own layer list, their
+gains, and the mix's character are untouched: the companions are the same kind of thing the mix
+already contains.
+
+Companions come from the catalogue families the mix's own layers belong to — another rain beside a
+rain, another hum beside a hum — and never from music, where a second progression in another key is
+the one way this could sound wrong. A family must hold at least four entries to take part, so a
+one-of-a-kind sound gets no companion rather than an unrelated one. Each companion is a real sibling
+layer at about 60% of its parent's gain, sitting behind the mix with a narrower band and the opposite
+half of the image, and it is trimmed by `Levels` like every other source — which is what lets the
+compensation below reason about power instead of introducing a second gain table.
+
+The schedule is a function of frames rendered and nothing else. There is no wall clock in it, so
+pausing does not spend a night and a seed reproduces one sample for sample. A companion is present or
+absent per *granule*, and the granules are coprime primes (419 s and 211 s), so the pair of decisions
+never lines up again: the pattern does not repeat at any lag reachable in a night. A 120 s and an 80 s
+smoothstep across the granule boundaries make each arrival and departure take about a minute, and the
+level travels through the same 25 ms smoother every other gain change uses. A shape table gives the
+night its arc — the first hour is the busiest, the middle thins out, the last hour comes back most of
+the way — and it is a function of elapsed time rather than of a known end, so a three-hour sleep gets
+the busy part and an all-night one gets the whole arc.
+
+Level is the part that had to be got right. `Levels` already holds every source at one reference
+loudness, so a companion that enters adds exactly its own power: the mixer scales the whole mix by the
+square root of the person's own power over the total power, a factor that is never above 1. A source
+arriving or leaving therefore moves the output level by hundredths of a LU rather than by the few a raw
+sum would, and endless night cannot push a mix louder or into the limiter where the plain mix was not.
+Since that factor is derived from the levels `Levels` established, a layer slider still means the same
+thing: moving it changes the mix's loudness, exactly as it does with the night off.
+
+The tone drift uses only tilt, brightness, width and pan — all level-neutral by construction — so it
+cannot quietly undo the compensation. It moves *around* the person's setting rather than instead of it,
+and a companion whose gate is shut renders nothing at all, the way an expired layer does, so two beds
+that are away cost no synthesis. The render path stays allocation-free with the night running, and the
+whole schedule is a handful of integer hashes per layer per block.
+
 ## Source algorithms
 
 - White: uniform PRNG noise. Pink: Paul Kellet seven-pole approximation (44.1–48 kHz). Brown/red: leaky integration. Blue: differentiated pink. Violet/purple: differentiated white. Gray is an approximate perceptual shaping preset, not calibrated equal loudness. Green: mid-band shaping; black: very quiet low-passed noise; velvet: sparse random signed impulses. Nonstandard names are identified in the UI.
@@ -251,5 +291,11 @@ are the launcher's, so whether the button clears a large radius on a particular 
 device question, answered so far only by rendering both layouts at Pixel-7 cell sizes. The tap
 path is exercised against a real media session in Robolectric, but a Robolectric bind cannot
 create the service the way the launcher's bind does, and no launcher has been driven.
+
+Endless night is an interpretation of "evolving" too: its companions are catalogue siblings chosen
+for character, not a generative model of the night, and the shape it gives an eight-hour night is a
+fixed arc rather than something learned. Its level stability and its crossfades are measured on the
+JVM against the render contract; whether a night sounds alive rather than merely varied is a
+hardware-and-ears judgement this repository does not make for you.
 
 DSP models are interpretations, not high-fidelity recordings of every named environment. Gray noise is an approximate preset. Headphone acoustic levels cannot be derived from gain percentages. Hardware Bluetooth behavior, power management, perceptual audio quality and all-night battery life need physical-device validation. Background execution is supported through Android's media foreground-service model; no manufacturer-independent all-night guarantee is made.
