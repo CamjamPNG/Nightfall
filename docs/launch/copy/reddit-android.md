@@ -59,7 +59,7 @@ Body:
 > **How it's built.** A single 48 kHz stereo float mix feeds one `AudioTrack` from one
 > audio-priority thread, in 1024-frame blocks, with a soft limiter at the end. The
 > engine lives in a pure Kotlin module with no Android dependency, so it runs under
-> plain JUnit: 69 tests covering nine simultaneous sources, 512 allocated layers,
+> plain JUnit: 97 tests covering nine simultaneous sources, 512 allocated layers,
 > phase continuity across unrelated sources, limiters, seeded music generation, timer
 > fades, loop seams, spectral slope and click size at layer add/remove.
 >
@@ -76,13 +76,33 @@ Body:
 > couldn't be licensed, so the library marks it unavailable rather than substituting
 > noise.
 >
+> **What 2.0 added.** An endless-night switch, so the mix evolves across hours instead of
+> looping one bed: companion layers from the same families drift in and out, and every
+> layer's tone drifts around its setting. On eight-hour renders of one preset, the worst
+> hour-to-hour move in level was 0.22 LU — a level measurement, not a claim about how it
+> sounds. A home-screen play/pause widget that drives the app's own media session. A
+> hidden diagnostics journal behind five taps on the version row: bounded, fixed tokens,
+> no free text, nothing transmitted, and absent from the F-Droid build entirely. And an
+> Android 16 target with the app's own suite executing on an API 36 runtime in CI. Every
+> UI string moved into resources with a build guard against the next literal, so the app
+> is translatable-ready — though English is still the only locale.
+>
 > **What I haven't proven.** A physical Pixel 7 pass, Bluetooth behaviour, acoustic
 > loudness, overnight battery and an update actually installing on a phone are all
-> pending, and the README says so. Playback lifecycle is covered by twelve Robolectric
-> scenarios that run under both builds in CI; the emulator instrumentation attempt
-> before that never passed, and the failure is written down in `docs/TESTING.md`
-> instead of being dropped. And two local builds of tag v1.0.1.2 are byte-identical,
-> which is weaker than an independent rebuild and is documented as such.
+> pending, and the README says so. So are four newer things, and they belong in the same
+> breath: the Opus decoder the seven recordings now go through has never run on a phone
+> (if a platform refuses Opus the app says so at start-up rather than playing silence),
+> nobody has heard the catalogue on a device, the widget has never been placed on a real
+> launcher, and diagnostics has never recorded a real crash. Playback lifecycle is
+> covered by twelve Robolectric scenarios that run under both builds in CI; the emulator
+> instrumentation attempt before that never passed, and the failure is written down in
+> `docs/TESTING.md` instead of being dropped. And two local builds of tag v1.0.1.2 are
+> byte-identical, which is weaker than an independent rebuild and is documented as such.
+>
+> **On size, because it changed.** 2.0 is 11.7 MB, down from 79.5 MB in 1.11: the seven
+> recordings ship as 10,089,142 bytes of Opus instead of 77,449,472 bytes of raw PCM. The
+> cost is a decoder in the path that used to memory-map a file, and that decoder is the
+> unverified piece above.
 >
 > **What I'd like from this thread:** anyone who runs it overnight on a device I don't
 > have. The app shows render-load and underrun counters in Settings, and a logcat

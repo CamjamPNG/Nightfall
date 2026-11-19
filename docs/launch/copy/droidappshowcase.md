@@ -69,14 +69,22 @@ Body:
 >   instead of being passed off as field recordings.
 > - **Sleep timers fade out** rather than cut, and individual layers can stop on their
 >   own schedules.
+> - **The mix can keep moving.** 2.0 added an endless-night switch: companion layers from
+>   the same families as the ones you picked drift in and out, and each layer's tone
+>   drifts around its setting. No ear has heard a whole night of it on a phone yet.
+> - **A home-screen play/pause widget**, plus hidden opt-in diagnostics you have to ask
+>   for (five taps on the version row) and that never transmit anything. Android 16
+>   targeting, and every UI string is now in resources so the app can be translated —
+>   nothing has been translated yet.
 > - **MIT licensed**, source is readable, and the audio engine is a Kotlin module with
->   no Android dependency and 69 tests, so the DSP is inspectable rather than hidden.
+>   no Android dependency and 97 tests, so the DSP is inspectable rather than hidden.
 >
 > What it isn't: there is no iOS version, no cloud sync, no Android Auto.
 > A physical-device pass (Pixel 7, Bluetooth mask, overnight battery) is still pending
 > — I've documented that honestly in the README's limitations section instead of
-> claiming all-night reliability I haven't measured. And it's a large download: about
-> 79 MB, because 77 MB of it is the bundled uncompressed recordings.
+> claiming all-night reliability I haven't measured. The widget has never been placed on
+> a real launcher, and the Opus decoder the recordings now go through has never run on a
+> phone. The download is 11.7 MB.
 >
 > Free, no account, no strings.
 >
@@ -84,7 +92,7 @@ Body:
 >
 > MIT licensed. I'm the developer — questions welcome in the thread.
 
-Notes for Camden before posting: put the size line in your own words if you like,
-but keep it, because it is the first thing someone will notice in the download and
-answering it up front is the difference between a curious reply and a hostile one.
-Do not add a review count, a user count, or a star count.
+Notes for Camden before posting: the size line changed in 2.0 — the APK is 11.7 MB, not
+79 MB, because the recordings ship as Opus instead of raw PCM. Keep the line about what
+has not been verified with it; four things are unverified, not one, and the README lists
+them by name. Do not add a review count, a user count, or a star count.

@@ -73,8 +73,8 @@ policy says gets a project degraded. Nothing in this repository is set up to fil
 that answer, and no request has been filed.
 
 One honest counterweight worth having ready, because it is true and checkable:
-`docs/TESTING.md` records what was and was not executed, `core/src/test` holds 69
-deterministic tests (68 of which run without an opt-in flag), and the README carries an
+`docs/TESTING.md` records what was and was not executed, `core/src/test` holds 97
+deterministic tests (96 of which run without an opt-in flag), and the README carries an
 explicit unverified list. If the
 request is filed, that record is the argument that a human is accountable for the
 output — not a claim that no tool was used.
@@ -103,24 +103,25 @@ per-app size limit."
 
 #### What Nightfall publishes today, measured
 
-As of `v1.8.2`, six APKs ship, and the per-ABI split is already done:
+As of `v2.0`, six APKs ship, and the per-ABI split is already done:
 
 | Asset | Bytes | MiB |
 | --- | --- | --- |
-| `Nightfall-1.8.2-arm64-v8a.apk` | 79,190,898 | 75.5 |
-| `Nightfall-1.8.2-armeabi-v7a.apk` | 79,186,806 | 75.5 |
-| `Nightfall-1.8.2-x86.apk` | 79,186,790 | 75.5 |
-| `Nightfall-1.8.2-x86_64.apk` | 79,190,892 | 75.5 |
-| `Nightfall-1.8.2-universal.apk` | 79,289,722 | 75.6 |
-| `Nightfall-1.8.2-fdroid-universal.apk` | 79,232,378 | 75.6 |
+| `Nightfall-2.0-arm64-v8a.apk` | 11,737,776 | 11.2 |
+| `Nightfall-2.0-armeabi-v7a.apk` | 11,737,780 | 11.2 |
+| `Nightfall-2.0-x86.apk` | 11,737,764 | 11.2 |
+| `Nightfall-2.0-x86_64.apk` | 11,737,770 | 11.2 |
+| `Nightfall-2.0-universal.apk` | 11,836,600 | 11.3 |
+| `Nightfall-2.0-fdroid-universal.apk` | 11,754,680 | 11.2 |
 
-Splitting by architecture saves **102,932 bytes** at most, because it is not the
-native libraries that are large: `lib/` in the `arm64-v8a` APK is 17,208 bytes.
-Unzipping that APK on 18 November 2026:
+Every one is under the 30 MB ceiling, and the smallest is 0.39× it rather than 2.6×.
+Splitting by architecture saves **98,824 bytes** at most, because it is not the native
+libraries that are large: `lib/` in the `arm64-v8a` APK is 17,208 bytes. Unzipping that
+APK on 19 November 2026:
 
 ```
-77449472  assets/audio/*.pcm  (74 MB of 16-bit mono 24 kHz PCM, stored uncompressed)
- 2933096  classes.dex       (R8-minified: 2.8 MB, was 47.37 MB across three files before 1.5.2)
+10089142  assets/audio/*.nfop (9.6 MB of Opus containers, seven files)
+ 3041456  classes.dex         (R8-minified: 2.9 MB, was 47.37 MB across three files before 1.5.2)
    17208  lib/
 ```
 
@@ -160,21 +161,20 @@ only combination that plausibly lands under 30 MB, and Opus puts a decoder in th
 path that currently memory-maps raw PCM — a change to the render path, whose deadline
 the project treats as a hard constraint (`docs/ARCHITECTURE.md`).
 
-**The encoded set exists; it does not ship.** The re-encode landed in the shape the
-estimate predicted: `app/src/opus/assets/audio` holds seven `.nfop` containers
-totalling 10,089,142 bytes, close to the ~9.6 MB the 48 kbit/s sample scaled to. The
-decode path that reads them is tested on the JVM (`OpusStreamTest`, 14 of the core
-tests) and is selected by `-PnightfallOpus=true`, off by default, because nobody has
-heard the decoded output on a device yet (`app/build.gradle.kts`: "until an Opus
-decode path has been heard on a device").
+**The encoded set shipped.** The re-encode landed in the shape the estimate predicted:
+`app/src/opus/assets/audio` holds seven `.nfop` containers totalling 10,089,142 bytes,
+close to the ~9.6 MB the 48 kbit/s sample scaled to. 1.12 switched the build to them,
+dropped the PCM, and the published `v2.0` APKs are the result: `arm64-v8a` is
+11,737,776 bytes, against 79,465,722 for the same file in 1.11. The estimate above was
+never a build; the 2.0 release is the measurement that replaced it.
 
-Arithmetic on the measured assets — **not a build, and not to be quoted as one** —
-puts a flagged APK around 11.8 MB: 79,190,898 minus 77,449,472 plus 10,089,142. That
-is comfortably under the 30 MB ceiling, so the size gate is now one build and one
-listening test away rather than an engineering project. The remaining work is to build
-`-PnightfallOpus=true`, check it against `tools/check_release.py`, hear it on hardware,
-and publish it — a product decision for the audio-engine owner and Camden, not a copy
-decision.
+What that cost, stated in the same breath, because it is the one thing a reviewer
+should weigh: the mixer now parses the containers and hands packets to the platform's
+Opus decoder ahead of the render path instead of memory-mapping raw PCM, and that
+platform binding has never run on a phone. The test suite decodes all seven with an
+independent conformant decoder (`OpusAssetDecodeTest`), which proves the format and not
+Android's `MediaCodec`. A platform that refuses Opus is reported at start-up rather than
+played as silence.
 
 ### Gate 3 — the channel, which needs Camden's account
 
@@ -198,20 +198,18 @@ The project now builds two channels
 | `fdroid` | all four `tools:node="remove"`d | no; `app/src/fdroid/java/dev/nightfall/update/UpdateSurfaces.kt` is a stub | **yes — `Nightfall-<version>-fdroid-universal.apk`, since 1.5** |
 
 Both rows were confirmed twice: in the source manifests, and on the downloaded
-`Nightfall-1.8.2-arm64-v8a.apk`, whose binary manifest lists `INTERNET`,
-`ACCESS_NETWORK_STATE`, `REQUEST_INSTALL_PACKAGES` and
-`UPDATE_PACKAGES_WITHOUT_USER_ACTION`, and on the downloaded
-`Nightfall-1.8.2-fdroid-universal.apk`, whose binary manifest lists none of them and
-whose dex contains no class from the updater package.
+`v2.0` assets — `tools/check_release.py --apk Nightfall-2.0-arm64-v8a.apk
+--fdroid-apk Nightfall-2.0-fdroid-universal.apk` passes on 19 November 2026, finding
+all four permissions in the `github` APK and none of them in the `fdroid` one, whose
+dex also carries no class from the updater package.
 
-That second confirmation is what changed since this section was first written. The
-request can now point at a **published `fdroid`-channel APK** —
-`Nightfall-1.8.2-fdroid-universal.apk`, attached to every release since 1.5, one
+The request points at a **published `fdroid`-channel APK** —
+`Nightfall-2.0-fdroid-universal.apk`, attached to every release since 1.5, one
 universal APK so `ApkMatch` can select it by name, signed with the same pinned
 certificate as the rest, and deliberately absent from `release-manifest.json` so the
-in-app updater never offers it. The old "third gate" — publish that asset — is closed.
-What is left is the AI disclosure and the size, and the size is one build away: a
-`-PnightfallOpus=true` APK would be about 11.8 MB by arithmetic on measured assets.
+in-app updater never offers it. Two of the three gates this document once listed are
+closed: that asset is published, and it is 11,754,680 bytes, well under the 30 MB
+ceiling. What is left is the AI disclosure.
 
 
 
@@ -295,8 +293,11 @@ the form's own words; it is true only in the sense argued under Gate 1.
 >
 > Limits: the README states what has not been verified. A physical Pixel 7 pass,
 > Bluetooth testing, acoustic loudness measurement and an overnight battery run are
-> pending, and all-night playback cannot be guaranteed on every phone. The download
-> is large: about 79 MB, most of it bundled PCM recordings.
+> pending, and all-night playback cannot be guaranteed on every phone. Four more gaps
+> came with 2.0 and are named the same way: the Opus decoder the recordings now go
+> through has never run on a phone, nobody has heard the catalogue on a device, the
+> home-screen widget has never been placed on a real launcher, and the opt-in
+> diagnostics journal has never recorded a real crash. The download is 11.7 MB.
 
 **Build instructions**
 > ```sh
@@ -334,17 +335,18 @@ about given `docs/TESTING.md` still lists the hardware pass as pending. Checking
 first without the second is more honest than checking both.
 
 **Further Notices**
-> The APK is 79 MB (75.5 MiB), above the 30 MB rule of thumb, because 77.4 MB of it is
-> bundled 16-bit mono 24 kHz PCM recordings that the mixer memory-maps; native
-> libraries are 17 KB and the per-ABI split is already in place, saving about 100 KB,
-> so the split does not address the limit. The release dex is minified (2.9 MB, from
-> 47.4 MB before R8 was enabled in 1.5.2). An Opus decode path with its encoded
-> recordings exists behind a build flag that is off by default, because it has not yet
-> been heard on a device; an APK built with it would be about 12 MB by arithmetic on
-> the measured assets. `docs/LAUNCH.md` records the measurements.
+> The APK is 11.7 MB (`arm64-v8a`, 11,737,776 bytes; `fdroid-universal`
+> 11,754,680), comfortably inside the 30 MB rule of thumb. It used to be 79 MB because
+> the seven field recordings were 77,449,472 bytes of raw PCM the mixer memory-mapped;
+> since 1.12 they are 10,089,142 bytes of Opus containers. The release dex is minified
+> (3,041,456 bytes, from 47,367,428 before R8 was enabled in 1.5.2), and native
+> libraries are 17,208 bytes. The per-ABI split is in place but is not what fixed the
+> size — it saves 98,824 bytes. The cost of the smaller number is a platform decoder in
+> the audio path, which is unverified on hardware. `docs/LAUNCH.md` records the
+> measurements.
 >
 > The asset to distribute is the `fdroid`-channel APK,
-> `Nightfall-1.8.2-fdroid-universal.apk`: it declares no `INTERNET`,
+> `Nightfall-2.0-fdroid-universal.apk`: it declares no `INTERNET`,
 > `ACCESS_NETWORK_STATE`, `REQUEST_INSTALL_PACKAGES` or
 > `UPDATE_PACKAGES_WITHOUT_USER_ACTION` permission and contains no updater code. The
 > five other APKs attached to that release are the `github` channel, which does carry

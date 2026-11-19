@@ -49,7 +49,7 @@ Body:
 >
 > **The engine is a plain Kotlin module.** One 48 kHz stereo float mix, 1024-frame
 > blocks, one audio-priority thread, a soft limiter at the end. It has no Android
-> dependency, so it runs as plain JUnit: 69 tests, including zero per-block allocation
+> dependency, so it runs as plain JUnit: 97 tests, including zero per-block allocation
 > inside the render path, click size at layer add/remove, loop seams on every bundled
 > recording, and a measured loudness table that calibrates every sound in the library
 > to the same reference level. The DSP being boring and testable was the point.
@@ -61,9 +61,23 @@ Body:
 > with keys, tuning and seeded variation. Sleep timers fade out instead of cutting,
 > and layers can stop on their own schedules.
 >
+> 2.0 added four things worth naming. An **endless night** switch, so the mix evolves
+> over hours instead of looping one bed — companion layers drift in and out, and every
+> layer's tone drifts around its setting; on eight-hour renders the worst hour-to-hour
+> level move was 0.22 LU. A **home-screen play/pause widget** that drives the app's own
+> media session. A **hidden, opt-in diagnostics journal** (five taps on the version row,
+> bounded, fixed tokens, nothing transmitted, and absent entirely from the F-Droid
+> build). And **Android 16 targeting**, with the app's own suite run on an API 36
+> runtime in CI. Every UI string is in resources now with a build guard against the
+> next literal, though nothing has been translated yet.
+>
 > Honest limits: a physical-device pass (Pixel 7, Bluetooth, overnight battery) is
-> still pending and the README says so; the APK is about 79 MB because 77 MB of it is
-> the uncompressed recordings the mixer memory-maps.
+> still pending and the README says so; the widget has never been placed on a real
+> launcher; the diagnostics journal has never recorded a real crash; the Opus decoder
+> the recordings now go through has never run on a phone, so if a platform refuses Opus
+> the app tells you at start-up instead of playing silence; and no ear has heard the
+> catalogue on a device. The APK is 11.7 MB — the seven recordings ship as 10,089,142
+> bytes of Opus where 1.8 carried 77,449,472 bytes of raw PCM.
 >
 > MIT licensed, no CLA, issues and PRs welcome:
 > https://github.com/CamjamPNG/Nightfall

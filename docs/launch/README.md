@@ -1,8 +1,8 @@
 # Camden — what to post, in what order, and what is missing
 
 Everything else in `docs/launch/` is research and drafts. This file is the short
-version. Facts and numbers were measured on 18 November 2026 against release
-`v1.8.2`; `docs/LAUNCH.md` has the evidence command beside every one of them.
+version. Facts and numbers were measured on 19 November 2026 against release
+`v2.0`; `docs/LAUNCH.md` has the evidence command beside every one of them.
 
 ## Post first: r/droidappshowcase
 
@@ -36,9 +36,9 @@ closed.
 ## Before you paste anything: two checks
 
 1. **Re-read the numbers against the release you are actually linking.** These drafts
-   name `v1.8.2`, 79 MB, 69 tests and six APKs, all measured on 18 November 2026. No draft
-   quotes a catalogue or preset count; if you add one, take it from the command below
-   rather than from `docs/LAUNCH.md`, which carries figures the posts do not need. `gh release list --limit 1` and
+   name `v2.0`, 11.7 MB, 97 core tests and six APKs, all measured on 19 November 2026.
+   No draft quotes a catalogue or preset count; if you add one, take it from the command
+   below rather than from `docs/LAUNCH.md`, which carries figures the posts do not need. `gh release list --limit 1` and
    `gh release view <tag> --json assets` are enough to confirm or correct the version
    and the sizes in under a minute; the catalogue and preset counts come from the
    compiled module:
@@ -54,6 +54,12 @@ closed.
    does, and a wrong count in public copy is the one error a reader catches. A stale
    size is the other.
 2. **Post as the developer, in the first lines.** Every draft says so. Keep it.
+3. **Keep the four unverified lines.** 2.0 shipped an Opus decoder that no phone has run,
+   a catalogue no ear has heard on a device, a widget no launcher has hosted, and a
+   diagnostics journal that has never recorded a real crash. Each draft carries them; a
+   post that drops one because the new release reads better is the kind of claim this
+   project has spent two releases avoiding. They are listed by name in `README.md` under
+   *Never checked on hardware*.
 
 ## The one blocker this kit cannot clear: the demo clip needs your Pixel 7
 
