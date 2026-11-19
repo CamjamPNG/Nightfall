@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.5 — 2026-11-19
+
+- fix: give the two counts that can be one a plural form (#34)
+
 ## 1.9.4 — 2026-11-19
 
 - refactor: extract every UI string into resources, and guard the next one (#33)
