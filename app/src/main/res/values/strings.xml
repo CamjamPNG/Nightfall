@@ -70,6 +70,8 @@
     <string name="home_action_fade">Fade</string>
     <string name="home_action_save_mix">Save mix</string>
     <string name="home_action_reset">Reset</string>
+    <string name="home_endless_title">Endless night</string>
+    <string name="home_endless_description">Sources drift in and out as the night goes on, so this mix keeps moving instead of settling into the same loop.</string>
     <string name="home_action_all_presets">All presets →</string>
     <string name="home_a11y_all_presets">See all presets</string>
 

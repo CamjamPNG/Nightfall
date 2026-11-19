@@ -57,6 +57,11 @@ data class Mix(
     val layers: List<Layer> = emptyList(),
     val master: Float = .5f,
     val favorite: Boolean = false,
+    /**
+     * Endless night, off by default. A mix saved before this existed decodes as off, which is the
+     * behaviour it was saved with: the layers exactly as set, and nothing evolving.
+     */
+    val endless: EndlessConfig = EndlessConfig(),
 )
 
 @Serializable

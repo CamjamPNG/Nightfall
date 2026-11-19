@@ -1,8 +1,12 @@
 # Localization
 
 Every string Nightfall shows a person used to be a Kotlin literal in `app/src/main/java/dev/nightfall/`.
-The app's own chrome is now in `app/src/main/res/values/strings.xml` and `plurals.xml`: 260 keys,
-every one of them used, extracted against `main` at `1ffbee1`. What still ships as English in code
+The app's own chrome is now in `app/src/main/res/values/strings.xml` and `plurals.xml`: 276 keys,
+every one of them used, extracted against `main` at `1ffbee1` and counted again at this branch's head.
+The count is `grep -c '<string name=\|<plurals name='` over the two files, and §2 below is the
+inventory as it stood when the extraction landed: the keys added afterwards — the home-screen widget's,
+the diagnostics journal's, and the endless-night switch's — are counted but only the switch is listed
+(§2.23). What still ships as English in code
 is the catalogue — 98 names, 10 categories, 15 preset names in
 `core/src/main/kotlin/dev/nightfall/core/Library.kt` — plus two defaults that are written into saved
 data rather than drawn (`Your soundscape`, `My night mix`). Both are listed in §5 as stages 5 and 6
@@ -39,11 +43,11 @@ Excluded, with the reason: §3.
 
 ## 2. Inventory
 
-250 user-visible surface strings and 129 catalogue strings, 379 in total:
+252 user-visible surface strings and 129 catalogue strings, 381 in total:
 
 | Surface | Strings |
 | --- | --- |
-| App shell, dialogs, Home, layer row and options panel (§2.1-§2.12) | 124 |
+| App shell, dialogs, Home, layer row and options panel (§2.1-§2.12, §2.23) | 126 |
 | Library, Presets, Studio, Settings (§2.13-§2.16) | 103 |
 | Snackbars, errors, notification, waveform a11y, launcher label (§2.17-§2.21) | 23 |
 | Catalogue: 98 sound names, 10 categories, 6 descriptions, 15 preset names (§2.22) | 129 |
@@ -605,6 +609,23 @@ persisted in `SavedState.favoriteIds` and used as Compose `key = "builtin-${it.i
 
 `Mix.name` defaults to `Nine-Layer Dream` (`core/Models.kt:56`) and `NightfallApp.kt:45` seeds the
 in-memory mix with `Your soundscape`; both end up written to DataStore.
+
+### 2.23 Endless night switch — `NightfallScreen.kt:488-497`
+
+| Key | Line | Text |
+| --- | --- | --- |
+| `home_endless_title` | 491 | Endless night |
+| `home_endless_description` | 492 | Sources drift in and out as the night goes on, so this mix keeps moving instead of settling into the same loop. |
+
+The switch is a `SettingToggle` in the Home list, after the master volume and the quick actions, and
+it edits the mix rather than the app's settings, so the words are `home.*` and the sentence travels
+with the mix it describes. The title is also the switch's `contentDescription`, so a screen reader
+announces one name for the control and the row above it rather than two.
+
+The description is a full sentence with a full stop, and it is the only place the product explains
+what the switch does. Two things it must keep saying in any translation: the sources move *in and
+out* rather than being added, and the mix keeps moving instead of settling into a loop — a translation
+that promises "more sounds" would be describing a different feature.
 
 ## 3. Strings that must not be extracted
 

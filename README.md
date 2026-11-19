@@ -142,7 +142,7 @@ copy yourself. It also builds from source:
 # app/build/outputs/apk/fdroid/debug/app-fdroid-debug.apk
 ```
 
-CI builds this channel, lints it, and runs the same eleven playback-lifecycle scenarios
+CI builds this channel, lints it, and runs the same twelve playback-lifecycle scenarios
 and the widget's twenty against it on every push; `tools/check_release.py --fdroid-apk`
 asserts from the built dex and manifest that no updater class and no network permission
 survived.
@@ -244,9 +244,9 @@ what no one has ever confirmed. All three columns are kept honest in
 | The widget's button is inside its own surface and its label is not cut, at one cell and at two, in both themes | `WidgetLayoutTest`, `WidgetRenderTest` (PNGs in `build/screenshots/github`) |
 | The F-Droid APK carries no network permission and no class from the updater package, and the GitHub APK carries code from every updater source file | `tools/check_release.py --fdroid-apk` and `--apk`, on every push |
 
-How many tests: **73 in `core`** (72 run, plus the opt-in `NIGHTFALL_CALIBRATE=1`
-calibration generator, which is skipped by design), **33 Robolectric scenarios** in
-`app/src/test` (11 playback-lifecycle, 20 widget, 2 Android 16) that run twice, once
+How many tests: **97 in `core`** (96 run, plus the opt-in `NIGHTFALL_CALIBRATE=1`
+calibration generator, which is skipped by design), **34 Robolectric scenarios** in
+`app/src/test` (12 playback-lifecycle, 20 widget, 2 Android 16) that run twice, once
 per channel, plus 3 decoder-fallback tests, **51 updater tests** in
 `app/src/testGithub/java/dev/nightfall/update`, and **66 release-tooling tests**. The
 six render classes in `app/src/testGithub/java/dev/nightfall/render` are not
@@ -294,7 +294,7 @@ Needs JDK 17 and Android SDK 35 with build-tools 35.0.0. These three commands ar
 documented gate, and CI runs these three plus the rest of the list below.
 
 ```sh
-./gradlew :core:test :app:assembleDebug :app:lintDebug   # 73 core tests, both channels, lint aborts on error
+./gradlew :core:test :app:assembleDebug :app:lintDebug   # 97 core tests, both channels, lint aborts on error
 python3 -m unittest discover -s tools/tests              # 66 release-tooling tests
 python3 tools/check_release.py                           # store metadata, bundled audio, both channels
 ```

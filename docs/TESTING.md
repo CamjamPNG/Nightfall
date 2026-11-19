@@ -107,8 +107,8 @@
   rejection of duplicate versions and preservation of code/audio in ABI options.
   Signed APK variants are additionally checked with Android's apksigner, aapt,
   zipalign and source-tag audio hashes before publication.
-- 73 deterministic JVM/core tests pass (72 executed, 1 skipped by design: the
-  opt-in `NIGHTFALL_CALIBRATE=1` level-calibration generator). One of them renders
+- 97 deterministic JVM/core tests pass (96 executed, 1 skipped by design: the
+  opt-in `NIGHTFALL_CALIBRATE=1` level-calibration generator). Two of them render
   a whole eight-hour night through the real render path. They cover nine
   simultaneous non-silent sources, 512 allocated layers, unrelated-source phase
   continuity, independent gain/master/mute/solo, limiting, colored-noise
@@ -116,6 +116,19 @@
   plus the loudness ledger and per-source level calibration, true-peak ceiling,
   zero per-block allocation, click size at layer add/remove, loop seams on the
   bundled recordings, spectral slope, DC offset and tuning in cents.
+- Endless night is measured rather than described. Its schedule is a function of rendered frames, so
+  the tests hold it directly: the same seed renders bit-identical output and another seed differs; the
+  pattern does not repeat at any lag (a repeat would agree at one lag far more than at the lags either
+  side of it); the envelope moves at 0.02 a second and never steps across sixteen hours; a source
+  arriving or leaving is as smooth as the material around it; and the level the person set is held to
+  hundredths of a LU while a source enters. Companions are drawn only from the families the mix's own
+  layers belong to, never from music. A second night test renders eight hours of an evolving preset
+  beside the same preset with the night off — same layer ids, so the two nights differ only by what
+  the night itself did — and reports the hourly level difference, the CPU per block, and how far the
+  evolving night's spectrum sits from the plain mix's at the same instant. It also reports the
+  ten-minute spectrum drift both ways, because that number is *not* the night's: for a rain-dominated
+  preset the material's own swells move it as much as the night does, and the honest measure of the
+  feature is composition (which sources are sounding) rather than a slow tilt of the whole spectrum.
 - Duplicate noise layers have independent random streams. Pausing in the final
   timer fade preserves the fade level. Expired layer schedules stop source
   reads/rendering and can resume with a new schedule.
@@ -156,8 +169,8 @@
   inventory has no GMS, Firebase, billing, ad or tracking SDK from the checked
   denylist. F-Droid's independent review remains necessary.
 
-- 33 Robolectric scenarios pass in both channels (see below), plus the three GitHub-only
-  diagnostics gesture scenarios described above: eleven
+- 34 Robolectric scenarios pass in both channels (see below), plus the three GitHub-only
+  diagnostics gesture scenarios described above: twelve
   playback-lifecycle ones, which replace the instrumented attempt that never went
   green, two Android 16 assertions that need the API 36 sandbox CI now runs
   (`Android16RuntimeTest`), and twenty for the home-screen widget.
