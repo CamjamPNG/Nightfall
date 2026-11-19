@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.9.4 — 2026-11-19
+
+- refactor: extract every UI string into resources, and guard the next one (#33)
+- docs: the playback-lifecycle scenario count is eleven, not ten (#32)
+
 ## 1.9.3 — 2026-11-19
 
 - test: count open decoders per test so a neighbour's teardown cannot break the assertion (#31)

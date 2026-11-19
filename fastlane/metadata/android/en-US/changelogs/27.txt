@@ -1,0 +1,2 @@
+- refactor: extract every UI string into resources, and guard the next one (#33)
+- docs: the playback-lifecycle scenario count is eleven, not ten (#32)
