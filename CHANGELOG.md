@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.12 — 2026-11-19
+
+- sounds: ship the field recordings as Opus and drop 77 MB of PCM (#38)
+
 ## 1.11 — 2026-11-19
 
 - feat: home-screen play/pause widget with a configurable tap (#36)

@@ -4,7 +4,7 @@ License: MIT
 AuthorName: Camden VandenBosch
 SourceCode: https://github.com/CamjamPNG/Nightfall
 IssueTracker: https://github.com/CamjamPNG/Nightfall/issues
-Changelog: https://github.com/CamjamPNG/Nightfall/blob/HEAD/fastlane/metadata/android/en-US/changelogs/30.txt
+Changelog: https://github.com/CamjamPNG/Nightfall/blob/HEAD/fastlane/metadata/android/en-US/changelogs/31.txt
 
 AutoName: Nightfall
 
@@ -222,6 +222,13 @@ Builds:
     gradle:
       - fdroid
 
+  - versionName: '1.12'
+    versionCode: 31
+    commit: v1.12
+    subdir: app
+    gradle:
+      - fdroid
+
 MaintainerNotes: |
   Original code is MIT. The commercial-courtesy request is voluntary and
   adds no license restriction. Bundled non-executable recordings retain
@@ -246,5 +253,5 @@ MaintainerNotes: |
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9].*
-CurrentVersion: '1.11'
-CurrentVersionCode: 30
+CurrentVersion: '1.12'
+CurrentVersionCode: 31
