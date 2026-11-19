@@ -47,6 +47,13 @@ data class OutputRoute(val kind: Kind = Kind.SYSTEM, val deviceName: String = ""
 
 data class PlaybackStatus(
     val playing: Boolean = false,
+    /**
+     * Whether the mix has been reset rather than paused. A widget and the transport control both
+     * have to tell "silent but resumable" from "nothing loaded", and only the runtime knows: stop
+     * resets the mixer, pause does not. Nothing else reads this, so it is not a second state to keep
+     * in sync with [playing].
+     */
+    val stopped: Boolean = true,
     val output: OutputRoute = OutputRoute(),
     val remainingMs: Long = 0,
     val timerActive: Boolean = false,
@@ -212,7 +219,14 @@ class NightfallRuntime(
     fun stop() {
         timer.cancel()
         host?.stop()
-        status.value = status.value.copy(timerActive = false, remainingMs = 0, timerFading = false)
+        status.value =
+            status.value.copy(
+                playing = false,
+                stopped = true,
+                timerActive = false,
+                remainingMs = 0,
+                timerFading = false,
+            )
     }
 
     fun setTimer(minutes: Long) {

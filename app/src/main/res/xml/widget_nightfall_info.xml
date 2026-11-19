@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The widget's declaration. `updatePeriodMillis` is zero on purpose: nothing here polls, and the
+    service pushes a new picture whenever playback actually changes. From Android 12 the launcher
+    sizes a widget by cells, so the target is one cell and the resize range allows two; the layout
+    picks its cell-per-size variant from the RemoteViews size map in PlaybackWidget.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:configure="dev.nightfall.WidgetConfigureActivity"
+    android:description="@string/widget_description"
+    android:initialLayout="@layout/widget_nightfall"
+    android:maxResizeHeight="120dp"
+    android:maxResizeWidth="260dp"
+    android:minHeight="40dp"
+    android:minResizeHeight="40dp"
+    android:minResizeWidth="40dp"
+    android:minWidth="40dp"
+    android:previewLayout="@layout/widget_nightfall"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="1"
+    android:targetCellWidth="1"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable"
+    tools:targetApi="s" />

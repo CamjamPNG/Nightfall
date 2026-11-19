@@ -2,6 +2,7 @@
 package dev.nightfall
 
 import android.app.Application
+import android.content.ComponentName
 import android.content.Intent
 import android.os.Bundle
 import android.os.Looper
@@ -11,10 +12,12 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.media3.session.MediaSession
+import androidx.media3.session.MediaSessionService
 import androidx.test.core.app.ApplicationProvider
 import dev.nightfall.core.PresetJson
 import dev.nightfall.core.Presets
 import java.time.Duration
+import java.util.concurrent.atomic.AtomicBoolean
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -114,6 +117,39 @@ abstract class PlaybackHarness {
             Robolectric.buildService(PlaybackService::class.java, intent).create().startCommand(0, 1)
         service = controller
         return controller.get()
+    }
+
+    /**
+     * The `PlaybackService` a widget tap would reach. On a device the tap's controller bind creates
+     * the service; Robolectric never starts a service by binding, so the test creates it and
+     * [tapWidget] hands its binder to the bind.
+     */
+    protected fun bindWidgetSession(): PlaybackService {
+        val controller =
+            Robolectric.buildService(
+                    PlaybackService::class.java,
+                    Intent(app, PlaybackService::class.java).setAction("play"),
+                )
+                .create()
+        service = controller
+        return controller.get()
+    }
+
+    /**
+     * Taps the widget: the provider's handler, from opening the app's session to the command. The
+     * bind reaches the service this test already created, which is where the OS would reach a running
+     * one; the app's own [WidgetSession] then connects a real controller through that binder.
+     */
+    protected fun tapWidget() {
+        val name = ComponentName(app, PlaybackService::class.java)
+        val binder =
+            checkNotNull(
+                service?.get()?.onBind(Intent(MediaSessionService.SERVICE_INTERFACE).setComponent(name))
+            ) { "tapWidget needs a running PlaybackService" }
+        shadowOf(app).setComponentNameAndServiceForBindService(name, binder)
+        val done = AtomicBoolean(false)
+        WidgetSession.toggle(app) { done.set(true) }
+        await { done.get() }
     }
 
     /** The media session a controller would connect to, as the service publishes it. */

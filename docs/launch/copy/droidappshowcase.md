@@ -72,7 +72,7 @@ Body:
 > - **MIT licensed**, source is readable, and the audio engine is a Kotlin module with
 >   no Android dependency and 69 tests, so the DSP is inspectable rather than hidden.
 >
-> What it isn't: there is no iOS version, no cloud sync, no widgets, no Android Auto.
+> What it isn't: there is no iOS version, no cloud sync, no Android Auto.
 > A physical-device pass (Pixel 7, Bluetooth mask, overnight battery) is still pending
 > — I've documented that honestly in the README's limitations section instead of
 > claiming all-night reliability I haven't measured. And it's a large download: about

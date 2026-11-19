@@ -161,7 +161,8 @@ class AudioHost(private val runtime: NightfallRuntime) {
         playing = true
         runtime.timer.resume(SystemClock.elapsedRealtime())
         if (!wake.isHeld) wake.acquire()
-        runtime.status.value = runtime.status.value.copy(playing = true, error = null)
+        runtime.status.value =
+            runtime.status.value.copy(playing = true, stopped = false, error = null)
         synchronized(monitor) { monitor.notifyAll() }
     }
 

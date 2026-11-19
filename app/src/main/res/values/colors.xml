@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Home-screen widget palette. The widget is inflated inside the launcher's process, so a theme
+    attribute from NightfallTheme is not available to it: these are the same colours Design.kt names,
+    declared as plain resources so `values-night` can answer the launcher's dark mode.
+-->
+<resources>
+    <color name="widget_surface">#F4F2F9</color>
+    <color name="widget_on_surface">#202437</color>
+    <color name="widget_accent">#67519E</color>
+    <color name="widget_on_accent">#FFFFFF</color>
+</resources>

@@ -32,6 +32,38 @@ Rendering uses a 4-block minimum output buffer (about 85 ms at 48 kHz), or Andro
 
 JSON imports validate known sound IDs, unique layer IDs, finite numeric values, ranges and names. JSON is decoded from the input stream without an arbitrary file or layer-count cap; actual available memory remains finite. Android's Storage Access Framework supplies import/export access without broad filesystem permission. User presets can be renamed, duplicated, favorited, deleted and exported; bundled presets can be duplicated and favorited.
 
+## Home-screen widget
+
+`PlaybackWidgetProvider` is an `AppWidgetProvider` that draws one `RemoteViews` control: a
+play/pause button and the mix's state, at a 1x1 and a roughly 2x1 footprint. No dependency was
+added for it — a single button and a label are RemoteViews territory, and Glance would have
+brought a Compose runtime and a second AndroidX tree for one view.
+
+The widget keeps no state of its own and has no second command channel. `PlaybackService`
+collects `NightfallRuntime.status` and calls `PlaybackWidget.publish` whenever the *state*
+changes, so the transport control, the notification, the lock screen, a Bluetooth button, a
+timer running out or an audio-focus loss all reach the widget through the one path that already
+existed. A tap opens the app's media session with a `MediaController` and sends the same
+`play`/`pause` the notification sends; the decision is read from the session's own
+`playWhenReady`, never from what the widget last drew. With no Nightfall process, the controller
+bind creates the service and playback starts through the same `AudioHost` a cold start reaches;
+a widget tap is one of the platform's documented exemptions for starting a foreground service
+from the background.
+
+`PlaybackStatus.stopped` is what lets the widget tell *paused* from *stopped*: `stop()` resets
+the mixer and a pause does not, and before this only `playing` was published. The state is
+written to private preferences with the kernel's boot identifier and the `elapsedRealtime` mark
+it was written at. A stored state carrying another boot's identifier is replaced with stopped
+rather than skipped past — uptime alone only catches a reboot the launcher asks about early in
+the new boot, and a short previous boot leaves a mark this boot passes in minutes. A widget
+therefore reads as stopped rather than as whatever it showed when the phone went down. `updatePeriodMillis` is zero: nothing polls. The tap behaviour — play/pause here, or open
+Nightfall and leave playback alone — is chosen in `WidgetConfigureActivity` when the widget is
+added and is reconfigurable from the launcher afterwards; it is a stored per-widget choice that
+decides which `PendingIntent` the surface carries, not a setting in the app.
+
+Colours come from `Design.kt`'s palette as plain `values`/`values-night` resources, because the
+launcher inflates the layout in its own process where `NightfallTheme` does not exist.
+
 ## Update channel
 
 `app` builds two flavours from one source set. Every updater source file lives in
@@ -211,5 +243,11 @@ same place as the updater's rule.
 ## Limits
 
 The update guard's residue: an install re-reads playback immediately before committing and defers if playback resumed, so the interval in which a play request can be overtaken by the commit is one binder write (microseconds) rather than the multi-second APK copy, which is guarded. That interval is not zero, and it is not closed by design: the alternative is the audio start path waiting on the installer, which would put update state in the audio path.
+
+The widget's own limits: a launcher's corner radius, cell padding and the wall behind the widget
+are the launcher's, so whether the button clears a large radius on a particular phone is a
+device question, answered so far only by rendering both layouts at Pixel-7 cell sizes. The tap
+path is exercised against a real media session in Robolectric, but a Robolectric bind cannot
+create the service the way the launcher's bind does, and no launcher has been driven.
 
 DSP models are interpretations, not high-fidelity recordings of every named environment. Gray noise is an approximate preset. Headphone acoustic levels cannot be derived from gain percentages. Hardware Bluetooth behavior, power management, perceptual audio quality and all-night battery life need physical-device validation. Background execution is supported through Android's media foreground-service model; no manufacturer-independent all-night guarantee is made.
