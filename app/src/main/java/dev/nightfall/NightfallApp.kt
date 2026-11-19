@@ -69,6 +69,8 @@ class NightfallRuntime(
 ) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     // Keep Application.onCreate cheap; catalogue construction/restoration belongs off main.
+    // A mix name that gets written to storage, not drawn copy: extracting it means deciding what an
+    // existing save migrates to, which docs/LOCALIZATION.md keeps in its own stage.
     private val _saved = MutableStateFlow(SavedState(current = Mix(name = "Your soundscape")))
     val saved = _saved.asStateFlow()
     val status = MutableStateFlow(PlaybackStatus())
@@ -95,7 +97,7 @@ class NightfallRuntime(
             } catch (e: Exception) {
                 _saved.value = SavedState()
                 status.value =
-                    status.value.copy(error = "Could not restore saved mix: ${e.message}")
+                    status.value.copy(error = context.getString(R.string.error_restore_failed, e.message))
             }
             ready.value = true
         }
@@ -116,7 +118,10 @@ class NightfallRuntime(
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        status.value = status.value.copy(error = "Saving failed: ${e.message}")
+                        status.value =
+                            status.value.copy(
+                                error = context.getString(R.string.error_save_failed, e.message)
+                            )
                     }
                 }
             }
@@ -165,6 +170,8 @@ class NightfallRuntime(
         val preset =
             _saved.value.current.copy(
                 id = UUID.randomUUID().toString(),
+                // Persisted as the mix's name, so this is data rather than copy for the same reason
+                // as the default above.
                 name = name.trim().ifEmpty { "My night mix" },
             )
         change {
@@ -194,7 +201,7 @@ class NightfallRuntime(
                 Intent(context, PlaybackService::class.java).setAction("play"),
             )
         } catch (e: Exception) {
-            status.value = status.value.copy(error = "Playback could not start: ${e.message}")
+            status.value = status.value.copy(error = context.getString(R.string.error_playback_start_failed, e.message))
         }
     }
 

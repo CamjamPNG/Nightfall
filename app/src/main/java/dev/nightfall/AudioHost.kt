@@ -114,7 +114,9 @@ class AudioHost(private val runtime: NightfallRuntime) {
         failure?.let {
             failure = null
             pause(true)
-            runtime.status.value = runtime.status.value.copy(error = "Audio stopped: $it")
+            runtime.status.value = runtime.status.value.copy(
+                    error = context.getString(R.string.error_audio_stopped, it)
+                )
             return
         }
         if (!playing) return
@@ -142,7 +144,7 @@ class AudioHost(private val runtime: NightfallRuntime) {
         } catch (e: Exception) {
             runtime.status.value =
                 runtime.status.value.copy(
-                    error = "Background playback could not start: ${e.message}"
+                    error = context.getString(R.string.error_background_start_failed, e.message)
                 )
             return
         }
@@ -150,7 +152,7 @@ class AudioHost(private val runtime: NightfallRuntime) {
         if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             runtime.status.value =
                 runtime.status.value.copy(
-                    error = "Audio focus is unavailable. Try again after the other audio ends."
+                    error = context.getString(R.string.error_audio_focus_unavailable)
                 )
             return
         }
@@ -282,6 +284,8 @@ class AudioHost(private val runtime: NightfallRuntime) {
                                         AudioTrack.WRITE_BLOCKING,
                                     )
                                 if (written <= 0) {
+                                    // A diagnostic folded into error_audio_stopped, not copy:
+                                    // docs/LOCALIZATION.md keeps platform details untranslated.
                                     failure = "AudioTrack write returned $written"
                                     break
                                 }
@@ -348,7 +352,7 @@ class AudioHost(private val runtime: NightfallRuntime) {
      * saying so is the worst failure a mixer can have.
      */
     private fun reportDecodeFailure(reason: String) {
-        val message = "A bundled recording cannot be decoded on this device ($reason)."
+        val message = context.getString(R.string.error_recording_undecodable, reason)
         // The main thread owns playback status; a decoder's worker reports through it rather than
         // writing the state flow itself, which could resurrect a stale copy of `playing`.
         mainHandler.post {

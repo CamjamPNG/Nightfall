@@ -14,6 +14,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
@@ -46,11 +49,16 @@ private fun LayerCount(r: NightfallRuntime, soundId: String) {
             s.current.layers.count { it.soundId == soundId }
         }
     if (n > 0)
-        Text("$n in your mix", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary)
+        Text(
+            stringResource(R.string.library_in_mix, n),
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.primary,
+        )
 }
 
 @Composable
 fun SoundLibrary(r: NightfallRuntime) {
+    val context = LocalContext.current
     // null is "every category": the chip said "All" and was also the filter sentinel, which is an
     // English word deciding behaviour. The label is a label, the value is a value.
     var category by rememberSaveable { mutableStateOf<String?>(null) }
@@ -64,17 +72,24 @@ fun SoundLibrary(r: NightfallRuntime) {
         contentPadding = PaddingValues(22.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item { PageHeading("Sound library", "A little of everything. As many layers as you like.") }
+        item {
+            PageHeading(
+                stringResource(R.string.library_title),
+                stringResource(R.string.library_subtitle),
+            )
+        }
         item {
             OutlinedTextField(
                 query,
                 { query = it },
                 leadingIcon = { Icon(Icons.Outlined.Search, null) },
-                placeholder = { Text("Find your sound") },
+                placeholder = { Text(stringResource(R.string.library_search_hint)) },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
                 modifier =
-                    Modifier.fillMaxWidth().semantics { contentDescription = "Search sounds" },
+                    Modifier.fillMaxWidth().semantics {
+                        contentDescription = context.getString(R.string.library_a11y_search)
+                    },
             )
         }
         item {
@@ -83,15 +98,15 @@ fun SoundLibrary(r: NightfallRuntime) {
                     FilterChip(
                         selected = category == c,
                         onClick = { category = c },
-                        label = { Text(c ?: "All") },
+                        label = { Text(c ?: stringResource(R.string.library_category_all)) },
                     )
                 }
             }
         }
         item {
             SectionLabel(
-                category ?: "Explore sounds",
-                "${sounds.count {it.available}} available",
+                category ?: stringResource(R.string.library_section_explore),
+                stringResource(R.string.library_available, sounds.count { it.available }),
             )
         }
         items(sounds, key = { it.id }) { sound ->
@@ -115,9 +130,10 @@ fun SoundLibrary(r: NightfallRuntime) {
                         Spacer(Modifier.height(4.dp))
                         Text(
                             when (sound.kind) {
-                                "recording" -> "Field recording · offline"
-                                "unavailable" -> "Recording not bundled"
-                                "music" -> "Original generative music"
+                                "recording" -> stringResource(R.string.library_kind_recording)
+                                "unavailable" ->
+                                    stringResource(R.string.library_unavailable)
+                                "music" -> stringResource(R.string.library_kind_music)
                                 else -> sound.description
                             },
                             fontSize = 11.sp,
@@ -129,7 +145,7 @@ fun SoundLibrary(r: NightfallRuntime) {
                         Icon(
                             if (sound.available) Icons.Outlined.AddCircleOutline
                             else Icons.Outlined.Info,
-                            "Add ${sound.name}",
+                            stringResource(R.string.library_add, sound.name),
                         )
                     }
                 }
@@ -138,13 +154,13 @@ fun SoundLibrary(r: NightfallRuntime) {
         if (sounds.isEmpty())
             item {
                 Text(
-                    "No sounds match your search.",
+                    stringResource(R.string.library_no_match),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         item {
             Text(
-                "Environmental synthesis is an interpretation of a sound, not a field recording. Gray, green, black and velvet are labeled configurable presets. All music is generated on your device.",
+                stringResource(R.string.library_disclaimer),
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 12.dp),
@@ -160,6 +176,7 @@ fun PresetScreen(
     onExport: (Mix) -> Unit,
     onRename: (Mix) -> Unit,
 ) {
+    val context = LocalContext.current
     var favoritesOnly by rememberSaveable { mutableStateOf(false) }
     val presets by selectSaved(r, r.savedNow().presets) { it.presets }
     val favoriteIds by selectSaved(r, r.savedNow().favoriteIds) { it.favoriteIds }
@@ -167,18 +184,23 @@ fun PresetScreen(
         contentPadding = PaddingValues(22.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item { PageHeading("Find your night", "Carefully composed. Always yours to change.") }
+        item {
+            PageHeading(
+                stringResource(R.string.presets_title),
+                stringResource(R.string.presets_subtitle),
+            )
+        }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onImport) {
                     Icon(Icons.Outlined.FileOpen, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Import JSON")
+                    Text(stringResource(R.string.presets_action_import))
                 }
                 FilterChip(
                     selected = favoritesOnly,
                     onClick = { favoritesOnly = !favoritesOnly },
-                    label = { Text("Favorites") },
+                    label = { Text(stringResource(R.string.presets_action_favorites)) },
                     leadingIcon = {
                         Icon(Icons.Outlined.FavoriteBorder, null, Modifier.size(18.dp))
                     },
@@ -186,14 +208,24 @@ fun PresetScreen(
             }
         }
         if (presets.isNotEmpty())
-            item { SectionLabel("Your mixes", "${presets.size} saved") }
+            item {
+                SectionLabel(
+                    stringResource(R.string.presets_section_yours),
+                    stringResource(R.string.presets_saved, presets.size),
+                )
+            }
         items(
             presets.filter { !favoritesOnly || it.favorite || it.id in favoriteIds },
             key = { it.id },
         ) { p ->
             PresetCard(p, r, false, onExport, onRename)
         }
-        item { SectionLabel("Nightfall collection", "${Presets.all.size} soundscapes") }
+        item {
+            SectionLabel(
+                stringResource(R.string.presets_section_builtin),
+                stringResource(R.string.presets_soundscapes, Presets.all.size),
+            )
+        }
         items(
             Presets.all.filter { !favoritesOnly || it.id in favoriteIds },
             key = { "builtin-${it.id}" },
@@ -211,6 +243,7 @@ private fun PresetCard(
     onExport: (Mix) -> Unit,
     onRename: (Mix) -> Unit,
 ) {
+    val context = LocalContext.current
     var menu by remember { mutableStateOf(false) }
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -221,7 +254,7 @@ private fun PresetCard(
                 Column(Modifier.weight(1f)) {
                     Text(p.name, fontSize = 17.sp, fontWeight = FontWeight.Medium)
                     Text(
-                        "${p.layers.size} ${plural(p.layers.size, "layer", "layers")}",
+                        pluralStringResource(R.plurals.unit_layers, p.layers.size, p.layers.size),
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp),
@@ -242,25 +275,30 @@ private fun PresetCard(
                 ) {
                     Icon(
                         if (p.favorite) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
-                        "Favorite ${p.name}",
+                        stringResource(R.string.presets_a11y_favorite, p.name),
                         Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }
                 Box {
                     IconButton(onClick = { menu = true }) {
-                        Icon(Icons.Outlined.MoreHoriz, "Options for ${p.name}")
+                        Icon(
+                            Icons.Outlined.MoreHoriz,
+                            stringResource(R.string.presets_a11y_options, p.name),
+                        )
                     }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                         DropdownMenuItem(
-                            text = { Text("Duplicate") },
+                            text = { Text(stringResource(R.string.presets_action_duplicate)) },
                             onClick = {
-                                r.savePreset(p.copy(name = "${p.name} copy"))
+                                r.savePreset(
+                                    p.copy(name = context.getString(R.string.presets_copy_suffix, p.name))
+                                )
                                 menu = false
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text("Export JSON") },
+                            text = { Text(stringResource(R.string.presets_action_export)) },
                             onClick = {
                                 onExport(p)
                                 menu = false
@@ -268,14 +306,14 @@ private fun PresetCard(
                         )
                         if (!builtin) {
                             DropdownMenuItem(
-                                text = { Text("Rename") },
+                                text = { Text(stringResource(R.string.presets_action_rename)) },
                                 onClick = {
                                     onRename(p)
                                     menu = false
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text("Delete") },
+                                text = { Text(stringResource(R.string.presets_action_delete)) },
                                 onClick = {
                                     r.deletePreset(p.id)
                                     menu = false
@@ -297,7 +335,7 @@ private fun PresetCard(
             ) {
                 Icon(Icons.Outlined.PlayArrow, null, Modifier.size(19.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("Play soundscape")
+                Text(stringResource(R.string.presets_play))
             }
         }
     }
@@ -310,6 +348,7 @@ fun Studio(
     onSaved: (String) -> Unit,
     onClearEdit: () -> Unit,
 ) {
+    val context = LocalContext.current
     // One read, not a subscription: the studio form is local state and must not recompose with
     // every mixer change.
     val existing = remember(layerId) { r.savedNow().current.layers.firstOrNull { it.id == layerId } }
@@ -332,9 +371,9 @@ fun Studio(
     ) {
         item {
             PageHeading(
-                "Sound studio",
-                if (existing != null) "Shaping ${existing.name}"
-                else "A quiet composition, made by you.",
+                stringResource(R.string.studio_title),
+                if (existing != null) stringResource(R.string.studio_subtitle_editing, existing.name)
+                else stringResource(R.string.studio_subtitle_new),
             )
         }
         item {
@@ -350,13 +389,13 @@ fun Studio(
                         )
                         Spacer(Modifier.width(10.dp))
                         Text(
-                            "Original. Evolving. Endless.",
+                            stringResource(R.string.studio_music_intro),
                             style = MaterialTheme.typography.titleMedium,
                         )
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Seeded chords and gentle melodies develop together. Save to your mixer to hear your composition.",
+                        stringResource(R.string.studio_music_body),
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -365,7 +404,7 @@ fun Studio(
         }
         item {
             Choice(
-                "Music type",
+                stringResource(R.string.studio_music_type),
                 sound.name,
                 Library.all.filter { it.music }.map { it.id to it.name },
             ) { id ->
@@ -384,7 +423,7 @@ fun Studio(
                 }
             }
         }
-        item { SectionLabel("Musical foundation") }
+        item { SectionLabel(stringResource(R.string.studio_section_foundation)) }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 listOf(432f, 440f).forEach { hz ->
@@ -399,14 +438,14 @@ fun Studio(
                                 soundId = "${hz.toInt()}-hz-ambient-music"
                             }
                         },
-                        label = { Text("A4 = ${hz.toInt()} Hz") },
+                        label = { Text(stringResource(R.string.studio_tuning, hz.toInt())) },
                     )
                 }
             }
         }
         item {
             Text(
-                "Tuning changes musical pitch. Neither tuning is established to improve sleep or produce clinical benefits.",
+                stringResource(R.string.studio_tuning_note),
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -414,14 +453,19 @@ fun Studio(
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Box(Modifier.weight(1f)) {
-                    Choice("Key", keys[c.key], keys.mapIndexed { i, k -> i.toString() to k }) { k ->
+                    Choice(
+                        stringResource(R.string.studio_key),
+                        keys[c.key],
+                        keys.mapIndexed { i, k -> i.toString() to k },
+                    ) { k ->
                         update { it.copy(key = k.toInt()) }
                     }
                 }
                 Box(Modifier.weight(1f)) {
                     Choice(
-                        "Scale",
-                        if (c.minor) "Minor" else "Major",
+                        stringResource(R.string.studio_scale),
+                        if (c.minor) stringResource(R.string.studio_scale_minor)
+                        else stringResource(R.string.studio_scale_major),
                         listOf("major" to "Major", "minor" to "Minor"),
                     ) { k ->
                         update { it.copy(minor = k == "minor") }
@@ -431,54 +475,91 @@ fun Studio(
         }
         item {
             LevelSlider(
-                "Tempo",
+                stringResource(R.string.studio_tempo),
                 c.tempo,
                 { v -> update { it.copy(tempo = v) } },
                 20f..90f,
-                "${c.tempo.roundToInt()} BPM",
+                stringResource(R.string.studio_tempo_value, c.tempo.roundToInt()),
             )
         }
-        item { LevelSlider("Note density", c.density, { v -> update { it.copy(density = v) } }) }
         item {
             LevelSlider(
-                "Harmonic complexity",
+                stringResource(R.string.studio_note_density),
+                c.density,
+                { v -> update { it.copy(density = v) } },
+            )
+        }
+        item {
+            LevelSlider(
+                stringResource(R.string.studio_harmonic_complexity),
                 c.complexity,
                 { v -> update { it.copy(complexity = v) } },
             )
         }
         item {
+            val textures = stringArrayResource(R.array.studio_instrument_textures).toList()
             Choice(
-                "Instrument texture",
-                textures[c.texture],
+                stringResource(R.string.studio_instrument_texture),
+                textures.getOrElse(c.texture) { textures.first() },
                 textures.mapIndexed { i, t -> i.toString() to t },
             ) { v ->
                 update { it.copy(texture = v.toInt()) }
             }
         }
-        item { SectionLabel("Space & character") }
-        item { LevelSlider("Bass", bass, { bass = it }, -12f..12f, "${bass.roundToInt()} dB") }
-        item {
-            LevelSlider("Treble", treble, { treble = it }, -12f..12f, "${treble.roundToInt()} dB")
-        }
-        item { LevelSlider("Reverb", c.reverb, { v -> update { it.copy(reverb = v) } }) }
-        item { LevelSlider("Stereo delay", c.delay, { v -> update { it.copy(delay = v) } }) }
+        item { SectionLabel(stringResource(R.string.studio_section_space)) }
         item {
             LevelSlider(
-                "Melodic randomization",
+                stringResource(R.string.studio_bass),
+                bass,
+                { bass = it },
+                -12f..12f,
+                stringResource(R.string.unit_decibels, bass.roundToInt()),
+            )
+        }
+        item {
+            LevelSlider(
+                stringResource(R.string.studio_treble),
+                treble,
+                { treble = it },
+                -12f..12f,
+                stringResource(R.string.unit_decibels, treble.roundToInt()),
+            )
+        }
+        item {
+            LevelSlider(
+                stringResource(R.string.studio_reverb),
+                c.reverb,
+                { v -> update { it.copy(reverb = v) } },
+            )
+        }
+        item {
+            LevelSlider(
+                stringResource(R.string.studio_stereo_delay),
+                c.delay,
+                { v -> update { it.copy(delay = v) } },
+            )
+        }
+        item {
+            LevelSlider(
+                stringResource(R.string.studio_randomization),
                 c.randomness,
                 { v -> update { it.copy(randomness = v) } },
             )
         }
         item {
-            SettingToggle("Melody", "Let quiet notes wander over the chords.", c.melody) { v ->
+            SettingToggle(
+                stringResource(R.string.studio_melody),
+                stringResource(R.string.studio_melody_note),
+                c.melody,
+            ) { v ->
                 update { it.copy(melody = v) }
             }
         }
         if (soundId in listOf("lo-fi-sleep-music", "gentle-lo-fi"))
             item {
                 SettingToggle(
-                    "Low-volume percussion",
-                    "A restrained pulse for lo-fi compositions.",
+                    stringResource(R.string.studio_percussion),
+                    stringResource(R.string.studio_percussion_note),
                     c.percussion,
                 ) { v ->
                     update { it.copy(percussion = v) }
@@ -490,8 +571,8 @@ fun Studio(
                 onValueChange = { v ->
                     v.toLongOrNull()?.let { n -> update { it.copy(seed = n) } }
                 },
-                label = { Text("Composition seed") },
-                supportingText = { Text("The same seed and settings reproduce the same notes.") },
+                label = { Text(stringResource(R.string.studio_seed)) },
+                supportingText = { Text(stringResource(R.string.studio_seed_note)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -500,7 +581,7 @@ fun Studio(
             TextButton(onClick = { update { it.copy(seed = System.nanoTime()) } }) {
                 Icon(Icons.Outlined.Shuffle, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("New variation")
+                Text(stringResource(R.string.studio_new_variation))
             }
         }
         item {
@@ -534,8 +615,8 @@ fun Studio(
                             )
                         }
                     onSaved(
-                        if (existing != null) "Composition updated"
-                        else "Composition added to your mixer"
+                        if (existing != null) context.getString(R.string.studio_saved_updated)
+                        else context.getString(R.string.studio_saved_added)
                     )
                     onClearEdit()
                 },
@@ -544,7 +625,10 @@ fun Studio(
             ) {
                 Icon(Icons.Outlined.Add, null)
                 Spacer(Modifier.width(8.dp))
-                Text(if (existing != null) "Update mixer layer" else "Add composition to mixer")
+                Text(
+                    if (existing != null) stringResource(R.string.studio_action_update_layer)
+                    else stringResource(R.string.studio_action_add_layer)
+                )
             }
         }
         item {
@@ -552,7 +636,7 @@ fun Studio(
                 onClick = {
                     r.savePreset(
                         Mix(
-                            name = "Studio · ${sound.name}",
+                            name = context.getString(R.string.studio_layer_name, sound.name),
                             layers =
                                 listOf(
                                     Library.layer(soundId)
@@ -560,16 +644,16 @@ fun Studio(
                                 ),
                         )
                     )
-                    onSaved("Composition saved as a preset")
+                    onSaved(context.getString(R.string.studio_saved_as_preset))
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Save composition as a preset")
+                Text(stringResource(R.string.studio_action_save_preset))
             }
         }
         item {
             Text(
-                "Adjust midrange, filters and independent fade timing in the layer’s Options on Home. Save the whole mix as a preset at any time.",
+                stringResource(R.string.studio_note),
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -578,9 +662,6 @@ fun Studio(
 }
 
 private val keys = listOf("C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B")
-private val textures =
-    listOf("Soft pad", "Felt piano", "Warm analog", "Bells & bowls", "Soft strings")
-
 @Composable
 private fun Choice(
     label: String,
@@ -650,28 +731,43 @@ fun SettingsScreen(
     // The installed package, not a build constant: a literal here drifted two releases behind.
     val version by
         produceState("") { value = withContext(Dispatchers.IO) { installedVersion(context) } }
-    val appTitle = if (version.isEmpty()) "Nightfall" else "Nightfall $version"
+    val appTitle =
+        if (version.isEmpty()) stringResource(R.string.settings_app_title)
+        else stringResource(R.string.settings_app_title_version, version)
     LazyColumn(
         contentPadding = PaddingValues(22.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        item { PageHeading("Make yourself at home", "Quiet by design. Private by default.") }
-        item { SectionLabel("Appearance") }
         item {
-            SettingToggle("Light theme", "Midnight navy is the default.", s.light) { v ->
+            PageHeading(
+                stringResource(R.string.settings_title),
+                stringResource(R.string.settings_subtitle),
+            )
+        }
+        item { SectionLabel(stringResource(R.string.settings_section_appearance)) }
+        item {
+            SettingToggle(
+                stringResource(R.string.settings_light_theme),
+                stringResource(R.string.settings_light_theme_note),
+                s.light,
+            ) { v ->
                 r.change { it.copy(settings = it.settings.copy(light = v)) }
             }
         }
         item {
-            SettingToggle("Reduced motion", "Keep the waveform still.", s.reducedMotion) { v ->
+            SettingToggle(
+                stringResource(R.string.settings_reduced_motion),
+                stringResource(R.string.settings_reduced_motion_note),
+                s.reducedMotion,
+            ) { v ->
                 r.change { it.copy(settings = it.settings.copy(reducedMotion = v)) }
             }
         }
-        item { SectionLabel("Sound behavior") }
+        item { SectionLabel(stringResource(R.string.settings_section_sound)) }
         item {
             SettingToggle(
-                "Thunder ducking",
-                "Gently lower music during thunder events.",
+                stringResource(R.string.settings_thunder_ducking),
+                stringResource(R.string.settings_thunder_ducking_note),
                 s.ducking,
             ) { v ->
                 r.change { it.copy(settings = it.settings.copy(ducking = v)) }
@@ -679,8 +775,8 @@ fun SettingsScreen(
         }
         item {
             SettingToggle(
-                "Dynamic weather",
-                "Let weather intensity evolve slowly.",
+                stringResource(R.string.settings_dynamic_weather),
+                stringResource(R.string.settings_dynamic_weather_note),
                 s.dynamicWeather,
             ) { v ->
                 r.change { it.copy(settings = it.settings.copy(dynamicWeather = v)) }
@@ -688,8 +784,8 @@ fun SettingsScreen(
         }
         item {
             SettingToggle(
-                "Slow variation",
-                "Subtle texture changes over long sessions.",
+                stringResource(R.string.settings_slow_variation),
+                stringResource(R.string.settings_slow_variation_note),
                 s.slowVariation,
             ) { v ->
                 r.change { it.copy(settings = it.settings.copy(slowVariation = v)) }
@@ -697,8 +793,8 @@ fun SettingsScreen(
         }
         item {
             SettingToggle(
-                "Low-distraction mode",
-                "Soften thunder and other sudden events.",
+                stringResource(R.string.settings_low_distraction),
+                stringResource(R.string.settings_low_distraction_note),
                 s.lowDistraction,
             ) { v ->
                 r.change { it.copy(settings = it.settings.copy(lowDistraction = v)) }
@@ -706,8 +802,8 @@ fun SettingsScreen(
         }
         item {
             SettingToggle(
-                "Pause on disconnect",
-                "Pause when Bluetooth or wired audio disconnects. Turn off to allow the system to reroute audio.",
+                stringResource(R.string.settings_pause_on_disconnect),
+                stringResource(R.string.settings_pause_on_disconnect_note),
                 s.pauseOnDisconnect,
             ) { v ->
                 r.change { it.copy(settings = it.settings.copy(pauseOnDisconnect = v)) }
@@ -715,17 +811,27 @@ fun SettingsScreen(
         }
         item {
             LevelSlider(
-                "Sleep timer fade",
+                stringResource(R.string.settings_timer_fade),
                 s.fadeSeconds,
                 { v -> r.change { it.copy(settings = it.settings.copy(fadeSeconds = v)) } },
                 5f..120f,
-                "${s.fadeSeconds.roundToInt()} ${plural(s.fadeSeconds.roundToInt(), "second", "seconds")}",
+                pluralStringResource(
+                    R.plurals.unit_seconds,
+                    s.fadeSeconds.roundToInt(),
+                    s.fadeSeconds.roundToInt(),
+                ),
             )
         }
-        item { SectionLabel("On this device") }
+        item { SectionLabel(stringResource(R.string.settings_section_device)) }
         item {
             Text(
-                "Output: ${outputLabel(output)}\nAudio render load: $load% of buffer time\nAudioTrack underruns: $underruns\n48 kHz · stereo · floating-point PCM",
+                stringResource(
+                    R.string.settings_device_readout,
+                    outputLabel(context, output),
+                    load,
+                    underruns,
+                    stringResource(R.string.settings_pcm_spec),
+                ),
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 22.sp,
@@ -733,34 +839,34 @@ fun SettingsScreen(
         }
         item {
             Text(
-                "There is no software layer limit. If rendering approaches 65% of the buffer budget or underruns accumulate, Nightfall warns you. Music layers use more processing than noise. Actual battery life and all-night playback depend on Android and device power policies.",
+                stringResource(R.string.settings_capacity_note),
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        item { SectionLabel("Updates") }
+        item { SectionLabel(stringResource(R.string.settings_section_updates)) }
         item { UpdateSettingsSection() }
-        item { SectionLabel("Your data & audio") }
+        item { SectionLabel(stringResource(R.string.settings_section_data)) }
         item {
             Text(
-                "Everything that makes sound runs on your device. No account, advertising, analytics, tracking or purchases. Mixes and settings are stored locally. Keep listening levels comfortable; percentages describe layer gain, not acoustic loudness.",
+                stringResource(R.string.settings_privacy_note),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         item {
             OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth()) {
-                Text("Export current mix as JSON")
+                Text(stringResource(R.string.settings_action_export))
             }
         }
         item {
             OutlinedButton(onClick = onCredits, modifier = Modifier.fillMaxWidth()) {
-                Text("Audio credits & open-source licenses")
+                Text(stringResource(R.string.settings_action_credits))
             }
         }
         item {
             Text(
-                "$appTitle\nFree forever. A small space for a quieter night.",
+                stringResource(R.string.settings_about, appTitle),
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(vertical = 20.dp),

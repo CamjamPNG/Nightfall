@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <application android:name=".NightfallApp" android:label="Nightfall" android:icon="@drawable/ic_moon" android:theme="@style/Theme.Nightfall" android:allowBackup="false" android:supportsRtl="true">
+    <application android:name=".NightfallApp" android:label="@string/app_name" android:icon="@drawable/ic_moon" android:theme="@style/Theme.Nightfall" android:allowBackup="false" android:supportsRtl="true">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity>

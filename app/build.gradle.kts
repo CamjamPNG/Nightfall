@@ -66,7 +66,12 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    lint { abortOnError = true }
+    lint {
+        abortOnError = true
+        // Copy typed into a Compose call is invisible to a translator and to strings.xml, and no test
+        // can see it: making it an error means the next hardcoded string fails CI instead of shipping.
+        error += "HardcodedText"
+    }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
     testOptions {
         unitTests.isIncludeAndroidResources = true
@@ -81,6 +86,50 @@ android {
 
 // The flavor split turns lintDebug/lintRelease into per-channel tasks; keep the aggregate names
 // that the documented build gate and the release workflow use, covering both channels.
+// Compose draws copy from Kotlin string literals, which lint's HardcodedText cannot see: that check
+// reads View XML and Java, not `Text("…")`. This is the guard for the Compose half, and it hangs off
+// the same lint tasks the gate and the release workflow already call, so no workflow changed.
+val verifyNoHardcodedCopy = tasks.register("verifyNoHardcodedCopy") {
+    val sources = fileTree("src/main/java") { include("**/*.kt") }
+    inputs.files(sources)
+    val markers =
+        listOf(
+            "Text(\"",
+            "contentDescription = \"",
+            "stateDescription = \"",
+            "showSnackbar(\"",
+            "-> \"",
+        )
+    doLast {
+        val offenders =
+            sources.flatMap { file ->
+                val lines = file.readLines()
+                lines
+                    .withIndex()
+                    .filter { (index, line) ->
+                        val allowed =
+                            line.contains("hardcoded-copy-allowed") ||
+                                (index > 0 && lines[index - 1].contains("hardcoded-copy-allowed"))
+                        // An empty literal draws nothing, so it is not copy.
+                        !allowed &&
+                            !line.contains("R.string") &&
+                            !line.contains("-> \"\"") &&
+                            markers.any { line.contains(it) }
+                    }
+                    .map { (index, line) -> "${file.path}:${index + 1}: ${line.trim()}" }
+            }
+        if (offenders.isNotEmpty())
+            throw GradleException(
+                "Copy belongs in res/values/strings.xml, not in a Compose call:\n" +
+                    offenders.joinToString("\n")
+            )
+    }
+}
+
+tasks.matching { it.name == "lintDebug" || it.name == "lintRelease" }.configureEach {
+    dependsOn(verifyNoHardcodedCopy)
+}
+
 tasks.register("lintDebug") {
     group = "verification"
     description = "Runs lint for both channels' debug variants."
