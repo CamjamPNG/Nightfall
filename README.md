@@ -138,8 +138,9 @@ copy yourself. It also builds from source:
 ```
 
 CI builds this channel, lints it, and runs the same eleven playback-lifecycle scenarios
-against it on every push; `tools/check_release.py --fdroid-apk` asserts from the built
-dex and manifest that no updater class and no network permission survived.
+and the widget's thirteen against it on every push; `tools/check_release.py --fdroid-apk`
+asserts from the built dex and manifest that no updater class and no network permission
+survived.
 
 ### The self-hosted F-Droid repository — address reserved, not serving yet
 
@@ -234,13 +235,16 @@ what no one has ever confirmed. All three columns are kept honest in
 | Playback that resumes while the APK is being copied never reaches the installer commit; the session is abandoned and the update goes back to waiting | `InstallWindowTest` |
 | Release notes survive a hostile or missing `log` in the manifest without changing a single trust field | `ReleaseManifestParserTest.hostileNotesNeverChangeTheTrustDecision`, `…aManifestWithNoNotesStillUpdates` |
 | Playback survives navigation, activity recreation, backgrounding, audio-focus loss, a back gesture and service teardown | eleven Robolectric scenarios in `app/src/test`, run under both channels in CI |
+| The home-screen widget starts, pauses and resumes the loaded mix through the app's own media session, and its state follows the session rather than the last tap | `WidgetStoppedToPlayTest`, `WidgetPlayingToPauseTest`, `WidgetPausedToPlayTest`, `WidgetFollowsSessionTest` |
+| The widget's button is inside its own surface and its label is not cut, at one cell and at two, in both themes | `WidgetLayoutTest`, `WidgetRenderTest` (PNGs in `build/screenshots/github`) |
 | The F-Droid APK carries no network permission and no class from the updater package, and the GitHub APK carries code from every updater source file | `tools/check_release.py --fdroid-apk` and `--apk`, on every push |
 
 How many tests: **69 in `core`** (68 run, plus the opt-in `NIGHTFALL_CALIBRATE=1`
-calibration generator, which is skipped by design), **11 playback-lifecycle scenarios**
-that run twice, once per channel, **51 updater tests** in
+calibration generator, which is skipped by design), **26 Robolectric scenarios** in
+`app/src/test` (11 playback-lifecycle, 13 widget, 2 Android 16) that run twice, once
+per channel, **51 updater tests** in
 `app/src/testGithub/java/dev/nightfall/update`, and **53 release-tooling tests**. The
-five render classes in `app/src/testGithub/java/dev/nightfall/render` are not
+six render classes in `app/src/testGithub/java/dev/nightfall/render` are not
 updater tests and are not counted there. They all run on a JVM with no device, no
 emulator and no network. Recount them with:
 

@@ -318,4 +318,23 @@
     <string name="error_audio_focus_unavailable">Audio focus is unavailable. Try again after the other audio ends.</string>
     <string name="error_recording_undecodable">A bundled recording cannot be decoded on this device (%1$s).</string>
 
+    <!--
+        Home-screen widget. The action a tap takes reuses home_action_play/home_action_pause, so the
+        widget and the transport control cannot drift apart. Only the state labels and the tap
+        configuration are new copy.
+    -->
+    <string name="widget_description">One play/pause button for your soundscape.</string>
+    <string name="widget_state_playing">Playing</string>
+    <string name="widget_state_paused">Paused</string>
+    <string name="widget_state_stopped">Stopped</string>
+    <!-- Said by a screen reader instead of the two views: what a tap does, then the state it is in. -->
+    <string name="widget_state_spoken">%1$s. %2$s.</string>
+    <string name="widget_configure_title">Nightfall widget</string>
+    <string name="widget_configure_prompt">What should a tap do?</string>
+    <string name="widget_configure_toggle">Play or pause here</string>
+    <string name="widget_configure_toggle_note">Starts or pauses your soundscape without opening the app.</string>
+    <string name="widget_configure_open">Open Nightfall</string>
+    <string name="widget_configure_open_note">Opens the app and leaves playback alone.</string>
+    <string name="widget_configure_note">You can change this later from the launcher’s widget options.</string>
+
 </resources>

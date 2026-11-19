@@ -7,6 +7,11 @@
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity>
+        <activity android:name=".WidgetConfigureActivity" android:exported="true" android:excludeFromRecents="true" android:label="@string/widget_configure_title" />
+        <receiver android:name=".PlaybackWidgetProvider" android:exported="true" android:label="@string/app_name">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_nightfall_info" />
+        </receiver>
         <service android:name=".PlaybackService" android:foregroundServiceType="mediaPlayback" android:exported="true" android:stopWithTask="false">
             <intent-filter><action android:name="androidx.media3.session.MediaSessionService" /></intent-filter>
         </service>

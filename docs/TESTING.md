@@ -139,11 +139,11 @@
   inventory has no GMS, Firebase, billing, ad or tracking SDK from the checked
   denylist. F-Droid's independent review remains necessary.
 
-- 13 Robolectric scenarios pass in both channels (see below), plus the three GitHub-only
+- 32 Robolectric scenarios pass in both channels (see below), plus the three GitHub-only
   diagnostics gesture scenarios described above: eleven
   playback-lifecycle ones, which replace the instrumented attempt that never went
-  green, and two Android 16 assertions that need the API 36 sandbox CI now runs
-  (`Android16RuntimeTest`).
+  green, two Android 16 assertions that need the API 36 sandbox CI now runs
+  (`Android16RuntimeTest`), and nineteen for the home-screen widget.
 
 Machine-readable results: `docs/verification/update-channel.json`,
 `release-checks.json`, `dependency-audit.json`, `reproducibility.json`, and
@@ -289,6 +289,44 @@ instrumentation passes are claimed from this run. Startup restoration was then
 moved off the main thread; this does not establish that every device issue has
 been resolved. That never-green `PlaybackIntegrationTest` has since been replaced
 by the Robolectric scenarios above, which run on a JVM without an emulator.
+
+## Home-screen widget tests (Robolectric, JVM)
+
+`app/src/test/java/dev/nightfall`, run under both channels in CI and in the API 36 job:
+
+- `WidgetStoppedToPlayTest`: from a fresh install, the widget reads `Stopped` while the runtime
+  reports a stopped mix; a tap on the widget — through `WidgetSession`, a real `MediaController`
+  and the real `PlaybackService` — starts playback, the float sink receives non-silent samples,
+  and the widget then reads `Playing` with the pause glyph and the description "Pause soundscape.
+  Playing.".
+- `WidgetPlayingToPauseTest`: a tap while playing pauses the session, the widget reads `Paused`,
+  and a 250 ms window after the block already in flight writes zero samples. The label alone
+  could lie about running audio; the sample count cannot.
+- `WidgetPausedToPlayTest`: a tap on a paused widget resumes the loaded mix rather than starting
+  another one — the layer count is compared across the resume.
+- `WidgetFollowsSessionTest`: no tap happens anywhere. Home's pause control, then the media
+  session resumed behind the notification, then "Stop all" (which must read `Stopped`, not
+  `Paused`), then the service being destroyed while playing — the widget follows each one.
+- `WidgetLayoutTest`: reads the provider declaration (no polling, one target cell, reconfigurable,
+  both resize axes) and measures both layouts at the Pixel 7's cell sizes, 68×68 dp and 150×70 dp.
+  Every corner of the button is required to lie inside the surface's 20 dp rounded rect, the label
+  must not be ellipsised, and the label must sit beside the button in the wide layout.
+- `WidgetTapModeTest`: the two tap behaviours are two intents — a broadcast to the provider with
+  no window, or an activity intent with `NEW_TASK` and no action — and the choice survives an
+  edit and dies with the widget.
+- `WidgetConfigureTest`: the configure screen is driven as a person drives it; picking "Open
+  Nightfall" and pressing Done records the choice, returns `RESULT_OK` with the widget id, and a
+  second visit keeps the behaviour the widget already had. A screen opened with no widget id
+  answers cancelled and adds nothing.
+
+`app/src/testGithub/java/dev/nightfall/render/WidgetRenderTest` draws the widget itself — real
+`RemoteViews`, real Skia canvas, the launcher's `xxhdpi` density — at 1x1 and 2x1 in both theme
+variants, writes them to `build/screenshots/github`, and fails if a frame has too few colours or
+if light and dark come out identical.
+
+What none of this can show: a launcher's own corner radius and cell padding, the wallpaper behind
+the widget, or the bind that creates the service when Nightfall is not running. Robolectric never
+starts a service by binding, so the tests create the service and hand its binder to the bind.
 
 ## Android 16 (API 36) compatibility
 
