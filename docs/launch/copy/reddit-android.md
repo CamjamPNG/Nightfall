@@ -49,10 +49,10 @@ Body:
 >
 > **The premise.** Sleep audio is the category where developers seem most comfortable
 > shipping something that phones home — account walls, streaming, an analytics SDK, a
-> subscription for a rain loop. Nightfall ships no accounts, no ads and no tracking — the one
-> thing it can record is a local diagnostics journal you have to switch on yourself, and it
-> transmits nothing — and it ships in two builds: the F-Droid one has no updater, no network code and no network
-> permission at all, so it cannot open a socket; the GitHub one adds an updater that
+> subscription for a rain loop. Nightfall ships no accounts, no ads and no tracking — it
+> keeps no log unless you switch a local diagnostics journal on yourself, and that transmits
+> nothing — and it ships in two builds: the F-Droid one has no updater, no network code and no
+> network permission at all, so it cannot open a socket; the GitHub one adds an updater that
 > reads the release manifest and, by default, installs a newer APK on its own once
 > nothing is playing — it never interrupts a mix — and that is its only network use.
 > Playback and music generation run entirely on the phone.

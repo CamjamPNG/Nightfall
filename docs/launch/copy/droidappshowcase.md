@@ -36,7 +36,7 @@ established posting history, which is why this channel comes before r/Android.
 
 Suggested title (no editorialising, no invented numbers):
 
-> Nightfall — a sleep-sound mixer with independent layers, no account, nothing recorded unless you opt in, and no network permission in the F-Droid build
+> Nightfall — a sleep-sound mixer with independent layers, no account, no usage log unless you opt in, and no network permission in the F-Droid build
 
 Body:
 
@@ -54,10 +54,10 @@ Body:
 > Some details I care about:
 >
 > - **No accounts, no ads, no trackers.** All playback and music generation run on the
->   phone. Nothing is recorded about how you use it unless you switch the hidden diagnostics
->   on yourself — five taps on the version row — and even then it is a bounded local file
->   with no free text that never leaves the device unless you share it. It is not in the
->   F-Droid build at all.
+>   phone. It keeps no log of how you use it unless you switch the hidden diagnostics on
+>   yourself — five taps on the version row — and even then it is a bounded local file with
+>   no free text that never leaves the device unless you share it. It is not in the F-Droid
+>   build at all.
 >
 > - **Two builds, and the difference is the network.** The F-Droid build has no updater, no
 >   network code and no network permission at all — it cannot open a socket. The build on

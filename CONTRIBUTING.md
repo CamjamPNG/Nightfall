@@ -7,10 +7,10 @@ bundled field recordings — into one 48 kHz stereo `AudioTrack`. A Jetpack Comp
 app drives it with per-layer controls, presets, sleep timers and a foreground
 media session.
 
-It runs with no network, no account and no microphone access, and the only thing it can
-record about how you use it is a diagnostics journal you have to switch on yourself — a
-bounded local file that transmits nothing and is absent from the F-Droid build entirely.
-The tests that prove the audio engine is deterministic run on any machine with a JVM. The [README](README.md) says what the app does; [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+It runs with no network, no account and no microphone access, and it keeps no log of how
+you use it unless you switch the diagnostics journal on yourself — a bounded local file that
+transmits nothing and is absent from the F-Droid build entirely. The tests that prove the
+audio engine is deterministic run on any machine with a JVM. The [README](README.md) says what the app does; [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 says how; [docs/TESTING.md](docs/TESTING.md) says exactly what has and has not
 been verified. Read that last one before you rely on anything.
 
