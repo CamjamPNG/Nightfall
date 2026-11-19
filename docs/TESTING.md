@@ -254,7 +254,7 @@ GitHub build's.
 `gradle/verification-metadata.xml` carries the SHA-256 entries for every
 transitive artifact these dependencies resolve, so dependency verification stays
 strict without a second pass. Robolectric downloads the platform jar for the
-sandbox it runs — Android 35 for the `release` job, Android 16 for the `api36`
+sandbox it runs — Android 35 for the `unit` job, Android 16 for the `api36`
 job — on first use, so each CI job needs network access the first time it runs on
 a runner. A cold Gradle home on Temurin 21 resolves the same descriptors the
 Temurin 17 job does, so the 21 job needed no new verification entries.
@@ -438,7 +438,7 @@ instead of offering it page-size compatibility mode.
 
 Two runtimes, two jobs. Robolectric's SDK 36 sandbox refuses to start on the
 Temurin 17 that builds the release APK and the F-Droid recipe ("Android SDK 36
-requires Java 21"), so the `release` job keeps running the whole suite on the
+requires Java 21"), so the `unit` job keeps running the whole suite on the
 **API 35 runtime** with the app's `targetSdk` at 36, and it is what ships. The
 `api36` job runs the same tests on Temurin 21 with the **API 36 runtime**: the
 platform classes are Android 16's own rather than 15's.
@@ -468,7 +468,7 @@ What this still does not prove: a phone. No gesture is generated, no system bar 
 real, and `SystemClock` is virtual. Predictive back and the insets above are
 measured on a JVM against the 36 platform classes; whether a physical Android 16
 device reports the same insets and animation stays unverified and is part of the
-hardware list below. The `release` job's runtime is unchanged: on Temurin 17 those
+hardware list below. The `unit` job's runtime is unchanged: on Temurin 17 those
 two scenarios are skipped and every other test still runs on API 35.
 
 ## Update channel that was not exercised
