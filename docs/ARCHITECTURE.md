@@ -19,8 +19,14 @@ Rendering uses a 4-block minimum output buffer (about 85 ms at 48 kHz), or Andro
 ## Endless night
 
 A mix carries an `endless` setting, off by default — and what a mix saved before the setting existed
-decodes to, so an old JSON keeps exactly the behaviour it was saved with. Turned on, the mixer earns
-up to two **companion** beds and drifts the tone of every layer. The person's own layer list, their
+decodes to, so an old JSON keeps exactly the behaviour it was saved with. It is one switch on the Home
+screen, sitting with the mix's own controls under the master volume, and it is the only control the
+night has: how far the night travels is the constant `Endless.DEPTH`, measured rather than offered
+as a slider — at .65 a companion is present 39% of a night across eight seeds, and the tone drift
+alone moves the waveform -34.1 dB from the plain mix, which is movement without a change of identity.
+A second control would be a decision a person has to make at bedtime, and the table in the KDoc beside
+the constant is where that reasoning lives. Turned on, the mixer earns up to two **companion**
+beds and drifts the tone of every layer. The person's own layer list, their
 gains, and the mix's character are untouched: the companions are the same kind of thing the mix
 already contains.
 

@@ -160,7 +160,7 @@ class PcmMixer(
         val seconds = if (night != null) nightFrames.toDouble() / sampleRate else 0.0
         var comp = 1f
         if (night != null) {
-            val depth = night.config.depth
+            val depth = Endless.DEPTH
             val ramp = Endless.ramp(seconds)
             var user = 0f
             var total = 0f
@@ -186,8 +186,15 @@ class PcmMixer(
                     ch.endless = if (ch.companion) 0f else 1f
                     continue
                 }
-                val audible = c.enabled && !c.mute && (!solo || c.solo)
+                val audible = !ch.expired && c.enabled && !c.mute && (!solo || c.solo)
                 if (ch.companion) {
+                    // A companion's clock is its parent's, not its own: its gate is shut much of the
+                    // time, so counting the frames it happened to render would stretch its parent's
+                    // stop schedule by the reciprocal of that duty, and the night's own elapsed time
+                    // would let it outlive a parent whose schedule had already run out before endless
+                    // night was switched on. Reading the parent's clock makes "this layer stops at
+                    // thirty minutes" true of everything the layer put in the mix.
+                    ch.played = night.parents[c.id]?.let { channels[it]?.played } ?: nightFrames
                     val e = if (audible) Endless.envelope(salt, seconds, depth, ramp) else 0f
                     ch.endless = e
                     total += c.gain * c.gain * tone * e * e
@@ -301,7 +308,7 @@ class PcmMixer(
                 val gain = ch.gain * ch.life * fade * musicDuck * scale
                 accumL[i] += l * gain * leftPan
                 accumR[i] += r * gain * rightPan
-                ch.played++
+                if (!ch.companion) ch.played++
             }
         }
         peak = 0f

@@ -11,10 +11,12 @@ import kotlinx.serialization.Serializable
  * setting the person left it at. A mix saved by an older build decodes with [enabled] false, so an old
  * JSON keeps its old meaning and nothing has to be migrated.
  *
- * On, the mixer adds two *companion* beds drawn from the catalogue families the person's own layers
- * belong to, brings each one in and out over tens of minutes, and drifts the tone of every layer
- * around its own setting. [seed] decides which companions and which offsets, so a night is
- * reproducible; [depth] scales how far the night travels, from a hint of movement to the full thing.
+ * On, the mixer adds up to two *companion* beds drawn from the catalogue families the person's own
+ * layers belong to, brings each one in and out over tens of minutes, and drifts the tone of every
+ * layer around its own setting. [seed] decides which companions and which offsets, so a night is
+ * reproducible. There is deliberately no amount control: how far a night travels is [Endless.DEPTH],
+ * one measured constant, because a sleep app should not ask a person to make a second decision at
+ * bedtime with no way to hear the difference.
  *
  * Nothing here reads a clock: the schedule is a function of frames rendered, so pausing a night does
  * not spend it, and two runs of the same seed from the same start are identical sample for sample.
@@ -23,7 +25,6 @@ import kotlinx.serialization.Serializable
 data class EndlessConfig(
     val enabled: Boolean = false,
     val seed: Long = 1L,
-    val depth: Float = .65f,
 )
 
 /**
@@ -57,6 +58,29 @@ object Endless {
 
     /** Seconds a companion takes to reach full after playback starts. */
     const val START_RAMP = 150.0
+
+    /**
+     * How far a night travels, as one measured constant rather than a second control: the duty of the
+     * gate that brings companions in, and the size of the tone drift.
+     *
+     * Measured on the mix and method `EndlessNightTest.theChosenDepthIsWhereTheNightBecomesAudible`
+     * uses, at each end of the range and at the value chosen:
+     *
+     * | depth | a companion is present this much of a night | the drift alone, against the plain mix |
+     * | --- | --- | --- |
+     * | 0.2 | 18% | -44.3 dB, a tint nobody hears |
+     * | 0.65 | 39% | -34.1 dB, movement without a change of identity |
+     * | 1.0 | 51% | -30.4 dB, and the bed starts to sound like a different one |
+     *
+     * (Presence is the mean over eight seeds across eight hours; the drift figure is the waveform
+     * difference from the plain mix when no companion is in, on the test's mix.)
+     *
+     * 0.65 is the value where a source arrives and leaves often enough to be the point of the feature
+     * without the night becoming a different mix. It is a constant because a second slider on a sleep
+     * app is a decision the person has to make at bedtime, and nobody can hear the difference between
+     * 0.5 and 0.65 without a test harness.
+     */
+    const val DEPTH = .65f
 
     /** The night's arc, in minutes and presence 0..1. Linear between points, held after the last. */
     private val shape =
@@ -204,7 +228,12 @@ object Endless {
  *
  * Built on the thread that submits a mix, like the channels themselves; the render path only reads it.
  */
-class NightPlan(val config: EndlessConfig, val companions: List<Layer>) {
+class NightPlan(
+    val config: EndlessConfig,
+    val companions: List<Layer>,
+    /** Each companion's id to the id of the layer it belongs to, so the render path can read the parent. */
+    val parents: Map<String, String>,
+) {
     /** The seed as an integer salt, so two nights of the same mix differ in schedule and in drift. */
     val salt: Int = (config.seed xor (config.seed ushr 32)).toInt()
 
@@ -241,6 +270,7 @@ class NightPlan(val config: EndlessConfig, val companions: List<Layer>) {
             val rng = RandomStream(mix.endless.seed * 0x2545F491L + 17L)
             val taken = HashSet<String>(MAX_COMPANIONS)
             val companions = ArrayList<Layer>(MAX_COMPANIONS)
+            val parents = HashMap<String, String>(MAX_COMPANIONS)
             for (layer in mix.layers) {
                 if (companions.size == MAX_COMPANIONS) break
                 val sound = Library.byId[layer.soundId] ?: continue
@@ -248,9 +278,11 @@ class NightPlan(val config: EndlessConfig, val companions: List<Layer>) {
                 if (!taken.add(f)) continue
                 val siblings = families[f]?.filter { it.id != sound.id } ?: continue
                 if (siblings.size < MIN_FAMILY - 1) continue
-                companions.add(guest(siblings[rng.index(siblings.size)], layer, companions.size, mix.endless.seed))
+                val bed = guest(siblings[rng.index(siblings.size)], layer, companions.size, mix.endless.seed)
+                companions.add(bed)
+                parents[bed.id] = layer.id
             }
-            return NightPlan(mix.endless, companions)
+            return NightPlan(mix.endless, companions, parents)
         }
 
         /**

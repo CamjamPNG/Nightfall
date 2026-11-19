@@ -484,6 +484,17 @@ private fun Home(
                 QuickActions(r, onFade, onSave)
             }
         }
+        item {
+            val endless by
+                selectSaved(r, r.savedNow().current.endless.enabled) { it.current.endless.enabled }
+            SettingToggle(
+                stringResource(R.string.home_endless_title),
+                stringResource(R.string.home_endless_description),
+                endless,
+            ) { on ->
+                r.mix { it.copy(endless = it.endless.copy(enabled = on)) }
+            }
+        }
         item { PresetStrip(r, onPresets) }
         item {
             Row(

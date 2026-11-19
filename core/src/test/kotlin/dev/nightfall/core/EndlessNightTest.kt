@@ -28,15 +28,15 @@ class EndlessNightTest {
                 )
         )
 
-    private fun night(seed: Long = 1L, depth: Float = .65f) =
-        base.copy(endless = EndlessConfig(enabled = true, seed = seed, depth = depth))
+    private fun night(seed: Long = 1L) =
+        base.copy(endless = EndlessConfig(enabled = true, seed = seed))
 
     /** The companion channels' envelope salts, derived exactly as the mixer derives them. */
     private fun salts(mix: Mix): IntArray =
         NightPlan.of(mix)!!.companions.map { it.id.hashCode() xor NightPlan.of(mix)!!.salt }.toIntArray()
 
     private fun envelope(mix: Mix, k: Int, seconds: Double): Float =
-        Endless.envelope(salts(mix)[k], seconds, mix.endless.depth, Endless.ramp(seconds))
+        Endless.envelope(salts(mix)[k], seconds, Endless.DEPTH, Endless.ramp(seconds))
 
     /** Where a companion's gate opens (rising = true) or shuts, scanning a second at a time. */
     private fun crossings(mix: Mix, k: Int, upTo: Double): List<Pair<Double, Boolean>> {
@@ -97,13 +97,11 @@ class EndlessNightTest {
 
     @Test
     fun endlessNightIsSavedAndRestoredWithItsSeed() {
-        val saved = PresetJson.decode(PresetJson.encode(night(seed = 1234L, depth = .4f)))
+        val saved = PresetJson.decode(PresetJson.encode(night(seed = 1234L)))
         assertTrue(saved.endless.enabled)
         assertEquals(1234L, saved.endless.seed)
-        assertEquals(.4f, saved.endless.depth, .001f)
-        // Depth is clamped like every other audio setting rather than trusted.
-        val wild = PresetJson.decode(PresetJson.encode(night(depth = 4f)))
-        assertEquals(1f, wild.endless.depth, .001f)
+        // The night carries one switch and a seed, and nothing else a person has to decide.
+        assertEquals(EndlessConfig(enabled = true, seed = 1234L), saved.endless)
     }
 
     @Test
@@ -242,7 +240,7 @@ class EndlessNightTest {
 
     @Test
     fun aFadeMovesAtAFixedSlewAndNeverSteps() {
-        val mix = night(depth = 1f)
+        val mix = night()
         var quickest = 0.0
         var steps = 0
         for (k in 0 until 2) {
@@ -516,12 +514,124 @@ class EndlessNightTest {
     }
 
     @Test
+    fun theChosenDepthIsWhereTheNightBecomesAudible() {
+        // The one number that decides how far a night travels, held against what it is for. `depth` is
+        // a constant rather than a control, so this test is the record of why it is the value it is:
+        // the companion has to be present often enough to be the point of the feature, and the tone
+        // drift has to be movement rather than a change of identity.
+        val mix = night()
+        var present = 0
+        var longest = 0
+        var run = 0
+        for (second in 0 until 8 * 3600) {
+            if (envelope(mix, 0, second.toDouble()) > .02f) {
+                present++
+                run++
+                if (run > longest) longest = run
+            } else run = 0
+        }
+        val share = 100 * present / (8 * 3600)
+        println("at the chosen depth a companion is present %d%% of a night, longest %d min".format(share, longest / 60))
+        assertTrue("a companion is present only $share% of a night", share >= 25)
+        // Measured: 15 minutes for this mix; eight seeds average a longer one, so this bound is
+        // well under that and still far above a blip.
+        assertTrue("no appearance lasts longer than ${longest / 60} min", longest / 60 >= 10)
+
+        val marks = crossings(mix, 0, 60 * 60.0)
+        val arrival = marks.first { it.second }.first
+        val inside = arrival + 150.0
+        var quiet = -1.0
+        var t = 180.0
+        while (quiet < 0 && t < 4 * 3600.0) {
+            var clear = true
+            for (k in 0 until 2) for (d in 0 until 10) if (envelope(mix, k, t + d) > 0f) clear = false
+            if (clear) quiet = t
+            t += 10.0
+        }
+        val windows = listOf(quiet to quiet + 10.0, inside to inside + 10.0)
+        val seconds = maxOf(inside, quiet) + 60.0
+        val evolving = stream(mix, seconds, windows = windows).captured
+        val plain = stream(base, seconds, windows = windows).captured
+        fun rms(a: FloatArray) = kotlin.math.sqrt(a.fold(0.0) { acc, v -> acc + v * v } / a.size)
+        fun difference(k: Int): Double {
+            val d = FloatArray(evolving[k].size) { evolving[k][it] - plain[k][it] }
+            return 20 * kotlin.math.log10(rms(d) / rms(plain[k]) + 1e-30)
+        }
+        val alone = difference(0)
+        val withSource = difference(1)
+        println("the night differs from the plain mix by %.1f dB with a companion in, %.1f dB with the drift alone".format(withSource, alone))
+        assertTrue("the drift alone is inaudible ($alone dB)", alone > -40.0)
+        assertTrue("the drift alone is a change of identity ($alone dB)", alone < -28.0)
+        assertTrue("the companion is not a source ($withSource dB)", withSource > -14.0)
+    }
+
+    @Test
+    fun aCompanionStopsWhenItsParentDoesEvenIfItWasAwayAtTheTime() {
+        // A companion's stop schedule has to run on its parent's clock, not on the frames it happened
+        // to render. A companion is away much of the time, so counting only rendered frames would
+        // stretch a two-minute schedule to five and a stop that ends the visible layer would leave an
+        // invisible one playing for hours.
+        val stopping = night().let { n -> n.copy(layers = n.layers.map { it.copy(stopAfterMinutes = 2f) }) }
+        val windows = listOf(240.0 to 300.0)
+        val late = stream(stopping, 320.0, windows = windows).captured[0]
+        println("four to five minutes after a two-minute stop schedule: %.1f dBFS".format(peakDb(late)))
+        assertTrue("a companion outlived its parent's stop schedule", peakDb(late) < -60.0)
+    }
+
+    @Test
+    fun aNightSwitchedOnLateAddsNothingToALayerThatAlreadyStopped() {
+        // The night can be switched on half an hour into a session, long after a layer's one-minute
+        // schedule has run out. The companion that layer earns then arrives with its parent already
+        // stopped, so it must be silent rather than start a fresh minute of its own.
+        val stopping = base.let { n ->
+            n.copy(layers = n.layers.map { it.copy(stopAfterMinutes = 1f) })
+        }
+        val mixer = PcmMixer(rate, 1024, loader)
+        val buffer = FloatArray(2048)
+        fun render(seconds: Double) {
+            repeat((seconds * rate / 1024).toInt()) { mixer.render(buffer, 1024) }
+        }
+        mixer.sync(stopping)
+        render(180.0)
+        mixer.sync(stopping.copy(endless = EndlessConfig(enabled = true, seed = 1L)))
+        var peak = 0f
+        repeat((60.0 * rate / 1024).toInt()) {
+            mixer.render(buffer, 1024)
+            for (i in buffer.indices) if (abs(buffer[i]) > peak) peak = abs(buffer[i])
+        }
+        println("a night switched on three minutes into a one-minute schedule: %.1f dBFS".format(db(peak)))
+        assertTrue("a late night revived a layer its schedule had stopped", db(peak) < -60.0)
+    }
+
+    @Test
+    fun aBrownNoiseMixHoldsItsLevelWhenACompanionArrives() {
+        // The worst case for the compensation's model: a brown-noise bed carries most of its power
+        // below 100 Hz, and a companion keeps a 50-90 Hz high-pass that the power sums do not model.
+        // If that mismatch were large the whole mix would dip whenever a companion arrived.
+        val brown = Mix(layers = listOf(Library.layer("brown", .45f, "brown-night")), master = .5f)
+        val night = brown.copy(endless = EndlessConfig(enabled = true, seed = 1L))
+        val arrival = crossings(night, 0, 60 * 60.0).first { it.second }.first
+        val at = arrival + 150.0
+        val windows = listOf(at to at + 30.0)
+        val seconds = at + 60.0
+        val evolving = stream(night, seconds, windows = windows).captured[0]
+        val plain = stream(brown, seconds, windows = windows).captured[0]
+        fun lufs(x: FloatArray) = M.integratedLufs(M.Signal(x, x))
+        println("brown noise with a companion in %.2f LUFS, plain %.2f LUFS".format(lufs(evolving), lufs(plain)))
+        // The same 1.5 LU `LevelCalibrationTest` allows a catalogue source against its reference.
+        assertTrue(
+            "a companion moved a brown-noise bed's level (${lufs(evolving)} vs ${lufs(plain)})",
+            abs(lufs(evolving) - lufs(plain)) < 1.5,
+        )
+    }
+
+    @Test
     fun endlessRendersWithoutAllocating() {
         val bean =
             java.lang.management.ManagementFactory.getThreadMXBean() as com.sun.management.ThreadMXBean
         bean.isThreadAllocatedMemoryEnabled = true
         val buf = FloatArray(1024 * 2)
-        for (mix in listOf(night(), night(seed = 5L, depth = 1f))) {
+        for (mix in listOf(night(), night(seed = 5L))) {
             val mixer = PcmMixer(rate, 1024, loader)
             mixer.sync(mix)
             repeat(400) { mixer.render(buf) }
@@ -556,7 +666,7 @@ class EndlessNightTest {
 
     @Test
     fun theNightStaysOutOfTheLimiter() {
-        val mix = night(depth = 1f)
+        val mix = night()
         val s = M.render(mix.copy(master = .5f), 120.0, loader)
         val peak = M.peakDb(s)
         val plain = M.peakDb(M.render(base.copy(master = .5f), 120.0, loader))
