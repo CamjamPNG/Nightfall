@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.2 — 2026-11-19
+
+- fix: give decoder failures their own journal event (#46)
+
 ## 2.2.1 — 2026-11-19
 
 - fix: pause and release the output track only from the thread that owns it (#45)
