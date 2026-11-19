@@ -78,7 +78,7 @@ Body:
 >
 > **What I haven't proven.** A physical Pixel 7 pass, Bluetooth behaviour, acoustic
 > loudness, overnight battery and an update actually installing on a phone are all
-> pending, and the README says so. Playback lifecycle is covered by ten Robolectric
+> pending, and the README says so. Playback lifecycle is covered by eleven Robolectric
 > scenarios that run under both builds in CI; the emulator instrumentation attempt
 > before that never passed, and the failure is written down in `docs/TESTING.md`
 > instead of being dropped. And two local builds of tag v1.0.1.2 are byte-identical,

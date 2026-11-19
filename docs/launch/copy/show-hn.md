@@ -55,7 +55,7 @@ evaluate is the engine and the testing record, with the APK as an optional extra
 - **The testing record includes the failure.** `docs/TESTING.md` records that the
   instrumentation suite terminated with `Process crashed` and a startup ANR on a
   software-emulated Pixel 7 profile, and that the hardware pass is still pending.
-  Playback lifecycle is covered instead by ten Robolectric scenarios that run under
+  Playback lifecycle is covered instead by eleven Robolectric scenarios that run under
   both builds in CI. That is the unusual part: the repo publishes what did not work
   and what replaced it.
 - **Two local builds are byte-identical** at tag `v1.0.1.2`
