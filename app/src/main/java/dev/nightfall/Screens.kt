@@ -106,7 +106,11 @@ fun SoundLibrary(r: NightfallRuntime) {
         item {
             SectionLabel(
                 category ?: stringResource(R.string.library_section_explore),
-                stringResource(R.string.library_available, sounds.count { it.available }),
+                pluralStringResource(
+                    R.plurals.library_available,
+                    sounds.count { it.available },
+                    sounds.count { it.available },
+                ),
             )
         }
         items(sounds, key = { it.id }) { sound ->
@@ -211,7 +215,7 @@ fun PresetScreen(
             item {
                 SectionLabel(
                     stringResource(R.string.presets_section_yours),
-                    stringResource(R.string.presets_saved, presets.size),
+                    pluralStringResource(R.plurals.presets_saved, presets.size, presets.size),
                 )
             }
         items(
