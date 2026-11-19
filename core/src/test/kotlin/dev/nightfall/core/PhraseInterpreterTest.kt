@@ -105,10 +105,18 @@ class PhraseInterpreterTest {
                 listOf("airplane-cabin" to .5f),
                 substitutions = listOf("helicopter" to "airplane-cabin"),
             ),
-            // A two-word intensity phrase outranks a catalogue name that shares one of its words.
+            // A two-word intensity phrase sets the level of the name it runs into, without taking
+            // that name's sound away from it.
             Expect("very quiet room", listOf("quiet-room" to .25f)),
             Expect("very soft piano", listOf("soft-piano" to .25f)),
-            Expect("very loud thunder", listOf("rolling-thunder" to 1f)),
+            Expect("very loud thunder", listOf("close-thunder" to 1f)),
+            Expect("very heavy rain", listOf("heavy-rain" to 1f)),
+            Expect("thunder in distance", listOf("distant-thunder" to .35f)),
+            Expect("a hint of rain", listOf("moderate-rain" to .25f)),
+            // A modifier in front of an alias keeps the alias's sound, and so does one in front of a
+            // catalogue name whose first word is not itself an intensity word.
+            Expect("very soft coffee shop", listOf("soft-coffee-shop-ambience" to .25f)),
+            Expect("very distant train", listOf("distant-train" to .35f)),
             // Negation.
             Expect("rain, don't play thunder", listOf("moderate-rain" to .5f)),
             Expect("rain and don’t play thunder", listOf("moderate-rain" to .5f)),

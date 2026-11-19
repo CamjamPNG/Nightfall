@@ -109,10 +109,11 @@ object LocalPhraseInterpreter : PhraseInterpreter {
         val words =
             raw.filterIndexed { i, w -> !timer.consumed[i] && w !in PhraseVocabulary.ARTICLES }
         val consumed = BooleanArray(words.size)
-        // "very quiet room" is one request, not "very" plus the Quiet room entry: a two-word
-        // intensity phrase is read before any catalogue name can claim one of its words.
-        val longModifiers = PhraseVocabulary.modifiers(words, consumed, minWords = 2)
         val heard = PhraseVocabulary.terms(words, consumed)
+        // "very quiet room" asks for the Quiet room entry at level 1: the term keeps its sound, and a
+        // two-word intensity phrase that begins before the term sets the level, even though its last
+        // word belongs to the name.
+        val longModifiers = PhraseVocabulary.modifiers(words, consumed, minWords = 2, mayOverlap = true)
         val silence = PhraseVocabulary.silence(words, consumed)
         val negated = PhraseVocabulary.negated(words, heard)
         val modifiers = longModifiers + PhraseVocabulary.modifiers(words, consumed, minWords = 1)
@@ -158,7 +159,7 @@ internal object PhraseVocabulary {
                 "very quiet" to 1,
                 "very soft" to 1,
                 "barely audible" to 1,
-                "a hint of" to 1,
+                "hint of" to 1,
                 "as loud as possible" to 5,
                 "very loud" to 5,
                 "very heavy" to 5,
@@ -830,7 +831,12 @@ internal object PhraseVocabulary {
      * lets the caller read every multiword phrase before the catalogue names run, and the single
      * words after them.
      */
-    fun modifiers(words: List<String>, consumed: BooleanArray, minWords: Int): List<Intensity> {
+    fun modifiers(
+        words: List<String>,
+        consumed: BooleanArray,
+        minWords: Int,
+        mayOverlap: Boolean = false,
+    ): List<Intensity> {
         val out = ArrayList<Intensity>()
         var i = 0
         while (i < words.size) {
@@ -845,7 +851,9 @@ internal object PhraseVocabulary {
                         val wanted = if (minWords == 1) size == 1 else size >= minWords
                         wanted &&
                             i + size <= words.size &&
-                            tokens.indices.all { !consumed[i + it] && words[i + it] == tokens[it] }
+                            tokens.indices.all {
+                                (mayOverlap || !consumed[i + it]) && words[i + it] == tokens[it]
+                            }
                     }
                     .maxByOrNull { it.first.split(' ').size }
             if (match == null) {
