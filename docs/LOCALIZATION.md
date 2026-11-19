@@ -1,7 +1,7 @@
 # Localization
 
 Every string Nightfall shows a person used to be a Kotlin literal in `app/src/main/java/dev/nightfall/`.
-The app's own chrome is now in `app/src/main/res/values/strings.xml` and `plurals.xml`: 275 keys,
+The app's own chrome is now in `app/src/main/res/values/strings.xml` and `plurals.xml`: 276 keys,
 every one of them used, extracted against `main` at `1ffbee1` and counted again at this branch's head.
 The count is `grep -c '<string name=\|<plurals name='` over the two files, and §2 below is the
 inventory as it stood when the extraction landed: the keys added afterwards — the home-screen widget's,
