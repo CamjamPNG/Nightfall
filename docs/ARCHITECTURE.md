@@ -52,9 +52,11 @@ from the background.
 
 `PlaybackStatus.stopped` is what lets the widget tell *paused* from *stopped*: `stop()` resets
 the mixer and a pause does not, and before this only `playing` was published. The state is
-written to private preferences with the `elapsedRealtime` mark it was written at, so a widget
-that outlives a reboot reads as stopped rather than as whatever it showed when the phone went
-down. `updatePeriodMillis` is zero: nothing polls. The tap behaviour — play/pause here, or open
+written to private preferences with the kernel's boot identifier and the `elapsedRealtime` mark
+it was written at. A stored state carrying another boot's identifier is replaced with stopped
+rather than skipped past — uptime alone only catches a reboot the launcher asks about early in
+the new boot, and a short previous boot leaves a mark this boot passes in minutes. A widget
+therefore reads as stopped rather than as whatever it showed when the phone went down. `updatePeriodMillis` is zero: nothing polls. The tap behaviour — play/pause here, or open
 Nightfall and leave playback alone — is chosen in `WidgetConfigureActivity` when the widget is
 added and is reconfigurable from the launcher afterwards; it is a stored per-widget choice that
 decides which `PendingIntent` the surface carries, not a setting in the app.

@@ -12,6 +12,7 @@ import android.os.SystemClock
 import android.util.SizeF
 import android.widget.RemoteViews
 import androidx.media3.common.Player
+import java.io.File
 
 /** What the widget shows: the mix's state, as the runtime reports it. */
 enum class WidgetState {
@@ -56,14 +57,19 @@ object PlaybackWidget {
     private const val PREFS = "nightfall_widget"
     private const val KEY_STATE = "state"
     private const val KEY_STATE_AT = "state_at"
+    private const val KEY_BOOT = "boot"
     private const val KEY_TAP = "tap_"
 
     /**
      * `elapsedRealtime` counts from boot. A stored mark that is ahead of now belongs to an earlier
      * boot than this one, and audio cannot survive a reboot, so the state is stopped rather than
-     * whatever the widget was showing when the phone went down.
+     * whatever the widget was showing when the phone went down. The mark alone only catches a reboot
+     * seen early in the new boot — the boot identifier below is what settles it at any uptime.
      */
     private const val REBOOT_SLACK_MS = 5_000L
+
+    /** Kernel boot identifier, read once: it cannot change while this process lives. */
+    @Volatile private var boot: String? = null
 
     /** The narrowest a widget can be and still hold the label beside the button, in dp. */
     private const val WIDE_MIN_DP = 90f
@@ -93,22 +99,41 @@ object PlaybackWidget {
 
     fun state(context: Context): WidgetState {
         val state = stored(context) ?: return WidgetState.STOPPED
+        // A state written in another boot is wrong, not merely old: audio cannot survive a reboot,
+        // and how far into this boot the launcher asks does not change that. Replace it rather than
+        // skip past it, or this boot resurrects "playing" over silence once its own uptime passes.
+        val written = prefs(context).getString(KEY_BOOT, null)
         val at = prefs(context).getLong(KEY_STATE_AT, 0L)
-        if (state != WidgetState.STOPPED && SystemClock.elapsedRealtime() + REBOOT_SLACK_MS < at) {
-            // The mark belongs to a boot this one never reached, so no audio is running: the stored
-            // picture is wrong, not merely old. Replace it rather than skip past it, or this same
-            // boot resurrects "playing" once uptime overtakes the old mark.
+        if (
+            state != WidgetState.STOPPED &&
+                (written != bootId() || SystemClock.elapsedRealtime() + REBOOT_SLACK_MS < at)
+        ) {
             record(context, WidgetState.STOPPED)
             return WidgetState.STOPPED
         }
         return state
     }
 
+    /** `/proc`'s boot identifier, with the boot's wall-clock instant as a fallback. */
+    private fun bootId(): String =
+        boot
+            ?: (
+                    runCatching { File("/proc/sys/kernel/random/boot_id").readText().trim() }
+                        .getOrNull()
+                        ?.takeIf { it.isNotEmpty() }
+                    // A clock corrected mid-boot moves this value, so it identifies a boot only
+                    // to the nearest hour; the fallback is a coarse guard, not an exact one.
+                    ?: "wall:" +
+                        (System.currentTimeMillis() - SystemClock.elapsedRealtime()) / 3_600_000L
+                )
+                .also { boot = it }
+
     private fun record(context: Context, state: WidgetState) {
         prefs(context)
             .edit()
             .putString(KEY_STATE, state.name)
             .putLong(KEY_STATE_AT, SystemClock.elapsedRealtime())
+            .putString(KEY_BOOT, bootId())
             .apply()
     }
 
