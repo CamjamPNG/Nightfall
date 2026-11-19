@@ -4,12 +4,6 @@ package dev.nightfall
 import android.content.Context
 
 /**
- * Count-aware wording: a count of one takes the singular. English only, and deliberately so — the
- * app has no translation, and adding one would have to go through docs/LOCALIZATION.md first.
- */
-internal fun plural(count: Int, one: String, many: String): String = if (count == 1) one else many
-
-/**
  * A duration as `m:ss`, or `h:mm:ss` once it reaches an hour. The sleep timer accepts up to 24
  * hours, so the hours field matters: a 90-minute timer is `1:30:00`, not `90:00`.
  */
@@ -27,18 +21,19 @@ internal fun installedVersion(context: Context): String =
     context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: ""
 
 /** The route as Settings shows it, device name included. */
-internal fun outputLabel(route: OutputRoute): String =
+internal fun outputLabel(context: Context, route: OutputRoute): String =
     when (route.kind) {
         OutputRoute.Kind.BLUETOOTH ->
-            if (route.deviceName.isEmpty()) "Bluetooth" else "Bluetooth · ${route.deviceName}"
-        OutputRoute.Kind.WIRED -> "Wired headphones"
-        OutputRoute.Kind.SPEAKER -> "Built-in speaker"
-        OutputRoute.Kind.DEVICE -> route.deviceName.ifEmpty { SYSTEM_OUTPUT }
-        OutputRoute.Kind.SYSTEM -> SYSTEM_OUTPUT
+            if (route.deviceName.isEmpty()) context.getString(R.string.output_bluetooth)
+            else context.getString(R.string.output_bluetooth_named, route.deviceName)
+        OutputRoute.Kind.WIRED -> context.getString(R.string.output_wired)
+        OutputRoute.Kind.SPEAKER -> context.getString(R.string.output_speaker)
+        OutputRoute.Kind.DEVICE ->
+            route.deviceName.ifEmpty { context.getString(R.string.output_system) }
+        OutputRoute.Kind.SYSTEM -> context.getString(R.string.output_system)
     }
 
 /** The route as the now-playing card has room for: the transport, not which earbuds. */
-internal fun outputShortLabel(route: OutputRoute): String =
-    if (route.kind == OutputRoute.Kind.BLUETOOTH) "Bluetooth" else outputLabel(route)
-
-private const val SYSTEM_OUTPUT = "System audio output"
+internal fun outputShortLabel(context: Context, route: OutputRoute): String =
+    if (route.kind == OutputRoute.Kind.BLUETOOTH) context.getString(R.string.output_bluetooth)
+    else outputLabel(context, route)

@@ -1,11 +1,17 @@
 # Localization
 
-Every string Nightfall shows a person is a Kotlin literal in `app/src/main/java/dev/nightfall/`,
-plus a catalogue of names and descriptions in `core/src/main/kotlin/dev/nightfall/core/Library.kt`.
-There is no `res/values/strings.xml`, no `res/values-<language>/`, no `plurals.xml`, no
-`android:localeConfig`, and no per-app language selection. This document is the inventory, the
-judgement calls, and the extraction plan. Nothing here changes behaviour; it is what a future
-extraction is built from.
+Every string Nightfall shows a person used to be a Kotlin literal in `app/src/main/java/dev/nightfall/`.
+The app's own chrome is now in `app/src/main/res/values/strings.xml` and `plurals.xml`: 260 keys,
+every one of them used, extracted against `main` at `1ffbee1`. What still ships as English in code
+is the catalogue — 98 names, 10 categories, 15 preset names in
+`core/src/main/kotlin/dev/nightfall/core/Library.kt` — plus two defaults that are written into saved
+data rather than drawn (`Your soundscape`, `My night mix`). Both are listed in §5 as stages 5 and 6
+and both need work outside `app/`.
+
+There is still no `res/values-<language>/`, no `android:localeConfig`, and no per-app language
+selection. English is the only locale, and this document is the inventory, the judgement calls, and
+what is left of the extraction plan: the sections below are the record of the tree as it was, kept
+because the reasoning about what must not be extracted still governs the keys that now exist.
 
 The inventory was taken against `main` at `0df94ac` (v1.1, versionCode 5), and the line column is
 valid at that commit and nowhere else. Both UI files change often and this list will drift within a
@@ -759,6 +765,20 @@ resolved to a resource at render time), which is a saved-state schema change and
 in this document.
 
 ## 5. Staged extraction plan
+
+**Status.** Stages 0–3 landed as one change against `1ffbee1`: `strings.xml`, `plurals.xml`, the
+manifest label, and every chrome string through `stringResource`/`getString`. Stage 4's typed values
+had already landed in `Text.kt` as `OutputRoute`, so the extraction used them rather than repeating
+that work. Stages 5 and 6 are open. One deliberate difference from the plan below: stage 3 does not
+adopt `DateUtils.formatElapsedTime` or ICU messages, because both change what is drawn for durations
+over an hour, and the extraction was held to pixel-identical renders. The formatting is still the
+same `elapsedLabel` as before, and moving to a locale-aware formatter is now its own piece of work.
+
+The guard that keeps this from regressing is `:app:verifyNoHardcodedCopy`, wired to `lintDebug` and
+`lintRelease` so the gate and the release workflow run it with no workflow change. Lint's own
+`HardcodedText` is enabled as an error too, but it reads View XML and Java only — a planted
+`Text("…")` in a composable does not trip it, which is why the Gradle task exists. It honours a
+`hardcoded-copy-allowed` marker for the preview-only strings.
 
 Each stage is independently shippable and independently reviewable. The gate for every stage is
 `./gradlew :core:test :app:assembleDebug :app:lintDebug` with `abortOnError = true`. No stage is

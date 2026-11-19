@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
@@ -189,10 +190,12 @@ fun Waveform(playing: Boolean, reducedMotion: Boolean) {
             )
         } else null
     val color = MaterialTheme.colorScheme.primary
+    val spoken =
+        stringResource(
+            if (playing) R.string.a11y_soundscape_playing else R.string.a11y_soundscape_paused
+        )
     Canvas(
-        Modifier.fillMaxWidth().height(52.dp).semantics {
-            contentDescription = if (playing) "Soundscape playing" else "Soundscape paused"
-        }
+        Modifier.fillMaxWidth().height(52.dp).semantics { contentDescription = spoken }
     ) {
         // Read in the draw phase: a phase change invalidates this drawing only.
         val phase = phase?.value ?: 0f
@@ -264,8 +267,10 @@ private fun DesignPreview() {
     NightfallTheme(false) {
         Surface {
             Column(Modifier.padding(24.dp)) {
+                // hardcoded-copy-allowed: preview only, never built into the app.
                 Text("Nightfall", style = MaterialTheme.typography.headlineMedium)
                 Waveform(false, true)
+                // hardcoded-copy-allowed: preview only, never built into the app.
                 LevelSlider("Master volume", .5f, {})
             }
         }
@@ -283,7 +288,9 @@ private fun LightDesignPreview() {
     NightfallTheme(true) {
         Surface {
             Column(Modifier.padding(24.dp)) {
+                // hardcoded-copy-allowed: preview only, never built into the app.
                 Text("Nightfall", style = MaterialTheme.typography.headlineMedium)
+                // hardcoded-copy-allowed: preview only, never built into the app.
                 LevelSlider("Master volume", .5f, {})
             }
         }

@@ -6,6 +6,7 @@ package dev.nightfall
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import android.content.Context
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
@@ -25,6 +26,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.nightfall.core.*
@@ -109,9 +112,9 @@ fun NightfallScreen(vm: NightfallViewModel) {
                                 it.write(json.toByteArray())
                             } ?: error("Cannot open export file")
                         }
-                        snackbar.showSnackbar("Mix exported")
+                        snackbar.showSnackbar(context.getString(R.string.snackbar_mix_exported))
                     } catch (e: Exception) {
-                        snackbar.showSnackbar("Export failed: ${e.message}")
+                        snackbar.showSnackbar(context.getString(R.string.snackbar_export_failed, e.message))
                     }
                 }
         }
@@ -127,9 +130,9 @@ fun NightfallScreen(vm: NightfallViewModel) {
                                 } ?: error("Cannot open preset")
                             }
                         runtime.savePreset(mix)
-                        snackbar.showSnackbar("Imported ${mix.name}")
+                        snackbar.showSnackbar(context.getString(R.string.snackbar_imported, mix.name))
                     } catch (e: Exception) {
-                        snackbar.showSnackbar("Import failed: ${e.message}")
+                        snackbar.showSnackbar(context.getString(R.string.snackbar_import_failed, e.message))
                     }
                 }
         }
@@ -166,11 +169,11 @@ fun NightfallScreen(vm: NightfallViewModel) {
                 ) {
                     val tabs =
                         listOf(
-                            "Home" to Icons.Outlined.Home,
-                            "Library" to Icons.Outlined.LibraryMusic,
-                            "Presets" to Icons.Outlined.Bookmarks,
-                            "Studio" to Icons.Outlined.Tune,
-                            "Settings" to Icons.Outlined.Settings,
+                            stringResource(R.string.nav_home) to Icons.Outlined.Home,
+                            stringResource(R.string.nav_library) to Icons.Outlined.LibraryMusic,
+                            stringResource(R.string.nav_presets) to Icons.Outlined.Bookmarks,
+                            stringResource(R.string.nav_studio) to Icons.Outlined.Tune,
+                            stringResource(R.string.nav_settings) to Icons.Outlined.Settings,
                         )
                     tabs.forEachIndexed { i, (label, icon) ->
                         NavigationBarItem(
@@ -274,13 +277,18 @@ fun NightfallScreen(vm: NightfallViewModel) {
                 AlertDialog(
                     onDismissRequest = { dialog = null },
                     title = {
-                        Text(if (editingPreset == null) "Save your mix" else "Rename preset")
+                        Text(
+                            stringResource(
+                                if (editingPreset == null) R.string.dialog_save_title
+                                else R.string.dialog_rename_title
+                            )
+                        )
                     },
                     text = {
                         OutlinedTextField(
                             value = name,
                             onValueChange = { name = it.take(200) },
-                            label = { Text("Mix name") },
+                            label = { Text(stringResource(R.string.dialog_mix_name)) },
                             singleLine = true,
                         )
                     },
@@ -295,20 +303,24 @@ fun NightfallScreen(vm: NightfallViewModel) {
                                 dialog = null
                             }
                         ) {
-                            Text("Save")
+                            Text(stringResource(R.string.common_save))
                         }
                     },
-                    dismissButton = { TextButton(onClick = { dialog = null }) { Text("Cancel") } },
+                    dismissButton = {
+                        TextButton(onClick = { dialog = null }) {
+                            Text(stringResource(R.string.common_cancel))
+                        }
+                    },
                 )
             "timer" -> TimerDialog(runtime, onDismiss = { dialog = null })
             "fade" ->
                 AlertDialog(
                     onDismissRequest = { dialog = null },
-                    title = { Text("Gentle transitions") },
+                    title = { Text(stringResource(R.string.dialog_fade_title)) },
                     text = {
                         Column {
                             Text(
-                                "New layers and preset changes fade in and out using each layer’s fade setting.",
+                                stringResource(R.string.dialog_fade_body),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Spacer(Modifier.height(20.dp))
@@ -317,7 +329,7 @@ fun NightfallScreen(vm: NightfallViewModel) {
                                     it.settings.fadeSeconds
                                 }
                             LevelSlider(
-                                "Timer fade duration",
+                                stringResource(R.string.dialog_fade_duration),
                                 fadeSeconds,
                                 { v ->
                                     runtime.change {
@@ -325,7 +337,11 @@ fun NightfallScreen(vm: NightfallViewModel) {
                                     }
                                 },
                                 5f..120f,
-                                "${fadeSeconds.roundToInt()} ${plural(fadeSeconds.roundToInt(), "second", "seconds")}",
+                                pluralStringResource(
+                                    R.plurals.unit_seconds,
+                                    fadeSeconds.roundToInt(),
+                                    fadeSeconds.roundToInt(),
+                                ),
                             )
                         }
                     },
@@ -343,15 +359,19 @@ fun NightfallScreen(vm: NightfallViewModel) {
                                 dialog = null
                             },
                         ) {
-                            Text("Fade out now")
+                            Text(stringResource(R.string.dialog_fade_now))
                         }
                     },
-                    dismissButton = { TextButton(onClick = { dialog = null }) { Text("Done") } },
+                    dismissButton = {
+                        TextButton(onClick = { dialog = null }) {
+                            Text(stringResource(R.string.common_done))
+                        }
+                    },
                 )
             "credits" ->
                 AlertDialog(
                     onDismissRequest = { dialog = null },
-                    title = { Text("Audio credits & licenses") },
+                    title = { Text(stringResource(R.string.dialog_credits_title)) },
                     text = {
                         Column(
                             Modifier.heightIn(max = 480.dp).verticalScroll(rememberScrollState())
@@ -369,7 +389,11 @@ fun NightfallScreen(vm: NightfallViewModel) {
                             Text(licenses, fontSize = 12.sp)
                         }
                     },
-                    confirmButton = { TextButton(onClick = { dialog = null }) { Text("Done") } },
+                    confirmButton = {
+                        TextButton(onClick = { dialog = null }) {
+                            Text(stringResource(R.string.common_done))
+                        }
+                    },
                 )
         }
     }
@@ -415,7 +439,7 @@ private fun Home(
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        "Nightfall",
+                        stringResource(R.string.home_title),
                         Modifier.semantics { heading() },
                         fontSize = 28.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -432,7 +456,7 @@ private fun Home(
                 IconButton(onClick = onPresets) {
                     Icon(
                         Icons.Outlined.Bookmarks,
-                        "Presets",
+                        stringResource(R.string.home_action_open_presets),
                         Modifier.size(21.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -440,7 +464,7 @@ private fun Home(
                 IconButton(onClick = onSettings) {
                     Icon(
                         Icons.Outlined.Settings,
-                        "Open settings",
+                        stringResource(R.string.home_action_open_settings),
                         Modifier.size(21.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -452,7 +476,11 @@ private fun Home(
             Column(Modifier.padding(top = 6.dp)) {
                 val master by
                     selectSaved(r, r.savedNow().current.master) { it.current.master }
-                LevelSlider("Master volume", master, { v -> r.mix { it.copy(master = v) } })
+                LevelSlider(
+                    stringResource(R.string.home_master_volume),
+                    master,
+                    { v -> r.mix { it.copy(master = v) } },
+                )
                 QuickActions(r, onFade, onSave)
             }
         }
@@ -464,13 +492,17 @@ private fun Home(
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        "Your soundscape",
+                        stringResource(R.string.home_section_your_soundscape),
                         Modifier.semantics { heading() },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        "${layerIds.size} ${plural(layerIds.size, "layer", "layers")} · hold the grip to reorder",
+                        pluralStringResource(
+                            R.plurals.home_layer_count,
+                            layerIds.size,
+                            layerIds.size,
+                        ),
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -478,7 +510,7 @@ private fun Home(
                 TextButton(onClick = onAdd, modifier = Modifier.heightIn(min = 48.dp)) {
                     Icon(Icons.Outlined.Add, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Add sound")
+                    Text(stringResource(R.string.home_action_add_sound))
                 }
             }
         }
@@ -494,12 +526,12 @@ private fun Home(
             ) {
                 Icon(Icons.Outlined.Add, null, Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Add another sound")
+                Text(stringResource(R.string.home_action_add_another_sound))
             }
         }
         item {
             Text(
-                "OFFLINE BY NATURE  ·  FREE FOREVER",
+                stringResource(R.string.home_tagline),
                 Modifier.fillMaxWidth().padding(top = 12.dp),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 fontSize = 9.sp,
@@ -517,6 +549,7 @@ private fun NowPlayingCard(
     reducedMotion: Boolean,
     onTimer: () -> Unit,
 ) {
+    val context = LocalContext.current
     val playing by selectStatus(r, false) { it.playing }
     val output by selectStatus(r, OutputRoute()) { it.output }
     Card(
@@ -527,7 +560,8 @@ private fun NowPlayingCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        if (playing) "NOW PLAYING" else "READY WHEN YOU ARE",
+                        if (playing) stringResource(R.string.home_status_playing)
+                        else stringResource(R.string.home_status_ready),
                         fontSize = 10.sp,
                         letterSpacing = 1.6.sp,
                         color = MaterialTheme.colorScheme.primary,
@@ -542,7 +576,8 @@ private fun NowPlayingCard(
                 ) {
                     Icon(
                         if (playing) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
-                        if (playing) "Pause soundscape" else "Play soundscape",
+                        if (playing) stringResource(R.string.home_action_pause)
+                        else stringResource(R.string.home_action_play),
                         Modifier.size(32.dp),
                     )
                 }
@@ -567,7 +602,7 @@ private fun NowPlayingCard(
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    outputShortLabel(output),
+                    outputShortLabel(context, output),
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -584,7 +619,7 @@ private fun NowPlayingCard(
 private fun ActiveLayerLabel(r: NightfallRuntime) {
     val active by selectSaved(r, r.savedNow().activeLayers()) { it.activeLayers() }
     Text(
-        "$active ${plural(active, "layer", "layers")}",
+        pluralStringResource(R.plurals.unit_layers, active, active),
         fontSize = 11.sp,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -592,17 +627,20 @@ private fun ActiveLayerLabel(r: NightfallRuntime) {
 
 @Composable
 private fun TimerButton(r: NightfallRuntime, onTimer: () -> Unit) {
+    val allNight = stringResource(R.string.common_all_night)
+    val fading = stringResource(R.string.common_fading)
+    val sleepTimer = stringResource(R.string.home_a11y_sleep_timer)
     val label by
-        selectStatus(r, "All night") { s ->
-            if (s.timerActive) if (s.timerFading) "Fading" else elapsedLabel(s.remainingMs)
-            else "All night"
+        selectStatus(r, allNight) { s ->
+            if (s.timerActive) if (s.timerFading) fading else elapsedLabel(s.remainingMs)
+            else allNight
         }
     TextButton(
         onClick = onTimer,
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
         modifier =
             Modifier.heightIn(min = 48.dp).semantics {
-                contentDescription = "Sleep timer"
+                contentDescription = sleepTimer
                 stateDescription = label
             },
     ) {
@@ -617,16 +655,19 @@ private fun QuickActions(r: NightfallRuntime, onFade: () -> Unit, onSave: () -> 
     val allMuted by selectSaved(r, r.savedNow().allMuted()) { it.allMuted() }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         TinyAction(
-            if (allMuted) "Unmute" else "Mute all",
+            if (allMuted) stringResource(R.string.home_action_unmute)
+            else stringResource(R.string.home_action_mute_all),
             Icons.AutoMirrored.Outlined.VolumeOff,
         ) {
             val muted = !r.savedNow().current.layers.all { it.mute }
             r.mix { it.copy(layers = it.layers.map { l -> l.copy(mute = muted) }) }
         }
-        TinyAction("Stop all", Icons.Outlined.Stop) { r.stop() }
-        TinyAction("Fade", Icons.Outlined.BlurOn, onFade)
-        TinyAction("Save mix", Icons.Outlined.BookmarkAdd, onSave)
-        TinyAction("Reset", Icons.Outlined.RestartAlt) { r.mix { Presets.all.last() } }
+        TinyAction(stringResource(R.string.home_action_stop_all), Icons.Outlined.Stop) { r.stop() }
+        TinyAction(stringResource(R.string.home_action_fade), Icons.Outlined.BlurOn, onFade)
+        TinyAction(stringResource(R.string.home_action_save_mix), Icons.Outlined.BookmarkAdd, onSave)
+        TinyAction(stringResource(R.string.home_action_reset), Icons.Outlined.RestartAlt) {
+            r.mix { Presets.all.last() }
+        }
     }
 }
 
@@ -645,10 +686,11 @@ private fun PresetStrip(r: NightfallRuntime, onPresets: () -> Unit) {
             )
         }
         item {
+            val seeAll = stringResource(R.string.home_a11y_all_presets)
             SuggestionChip(
                 onClick = onPresets,
-                label = { Text("All presets →", fontSize = 12.sp) },
-                modifier = Modifier.semantics { contentDescription = "See all presets" },
+                label = { Text(stringResource(R.string.home_action_all_presets), fontSize = 12.sp) },
+                modifier = Modifier.semantics { contentDescription = seeAll },
             )
         }
     }
@@ -658,7 +700,12 @@ private fun PresetStrip(r: NightfallRuntime, onPresets: () -> Unit) {
 private fun CapacityWarning(r: NightfallRuntime) {
     val stats by selectStatus(r, 0 to 0) { (it.load * 100).roundToInt() to it.underruns }
     Text(
-        "This mix is approaching the device’s audio capacity. Reduce music effects or layers if you hear gaps. Render load ${stats.first}% · ${stats.second} ${plural(stats.second, "underrun", "underruns")}",
+        pluralStringResource(
+            R.plurals.home_capacity_warning,
+            stats.second,
+            stats.first,
+            stats.second,
+        ),
         color = MaterialTheme.colorScheme.primary,
         fontSize = 12.sp,
     )
@@ -697,7 +744,18 @@ private fun LayerRow(r: NightfallRuntime, id: String, onStudio: (String) -> Unit
     val current = layer ?: return
     var expanded by rememberSaveable(id) { mutableStateOf(false) }
     val sound = Library.byId[current.soundId]
-    val adjusted = adjustedOptions(current)
+    val context = LocalContext.current
+    val adjusted = adjustedOptions(context, current)
+    val reorderLabel = stringResource(R.string.layer_a11y_reorder, current.name)
+    val moveUp = stringResource(R.string.layer_a11y_move_up)
+    val moveDown = stringResource(R.string.layer_a11y_move_down)
+    val enableLabel = stringResource(R.string.layer_a11y_enable, current.name)
+    val muteA11y = stringResource(R.string.layer_a11y_mute, current.name)
+    val soloA11y = stringResource(R.string.layer_a11y_solo, current.name)
+    val optionsA11y = stringResource(R.string.layer_a11y_options, current.name)
+    val stateOpen = stringResource(R.string.layer_state_expanded)
+    val stateDefaults = stringResource(R.string.layer_state_collapsed_defaults)
+    val stateAdjusted = stringResource(R.string.layer_state_collapsed_adjusted, adjusted.size)
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -721,14 +779,14 @@ private fun LayerRow(r: NightfallRuntime, id: String, onStudio: (String) -> Unit
                             )
                         }
                         .semantics {
-                            contentDescription = "Reorder ${current.name}"
+                            contentDescription = reorderLabel
                             customActions =
                                 listOf(
-                                    CustomAccessibilityAction("Move up") {
+                                    CustomAccessibilityAction(moveUp) {
                                         r.reorder(current.id, -1)
                                         true
                                     },
-                                    CustomAccessibilityAction("Move down") {
+                                    CustomAccessibilityAction(moveDown) {
                                         r.reorder(current.id, 1)
                                         true
                                     },
@@ -759,7 +817,7 @@ private fun LayerRow(r: NightfallRuntime, id: String, onStudio: (String) -> Unit
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        layerSubtitle(sound),
+                        layerSubtitle(context, sound),
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -768,33 +826,36 @@ private fun LayerRow(r: NightfallRuntime, id: String, onStudio: (String) -> Unit
                 Switch(
                     checked = current.enabled,
                     onCheckedChange = { v -> r.layer(current.id) { it.copy(enabled = v) } },
-                    modifier = Modifier.semantics { contentDescription = "Enable ${current.name}" },
+                    modifier =
+                        Modifier.semantics {
+                            contentDescription = enableLabel
+                        },
                 )
             }
             LevelSlider(
-                "Volume",
+                stringResource(R.string.layer_volume),
                 current.gain,
                 { v -> r.layer(current.id) { it.copy(gain = v) } },
-                spokenName = "${current.name} volume",
+                spokenName = stringResource(R.string.layer_spoken_volume, current.name),
             )
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 FilterChip(
                     selected = current.mute,
                     onClick = { r.layer(current.id) { it.copy(mute = !it.mute) } },
-                    label = { Text("Mute", fontSize = 11.sp) },
+                    label = { Text(stringResource(R.string.layer_action_mute), fontSize = 11.sp) },
                     modifier =
                         Modifier.heightIn(min = 48.dp).semantics {
-                            contentDescription = "Mute ${current.name}"
+                            contentDescription = muteA11y
                         },
                 )
                 Spacer(Modifier.width(8.dp))
                 FilterChip(
                     selected = current.solo,
                     onClick = { r.layer(current.id) { it.copy(solo = !it.solo) } },
-                    label = { Text("Solo", fontSize = 11.sp) },
+                    label = { Text(stringResource(R.string.layer_action_solo), fontSize = 11.sp) },
                     modifier =
                         Modifier.heightIn(min = 48.dp).semantics {
-                            contentDescription = "Solo ${current.name}"
+                            contentDescription = soloA11y
                         },
                 )
                 Spacer(Modifier.weight(1f))
@@ -805,7 +866,7 @@ private fun LayerRow(r: NightfallRuntime, id: String, onStudio: (String) -> Unit
                 ) {
                     Icon(
                         Icons.Outlined.DeleteOutline,
-                        "Remove ${current.name}",
+                        stringResource(R.string.layer_action_remove, current.name),
                         Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -815,18 +876,19 @@ private fun LayerRow(r: NightfallRuntime, id: String, onStudio: (String) -> Unit
                 onClick = { expanded = !expanded },
                 modifier =
                     Modifier.fillMaxWidth().heightIn(min = 48.dp).semantics {
-                        contentDescription = "Options for ${current.name}"
+                        contentDescription = optionsA11y
                         stateDescription =
-                            if (expanded) "Expanded"
-                            else if (adjusted.isEmpty()) "Collapsed, all defaults"
-                            else "Collapsed, ${adjusted.size} adjusted"
+                            if (expanded) stateOpen
+                            else if (adjusted.isEmpty()) stateDefaults
+                            else stateAdjusted
                     },
                 contentPadding = PaddingValues(horizontal = 8.dp),
             ) {
                 Icon(Icons.Outlined.Tune, null, Modifier.size(16.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    if (adjusted.isEmpty()) "Options" else "Options · ${adjusted.size} adjusted",
+                    if (adjusted.isEmpty()) stringResource(R.string.layer_options)
+                    else stringResource(R.string.layer_options_adjusted, adjusted.size),
                     fontSize = 12.sp,
                 )
                 Spacer(Modifier.weight(1f))
@@ -853,140 +915,182 @@ private fun LayerRow(r: NightfallRuntime, id: String, onStudio: (String) -> Unit
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                OptionGroup("Placement") {
+                OptionGroup(stringResource(R.string.option_group_placement)) {
                     LevelSlider(
-                        "Pan",
+                        stringResource(R.string.option_pan),
                         current.pan,
                         { v -> r.layer(current.id) { it.copy(pan = v) } },
                         -1f..1f,
-                        if (abs(current.pan) < .05) "Center"
-                        else "${(abs(current.pan) * 100).roundToInt()}% ${if (current.pan < 0) "left" else "right"}",
-                        "${current.name} pan",
+                        if (abs(current.pan) < .05) stringResource(R.string.option_pan_center)
+                        else
+                            stringResource(
+                                R.string.option_pan_value,
+                                (abs(current.pan) * 100).roundToInt(),
+                                stringResource(
+                                    if (current.pan < 0) R.string.option_pan_left
+                                    else R.string.option_pan_right
+                                ),
+                            ),
+                        stringResource(R.string.option_spoken_pan, current.name),
                     )
                     LevelSlider(
-                        "Stereo width",
+                        stringResource(R.string.option_stereo_width),
                         current.width,
                         { v -> r.layer(current.id) { it.copy(width = v) } },
-                        spokenName = "${current.name} stereo width",
+                        spokenName = stringResource(R.string.option_spoken_stereo_width, current.name),
                     )
                 }
-                OptionGroup("Tone") {
+                OptionGroup(stringResource(R.string.option_group_tone)) {
                     LevelSlider(
-                        "Bass",
+                        stringResource(R.string.option_bass),
                         current.bass,
                         { v -> r.layer(current.id) { it.copy(bass = v) } },
                         -12f..12f,
-                        "${current.bass.roundToInt()} dB",
-                        "${current.name} bass",
+                        stringResource(R.string.unit_decibels, current.bass.roundToInt()),
+                        stringResource(R.string.option_spoken_bass, current.name),
                     )
                     LevelSlider(
-                        "Mid",
+                        stringResource(R.string.option_mid),
                         current.mid,
                         { v -> r.layer(current.id) { it.copy(mid = v) } },
                         -12f..12f,
-                        "${current.mid.roundToInt()} dB",
-                        "${current.name} mid",
+                        stringResource(R.string.unit_decibels, current.mid.roundToInt()),
+                        stringResource(R.string.option_spoken_mid, current.name),
                     )
                     LevelSlider(
-                        "Treble",
+                        stringResource(R.string.option_treble),
                         current.treble,
                         { v -> r.layer(current.id) { it.copy(treble = v) } },
                         -12f..12f,
-                        "${current.treble.roundToInt()} dB",
-                        "${current.name} treble",
+                        stringResource(R.string.unit_decibels, current.treble.roundToInt()),
+                        stringResource(R.string.option_spoken_treble, current.name),
                     )
                     LevelSlider(
-                        "Brightness",
+                        stringResource(R.string.option_brightness),
                         current.brightness,
                         { v -> r.layer(current.id) { it.copy(brightness = v) } },
-                        spokenName = "${current.name} brightness",
+                        spokenName =
+                            stringResource(R.string.option_spoken_brightness, current.name),
                     )
                     LevelSlider(
-                        "Spectral tilt",
+                        stringResource(R.string.option_spectral_tilt),
                         current.tilt,
                         { v -> r.layer(current.id) { it.copy(tilt = v) } },
                         -1f..1f,
-                        "${"%.1f".format(current.tilt)}",
-                        "${current.name} spectral tilt",
+                        "%.1f".format(current.tilt),
+                        stringResource(R.string.option_spoken_tilt, current.name),
                     )
                 }
-                OptionGroup("Filters") {
+                OptionGroup(stringResource(R.string.option_group_filters)) {
                     LevelSlider(
-                        "High-pass filter",
+                        stringResource(R.string.option_high_pass),
                         current.highPass,
                         { v -> r.layer(current.id) { it.copy(highPass = v) } },
                         20f..2000f,
-                        "${current.highPass.roundToInt()} Hz",
-                        "${current.name} high-pass filter",
+                        stringResource(R.string.unit_hertz, current.highPass.roundToInt()),
+                        stringResource(R.string.option_spoken_high_pass, current.name),
                     )
                     LevelSlider(
-                        "Low-pass filter",
+                        stringResource(R.string.option_low_pass),
                         current.lowPass,
                         { v -> r.layer(current.id) { it.copy(lowPass = v) } },
                         500f..20000f,
-                        "${current.lowPass.roundToInt()} Hz",
-                        "${current.name} low-pass filter",
+                        stringResource(R.string.unit_hertz, current.lowPass.roundToInt()),
+                        stringResource(R.string.option_spoken_low_pass, current.name),
                     )
                 }
                 if (hasTextureOptions(sound))
-                    OptionGroup("Texture") {
+                    OptionGroup(stringResource(R.string.option_group_texture)) {
                         if (sound?.kind == "binaural")
                             LevelSlider(
-                                "Beat frequency",
+                                stringResource(R.string.option_beat_frequency),
                                 current.intensity,
                                 { v -> r.layer(current.id) { it.copy(intensity = v) } },
-                                display = "${"%.1f".format(1+current.intensity*19)} Hz",
-                                spokenName = "${current.name} beat frequency",
+                                display =
+                                    stringResource(
+                                        R.string.unit_hertz_decimal,
+                                        "%.1f".format(1 + current.intensity * 19),
+                                    ),
+                                spokenName =
+                                    stringResource(
+                                        R.string.option_spoken_beat_frequency,
+                                        current.name,
+                                    ),
                             )
                         else {
                             LevelSlider(
-                                "Intensity",
+                                stringResource(R.string.option_intensity),
                                 current.intensity,
                                 { v -> r.layer(current.id) { it.copy(intensity = v) } },
-                                spokenName = "${current.name} intensity",
+                                spokenName =
+                                    stringResource(R.string.option_spoken_intensity, current.name),
                             )
                             if (sound?.kind in listOf("rain", "thunder", "winter", "fire"))
                                 LevelSlider(
-                                    "Event frequency",
+                                    stringResource(R.string.option_event_frequency),
                                     current.eventRate,
                                     { v -> r.layer(current.id) { it.copy(eventRate = v) } },
-                                    spokenName = "${current.name} event frequency",
+                                    spokenName =
+                                        stringResource(
+                                            R.string.option_spoken_event_frequency,
+                                            current.name,
+                                        ),
                                 )
                             LevelSlider(
-                                "Slow modulation",
+                                stringResource(R.string.option_slow_modulation),
                                 current.modulation,
                                 { v -> r.layer(current.id) { it.copy(modulation = v) } },
-                                spokenName = "${current.name} slow modulation",
+                                spokenName =
+                                    stringResource(
+                                        R.string.option_spoken_modulation,
+                                        current.name,
+                                    ),
                             )
                         }
                     }
-                OptionGroup("Timing") {
+                OptionGroup(stringResource(R.string.option_group_timing)) {
                     LevelSlider(
-                        "Fade in and out over",
+                        stringResource(R.string.option_fade_over),
                         current.fadeSeconds,
                         { v -> r.layer(current.id) { it.copy(fadeSeconds = v) } },
                         .1f..60f,
-                        "${"%.1f".format(current.fadeSeconds)} s",
-                        "${current.name} fade duration",
+                        stringResource(
+                            R.string.unit_seconds_decimal,
+                            "%.1f".format(current.fadeSeconds),
+                        ),
+                        stringResource(R.string.option_spoken_fade, current.name),
                     )
                     LevelSlider(
-                        "Stop this layer after",
+                        stringResource(R.string.option_stop_after),
                         current.stopAfterMinutes,
                         { v -> r.layer(current.id) { it.copy(stopAfterMinutes = v) } },
                         0f..120f,
-                        if (current.stopAfterMinutes < .5f) "All night"
-                        else "${current.stopAfterMinutes.roundToInt()} min",
-                        "${current.name} stop time",
+                        if (current.stopAfterMinutes < .5f)
+                            stringResource(R.string.common_all_night)
+                        else
+                            stringResource(
+                                R.string.unit_minutes,
+                                current.stopAfterMinutes.roundToInt(),
+                            ),
+                        stringResource(R.string.option_spoken_stop_time, current.name),
                     )
                     if (sound?.kind == "thunder")
                         LevelSlider(
-                            "Storm becomes rain over",
+                            stringResource(R.string.option_storm_to_rain),
                             current.weatherToRainMinutes,
                             { v -> r.layer(current.id) { it.copy(weatherToRainMinutes = v) } },
                             0f..120f,
-                            if (current.weatherToRainMinutes < .5f) "Off"
-                            else "${current.weatherToRainMinutes.roundToInt()} min",
-                            "${current.name} storm transition",
+                            if (current.weatherToRainMinutes < .5f)
+                                stringResource(R.string.common_off)
+                            else
+                                stringResource(
+                                    R.string.unit_minutes,
+                                    current.weatherToRainMinutes.roundToInt(),
+                                ),
+                            stringResource(
+                                R.string.option_spoken_storm_transition,
+                                current.name,
+                            ),
                         )
                 }
                 if (sound?.music == true)
@@ -996,7 +1100,7 @@ private fun LayerRow(r: NightfallRuntime, id: String, onStudio: (String) -> Unit
                     ) {
                         Icon(Icons.Outlined.Tune, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Edit composition in Studio")
+                        Text(stringResource(R.string.layer_action_edit_in_studio))
                     }
                 Spacer(Modifier.height(8.dp))
             }
@@ -1020,25 +1124,26 @@ private fun OptionGroup(title: String, content: @Composable ColumnScope.() -> Un
 }
 
 /** Layer fields the audio model honours for every source kind. */
-private fun adjustedOptions(l: Layer): List<String> {
+private fun adjustedOptions(context: Context, l: Layer): List<String> {
     val d = Layer(id = l.id, soundId = l.soundId, name = l.name)
-    fun f(v: Float, ref: Float, name: String) = if (abs(v - ref) > 1e-4f) name else null
+    fun f(v: Float, ref: Float, name: Int) =
+        if (abs(v - ref) > 1e-4f) context.getString(name) else null
     return listOfNotNull(
-        f(l.pan, d.pan, "pan"),
-        f(l.width, d.width, "stereo width"),
-        f(l.highPass, d.highPass, "high-pass"),
-        f(l.lowPass, d.lowPass, "low-pass"),
-        f(l.bass, d.bass, "bass"),
-        f(l.mid, d.mid, "mid"),
-        f(l.treble, d.treble, "treble"),
-        f(l.brightness, d.brightness, "brightness"),
-        f(l.tilt, d.tilt, "tilt"),
-        f(l.intensity, d.intensity, "intensity"),
-        f(l.eventRate, d.eventRate, "events"),
-        f(l.modulation, d.modulation, "modulation"),
-        f(l.fadeSeconds, d.fadeSeconds, "fade"),
-        f(l.stopAfterMinutes, d.stopAfterMinutes, "stop time"),
-        f(l.weatherToRainMinutes, d.weatherToRainMinutes, "storm transition"),
+        f(l.pan, d.pan, R.string.layer_adjust_pan),
+        f(l.width, d.width, R.string.layer_adjust_stereo_width),
+        f(l.highPass, d.highPass, R.string.layer_adjust_high_pass),
+        f(l.lowPass, d.lowPass, R.string.layer_adjust_low_pass),
+        f(l.bass, d.bass, R.string.layer_adjust_bass),
+        f(l.mid, d.mid, R.string.layer_adjust_mid),
+        f(l.treble, d.treble, R.string.layer_adjust_treble),
+        f(l.brightness, d.brightness, R.string.layer_adjust_brightness),
+        f(l.tilt, d.tilt, R.string.layer_adjust_tilt),
+        f(l.intensity, d.intensity, R.string.layer_adjust_intensity),
+        f(l.eventRate, d.eventRate, R.string.layer_adjust_events),
+        f(l.modulation, d.modulation, R.string.layer_adjust_modulation),
+        f(l.fadeSeconds, d.fadeSeconds, R.string.layer_adjust_fade),
+        f(l.stopAfterMinutes, d.stopAfterMinutes, R.string.layer_adjust_stop_time),
+        f(l.weatherToRainMinutes, d.weatherToRainMinutes, R.string.layer_adjust_storm_transition),
     )
 }
 
@@ -1049,16 +1154,20 @@ private fun hasTextureOptions(sound: Sound?): Boolean =
         else -> true
     }
 
-private fun layerSubtitle(sound: Sound?): String =
+private fun layerSubtitle(context: Context, sound: Sound?): String =
     when (sound?.kind) {
-        "recording" -> "Field recording"
-        "music" -> "Generative music"
-        "binaural" -> "Binaural tones"
-        "noise" -> "Noise texture"
-        "clock" -> "Ticking clock"
-        "hum" -> "Hum"
+        "recording" -> context.getString(R.string.kind_field_recording)
+        "music" -> context.getString(R.string.kind_generative_music)
+        "binaural" -> context.getString(R.string.kind_binaural)
+        "noise" -> context.getString(R.string.kind_noise)
+        "clock" -> context.getString(R.string.kind_clock)
+        "hum" -> context.getString(R.string.kind_hum)
         null -> ""
-        else -> "${sound.kind.replaceFirstChar { it.uppercase() }} texture"
+        else ->
+            context.getString(
+                R.string.kind_other,
+                sound.kind.replaceFirstChar { it.uppercase() },
+            )
     }
 
 @Composable
@@ -1068,11 +1177,11 @@ private fun TimerDialog(r: NightfallRuntime, onDismiss: () -> Unit) {
     val timerPaused by selectStatus(r, false) { it.timerPaused }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Sleep timer") },
+        title = { Text(stringResource(R.string.dialog_timer_title)) },
         text = {
             Column {
                 Text(
-                    "Audio fades gently after the countdown. Pausing playback pauses the timer.",
+                    stringResource(R.string.dialog_timer_body),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1090,7 +1199,11 @@ private fun TimerDialog(r: NightfallRuntime, onDismiss: () -> Unit) {
                                 modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                                 contentPadding = PaddingValues(2.dp),
                             ) {
-                                Text(if (m == 0) "All night" else "$m min", fontSize = 11.sp)
+                                Text(
+                                    if (m == 0) stringResource(R.string.common_all_night)
+                                    else stringResource(R.string.unit_minutes, m),
+                                    fontSize = 11.sp,
+                                )
                             }
                         }
                     }
@@ -1098,7 +1211,7 @@ private fun TimerDialog(r: NightfallRuntime, onDismiss: () -> Unit) {
                 OutlinedTextField(
                     value = custom,
                     onValueChange = { custom = it.filter(Char::isDigit).take(4) },
-                    label = { Text("Custom minutes (1–1440)") },
+                    label = { Text(stringResource(R.string.dialog_timer_custom)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -1110,7 +1223,10 @@ private fun TimerDialog(r: NightfallRuntime, onDismiss: () -> Unit) {
                             r.status.value = r.status.value.copy(timerPaused = r.timer.paused)
                         }
                     ) {
-                        Text(if (timerPaused) "Resume timer" else "Pause timer")
+                        Text(
+                            if (timerPaused) stringResource(R.string.dialog_timer_resume)
+                            else stringResource(R.string.dialog_timer_pause)
+                        )
                     }
             }
         },
@@ -1126,9 +1242,11 @@ private fun TimerDialog(r: NightfallRuntime, onDismiss: () -> Unit) {
                         }
                 }
             ) {
-                Text("Set timer")
+                Text(stringResource(R.string.dialog_timer_set))
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Done") } },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_done)) }
+        },
     )
 }

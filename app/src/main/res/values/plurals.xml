@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Counts that genuinely vary, so a translator can give each language the forms it needs. English
+    has two, and the rendered text is the same as before this file existed: the code already chose
+    between a singular and a plural word.
+-->
+<resources>
+
+    <plurals name="unit_layers">
+        <item quantity="one">%1$d layer</item>
+        <item quantity="other">%1$d layers</item>
+    </plurals>
+
+    <plurals name="unit_seconds">
+        <item quantity="one">%1$d second</item>
+        <item quantity="other">%1$d seconds</item>
+    </plurals>
+
+    <plurals name="home_layer_count">
+        <item quantity="one">%1$d layer · hold the grip to reorder</item>
+        <item quantity="other">%1$d layers · hold the grip to reorder</item>
+    </plurals>
+
+    <plurals name="home_capacity_warning">
+        <item quantity="one">This mix is approaching the device’s audio capacity. Reduce music effects or layers if you hear gaps. Render load %1$d%% · %2$d underrun</item>
+        <item quantity="other">This mix is approaching the device’s audio capacity. Reduce music effects or layers if you hear gaps. Render load %1$d%% · %2$d underruns</item>
+    </plurals>
+
+    <!-- The layer count on the lock screen, with the timer suffix passed in as %2$s. -->
+    <plurals name="notification_artist">
+        <item quantity="one">%1$d layer%2$s</item>
+        <item quantity="other">%1$d layers%2$s</item>
+    </plurals>
+
+</resources>

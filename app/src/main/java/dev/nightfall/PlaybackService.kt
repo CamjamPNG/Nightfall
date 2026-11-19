@@ -54,7 +54,7 @@ class PlaybackService : MediaSessionService() {
         manager.createNotificationChannel(
             android.app.NotificationChannel(
                 "nightfall",
-                "Nightfall playback",
+                getString(R.string.notification_channel_playback),
                 android.app.NotificationManager.IMPORTANCE_LOW,
             )
         )
@@ -62,7 +62,7 @@ class PlaybackService : MediaSessionService() {
             androidx.core.app.NotificationCompat.Builder(this, "nightfall")
                 .setSmallIcon(R.drawable.ic_moon)
                 .setContentTitle(runtime.saved.value.current.name)
-                .setContentText("Preparing your soundscape")
+                .setContentText(getString(R.string.notification_preparing))
                 .setCategory(androidx.core.app.NotificationCompat.CATEGORY_TRANSPORT)
                 .setVisibility(androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC)
                 .setSilent(true)
@@ -129,17 +129,27 @@ private class MixerPlayer(private val runtime: NightfallRuntime) :
         val count = mix.layers.count { it.enabled && !it.mute && (!anySolo || it.solo) }
         val timer =
             if (s.timerActive)
-                if (s.timerFading) " · Fading out"
+                if (s.timerFading) runtime.context.getString(R.string.notification_timer_fading)
                 else
-                    " · ${elapsedLabel(s.remainingMs)} remaining"
-            else " · All night"
+                    runtime.context.getString(
+                        R.string.notification_timer_remaining,
+                        elapsedLabel(s.remainingMs),
+                    )
+            else runtime.context.getString(R.string.notification_timer_all_night)
         val item =
             MediaItem.Builder()
                 .setMediaId("nightfall-mix")
                 .setMediaMetadata(
                     MediaMetadata.Builder()
                         .setTitle(mix.name)
-                        .setArtist("$count ${plural(count, "layer", "layers")}$timer")
+                        .setArtist(
+                            runtime.context.resources.getQuantityString(
+                                R.plurals.notification_artist,
+                                count,
+                                count,
+                                timer,
+                            )
+                        )
                         .setIsPlayable(true)
                         .build()
                 )
