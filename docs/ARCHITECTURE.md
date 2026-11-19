@@ -62,6 +62,32 @@ and a companion whose gate is shut renders nothing at all, the way an expired la
 that are away cost no synthesis. The render path stays allocation-free with the night running, and the
 whole schedule is a handful of integer hashes per layer per block.
 
+## Describe a mix
+
+A phrase box on Home turns free text into a mix with no network, no key and no model file: the app
+promises to work with no connection, and a key cannot ship in an APK without being handed to everyone
+who unzips it. `LocalPhraseInterpreter` in `core` resolves the words against the catalogue itself, so
+the answer is deterministic, instant and explainable — the same phrase always builds the same mix,
+down to the music seeds.
+
+The vocabulary is the catalogue plus aliases ("tin roof" is rain on metal roof, "fan" is a box fan,
+"thunder" is rolling thunder), matched longest-first and left to right so a surface is one sound
+rather than "rain" plus something. Intensity words set one of five documented levels and therefore a
+layer gain (25 / 35 / 50 / 71 / 100%, about 3 LU a step); a catalogue name that carries an amount word
+carries its level too, while an entry like "Soft piano" carries the sound's timbre and not a request
+for quiet. A negation word suppresses the term after it ("rain without thunder"), a named duration
+becomes the sleep timer, and a concept the catalogue does not hold is reported with the closest real
+entry rather than substituted silently. A phrase that contradicts itself — "loud rain, silent" — is
+refused with both words named; a phrase that names nothing is refused and points at the Library. The
+parser only chooses from what exists: it changes what is played, never how anything is synthesized,
+and it never adds a layer the phrase did not ask for.
+
+The seam for a future network-assisted interpreter is `PhraseInterpreter`, with one implementation and
+nothing behind it that opens a socket. The response strings are resources and the vocabulary is
+English, so a second language is a translation plus a vocabulary table rather than a rewrite. The
+screen shows the layers as chips with their levels before anything plays, each removable, so a wrong
+reading is visible and correctable instead of hidden.
+
 ## Source algorithms
 
 - White: uniform PRNG noise. Pink: Paul Kellet seven-pole approximation (44.1–48 kHz). Brown/red: leaky integration. Blue: differentiated pink. Violet/purple: differentiated white. Gray is an approximate perceptual shaping preset, not calibrated equal loudness. Green: mid-band shaping; black: very quiet low-passed noise; velvet: sparse random signed impulses. Nonstandard names are identified in the UI.
