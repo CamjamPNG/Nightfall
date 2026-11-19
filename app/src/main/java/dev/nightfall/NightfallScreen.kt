@@ -472,6 +472,7 @@ private fun Home(
             }
         }
         item { NowPlayingCard(r, mixName, reducedMotion, onTimer) }
+        item { DescribeMix(r, onAdd) }
         item {
             Column(Modifier.padding(top = 6.dp)) {
                 val master by

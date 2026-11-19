@@ -75,6 +75,24 @@
     <string name="home_action_all_presets">All presets →</string>
     <string name="home_a11y_all_presets">See all presets</string>
 
+    <!-- Home: the describe-a-mix phrase box. The vocabulary is English for now; every response is
+         here so a translation can follow without touching the interpreter. -->
+    <string name="describe_title">Describe a mix</string>
+    <string name="describe_hint">Heavy rain and a fan</string>
+    <string name="describe_a11y_field">Describe the mix you want</string>
+    <string name="describe_action_make">Make mix</string>
+    <string name="describe_understood">THIS IS WHAT I HEARD</string>
+    <string name="describe_chip">%1$s · %2$d%%</string>
+    <string name="describe_a11y_remove">Remove %1$s</string>
+    <string name="describe_timer">Sleep timer · %1$d min</string>
+    <string name="describe_a11y_remove_timer">Remove the sleep timer</string>
+    <string name="describe_action_play">Play this mix</string>
+    <string name="describe_action_browse">Browse the library</string>
+    <string name="describe_empty">I couldn’t find a sound in that. Nightfall builds only from its offline catalogue, so try naming what you hear — rain, a fan, thunder far away.</string>
+    <string name="describe_conflict">“%1$s” and “%2$s” can’t both be true of one mix. Try one without the other.</string>
+    <string name="describe_unrecognized">Not in the catalogue: %1$s</string>
+    <string name="describe_substituted">No %1$s in the catalogue — the closest sound is %2$s.</string>
+
     <!-- Layer row, its options panel, and the accessibility contract they carry. -->
     <string name="layer_volume">Volume</string>
     <string name="layer_spoken_volume">%1$s volume</string>
