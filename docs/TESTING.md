@@ -11,13 +11,24 @@
   The release-tool suite covers the manifest generator's schema, URLs and
   rejection cases, and asserts that each F-Droid recipe block selects the flavour
   its own tag defines.
-- 15 JVM tests in `app/src/testGithub/java/dev/nightfall/diagnostics` cover the hidden diagnostics
+- 26 JVM tests in `app/src/testGithub/java/dev/nightfall/diagnostics` cover the hidden diagnostics
   surface, and they measure the file and the screen rather than a mock. `JournalTest` runs against a
   temporary directory: an entry is neither written nor held while the switch is off; five entries
   under a three-entry cap leave the three newest, in order; sixty entries under a 400-byte cap keep
   the newest ones and encode to no more than the cap; an entry older than thirty days is dropped
   whole; entries written by one journal are read by a second one over the same file, which is what
-  proves they reached storage; and erasing leaves no file, no entries and a report with zero of both.
+  proves they reached storage; erasing leaves no file, no entries and a report with zero of both, and
+  it also removes the `.writing` file an interrupted write leaves behind — that assertion was run
+  against the previous `erase()` and failed there, so it bites — and an erase that cannot delete the
+  file reports a failure instead of returning success.
+- The consent boundary is pinned in two places. `ConsentTest` (5) drives the real preferences: a
+  fresh install starts with no cutoff, the first consent is it, it only ever moves forward so a later
+  consent cannot re-open an interval collection was off for, an already-imported exit is never
+  re-opened, turning the switch on sets the cutoff to that moment, and the switch is off until it is
+  turned on. `SessionClockTest` (4) pins the other half: a session is measured from start to stop, a
+  night that ran while collection was off records nothing, turning collection off abandons the run
+  rather than pausing it so re-enabling mid-night measures only the part that was watched, and one
+  session is recorded once.
   `TapGateTest` pins the gesture as arithmetic: four taps never open, five inside three seconds do,
   five spread over ten seconds do not, a tap past the window restarts the run, and the tap after a
   completed run does not continue it. `DiagnosticsGestureTest` drives the app's own version row in

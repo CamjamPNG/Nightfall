@@ -52,7 +52,6 @@ class JournalStore(
     fun write(events: List<JournalEvent>) {
         val folder = file.parentFile ?: throw IOException("The journal has no folder: $file")
         folder.mkdirs()
-        val temporary = File(folder, file.name + ".writing")
         temporary.writeText(compactJson.encodeToString(JournalFile(events = events)))
         if (file.exists() && !file.delete()) {
             temporary.delete()
@@ -64,11 +63,19 @@ class JournalStore(
         }
     }
 
-    /** Deletes the journal. True when no file is left, which is what "erased" has to mean. */
+    /**
+     * Deletes the journal and the temporary file a write goes through. True when neither is left,
+     * which is what "erased" has to mean: an interrupted write leaves the completed journal in
+     * [temporary], so deleting only the journal would leave the events on disk behind a screen that
+     * says there is nothing.
+     */
     fun erase(): Boolean {
         if (file.exists() && !file.delete()) return false
-        return !file.exists()
+        if (temporary.exists() && !temporary.delete()) return false
+        return !file.exists() && !temporary.exists()
     }
+
+    private val temporary: File get() = File(file.parentFile, file.name + ".writing")
 }
 
 /**
@@ -122,13 +129,17 @@ class DiagnosticsJournal(
      * Deletes the file and empties the list. Synchronous, because "erased" has to be true when it
      * returns — and repeated on the write thread, so a write already queued behind this call cannot
      * put the file back afterwards.
+     *
+     * True only when nothing is left on disk, so the surface can say "erased" and mean it.
      */
-    fun erase() {
+    fun erase(): Boolean {
+        var erased = false
         synchronized(lock) {
             events = mutableListOf()
-            store.erase()
+            erased = store.erase()
         }
         runOnIo { synchronized(lock) { store.erase() } }
+        return erased
     }
 
     /** The document a person reads and, if they choose, shares. */

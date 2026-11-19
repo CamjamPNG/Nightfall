@@ -163,12 +163,21 @@ section at the bottom of Settings; that section stays until **Hide diagnostics**
 takes it with everything else.
 
 The journal is a bounded file, `files/diagnostics/journal.json`, rewritten whole through a temporary
-file and a rename so an interrupted write leaves the previous journal. `JournalStore` enforces three
+file and a rename so an interrupted write leaves the previous journal. Erasing deletes both names —
+the journal and that temporary file — and reports `false` when either survives, because the surface
+says "nothing is left on this device" and has to be able to mean it. `JournalStore` enforces three
 caps — 200 entries, 64 kilobytes and 30 days — by dropping from the front of the list, oldest first;
 the surface's copy formats those numbers from the same limits rather than restating them.
 `DiagnosticsJournal` gates every write on the switch, so nothing is loaded, held or written before it
 is turned on, and it flushes on one daemon thread, so no caller — least of all the render loop — waits
 for storage.
+
+Consent is a boundary, not a filter. `DiagnosticsPrefs.adoptConsent` moves a stored cutoff forward
+to the moment the switch is turned on, and `recordExits` imports only exits newer than it — Android's
+exit history reaches back before consent, and it is the one place the journal could otherwise read
+backwards past it. `SessionClock` does the same for a night: the switch is part of the stream it
+consumes, so turning collection off abandons the run and turning it back on measures from there, and a
+session that began while the switch was off records nothing.
 
 Collection is four subscriptions taken from outside the code they watch, which is why no audio-path,
 `core` or updater file knows diagnostics exists: playback sessions and playback failures read

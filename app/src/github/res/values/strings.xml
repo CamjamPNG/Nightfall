@@ -21,6 +21,7 @@
     <string name="settings_diagnostics_view">View report</string>
     <string name="settings_diagnostics_erase">Erase journal</string>
     <string name="settings_diagnostics_erased">The journal is erased. Nothing is left on this device.</string>
+    <string name="settings_diagnostics_erase_failed">The journal file could not be deleted, so it is still on this device. Nothing was sent anywhere; try again.</string>
     <string name="settings_diagnostics_hide">Hide diagnostics</string>
     <string name="settings_diagnostics_report_title">Diagnostics report</string>
     <string name="settings_diagnostics_report_intro">This is the exact text the app holds, formatted so you can read it. Nothing here has been sent anywhere.</string>

@@ -71,7 +71,7 @@ object DiagnosticsSurface {
         val collecting by diagnostics.collecting.collectAsStateWithLifecycle()
         val limits = diagnostics.limits
         var report by remember { mutableStateOf<String?>(null) }
-        var erased by remember { mutableStateOf(false) }
+        var erased by remember { mutableStateOf<Boolean?>(null) }
         var shareFailed by remember { mutableStateOf(false) }
 
         Column(Modifier.fillMaxWidth()) {
@@ -82,7 +82,7 @@ object DiagnosticsSurface {
                 collecting,
             ) { on ->
                 diagnostics.setCollecting(on)
-                erased = false
+                erased = null
             }
             Spacer(Modifier.height(10.dp))
             // What is recorded is stated whether or not the switch is on: somebody deciding has to be
@@ -115,17 +115,21 @@ object DiagnosticsSurface {
             Spacer(Modifier.height(8.dp))
             OutlinedButton(
                 onClick = {
-                    diagnostics.erase()
-                    erased = true
+                    erased = diagnostics.erase()
                     report = null
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.settings_diagnostics_erase))
             }
-            if (erased) {
+            erased?.let { done ->
                 Spacer(Modifier.height(8.dp))
-                Note(stringResource(R.string.settings_diagnostics_erased))
+                Note(
+                    stringResource(
+                        if (done) R.string.settings_diagnostics_erased
+                        else R.string.settings_diagnostics_erase_failed
+                    )
+                )
             }
             TextButton(
                 onClick = { diagnostics.hide() },

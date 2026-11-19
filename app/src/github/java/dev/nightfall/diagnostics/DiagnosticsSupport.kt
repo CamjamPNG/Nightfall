@@ -18,6 +18,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -39,10 +40,22 @@ class DiagnosticsPrefs(private val prefs: SharedPreferences) {
         get() = prefs.getBoolean(REVEALED, false)
         set(value) = prefs.edit().putBoolean(REVEALED, value).apply()
 
-    /** The newest exit of this app's own process already written to the journal, so it is written once. */
+    /**
+     * The newest exit of this app's own process already written to the journal, so it is written once.
+     * It doubles as the consent cutoff: Android keeps exits from before the switch was ever turned on,
+     * and those are the one thing on this device that could be read backwards past consent.
+     */
     var lastExit: Long
         get() = prefs.getLong(LAST_EXIT, 0L)
         set(value) = prefs.edit().putLong(LAST_EXIT, value).apply()
+
+    /**
+     * Collection begins now, so an exit recorded before this moment is not imported. Monotonic: the
+     * cutoff only ever moves forward, which is what makes a disabled interval unimportable.
+     */
+    fun adoptConsent(now: Long) {
+        if (now > lastExit) lastExit = now
+    }
 
     private companion object {
         const val ENABLED = "collecting"
@@ -100,6 +113,10 @@ class Diagnostics(context: Context) {
 
     fun setCollecting(on: Boolean) {
         prefs.enabled = on
+        // Consent starts at the switch, not at the beginning of Android's exit history: everything
+        // Android recorded before this moment — and everything it records while the switch is off —
+        // stays where it is.
+        if (on) prefs.adoptConsent(System.currentTimeMillis())
         _collecting.value = on
         if (on) watch()
     }
@@ -131,7 +148,7 @@ class Diagnostics(context: Context) {
     /** True when this instance watches [context]'s process, which is what makes a singleton safe. */
     internal fun serves(context: Context): Boolean = app === context.applicationContext
 
-    fun erase() = journal.erase()
+    fun erase(): Boolean = journal.erase()
 
     /** The app's own identity, read from the installed package rather than from a build constant. */
     private fun appVersion(): AppVersion {
@@ -161,28 +178,27 @@ class Diagnostics(context: Context) {
     /**
      * One entry per finished playback session, holding how long it lasted in a bucket. A session the
      * process did not outlive leaves no entry, which is why the count is of finished sessions.
+     *
+     * The switch is part of this stream, not a filter after it: a session is only measured from the
+     * moment collection was on. Night that started before the switch did is not attributed to it, and
+     * neither is the part of a night that ran while it was off.
      */
     private suspend fun collectPlayback() {
         val source = runtime ?: return
-        var startedAt: Long? = null
-        source.status
-            .map { it.playing }
+        val sessions = SessionClock { SystemClock.elapsedRealtime() }
+        combine(source.status.map { it.playing }.distinctUntilChanged(), _collecting) { playing, on ->
+                playing to on
+            }
             .distinctUntilChanged()
-            .collect { playing ->
-                if (playing) {
-                    startedAt = SystemClock.elapsedRealtime()
-                } else {
-                    val from = startedAt
-                    startedAt = null
-                    if (from != null)
-                        journal.record(
-                            JournalEvent(
-                                Journal.PLAYBACK,
-                                today(),
-                                bucket = Buckets.playback(SystemClock.elapsedRealtime() - from),
-                            )
-                        )
+            .collect { (playing, on) ->
+                if (!on) {
+                    sessions.reset()
+                    return@collect
                 }
+                val lasted = sessions.playing(playing) ?: return@collect
+                journal.record(
+                    JournalEvent(Journal.PLAYBACK, today(), bucket = Buckets.playback(lasted))
+                )
             }
     }
 
@@ -277,6 +293,33 @@ class Diagnostics(context: Context) {
             ApplicationExitInfo.REASON_EXIT_SELF -> "exit_self"
             else -> "other"
         }
+}
+
+/**
+ * Session lengths as a small state machine, so a night is only ever measured while collection was on.
+ *
+ * [reset] is what a switch turned off does: the run in progress is abandoned rather than paused, so
+ * turning collection back on mid-night starts a fresh measurement at that moment instead of
+ * reporting a length that mostly happened unwatched.
+ */
+internal class SessionClock(private val now: () -> Long) {
+    private var startedAt: Long? = null
+
+    /** True playback starts a session; false ends it and returns how long it was, or null if none ran. */
+    fun playing(playing: Boolean): Long? {
+        if (playing) {
+            if (startedAt == null) startedAt = now()
+            return null
+        }
+        val from = startedAt ?: return null
+        startedAt = null
+        return now() - from
+    }
+
+    /** Abandons the run in progress, so the next one is measured from where collection resumed. */
+    fun reset() {
+        startedAt = null
+    }
 }
 
 /** One diagnostics per process, and a new Application object is a new process. */

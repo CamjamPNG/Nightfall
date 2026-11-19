@@ -111,6 +111,33 @@ class JournalTest {
     }
 
     @Test
+    fun erasingRemovesTheTemporaryFileAWriteGoesThrough() {
+        val journal = journal()
+        journal.record(JournalEvent(Journal.STARTUP, day.toString(), bucket = "lt1s"))
+        // What an interrupted write leaves behind: the completed journal, under the write's own name.
+        val interrupted = File(file.parentFile, file.name + ".writing")
+        interrupted.writeText("{ \"schema\": 1, \"events\": [] }")
+
+        assertTrue("erasing reported a failure on a writable folder", journal.erase())
+
+        assertFalse("the journal file survived an erase", file.exists())
+        assertFalse("an interrupted write left the journal on disk after an erase", interrupted.exists())
+    }
+
+    @Test
+    fun aFailedEraseIsReportedRatherThanCalledSuccess() {
+        val journal = journal()
+        journal.record(JournalEvent(Journal.STARTUP, day.toString(), bucket = "lt1s"))
+        // A directory where the journal file is: delete fails, which is the case the surface must not
+        // report as "nothing is left on this device".
+        file.delete()
+        file.mkdirs()
+        File(file, "undeletable").writeText("x")
+
+        assertFalse("a failed erase was reported as a success", journal.erase())
+    }
+
+    @Test
     fun entriesSurviveANewProcess() {
         journal().record(JournalEvent(Journal.STARTUP, day.toString(), bucket = "lt1s"))
 
