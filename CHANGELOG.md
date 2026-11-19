@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2 — 2026-11-19
+
+- ui: make the library navigable with pinned filters, sticky sections and a collapsible outline (#40)
+
 ## 2.1.2 — 2026-11-19
 
 - test: guard the level trim table against silent drift (#43)

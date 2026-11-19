@@ -1,0 +1,1 @@
+- ui: make the library navigable with pinned filters, sticky sections and a collapsible outline (#40)
