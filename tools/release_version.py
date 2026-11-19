@@ -12,6 +12,49 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 VERSION = re.compile(r"^(\d+)\.(\d+)(?:\.(\d+))?(?:\.(\d+))?$")
 KINDS = ("hotfix", "patch", "minor", "major")
 
+DEFAULT_NOTES = (
+    "Each APK carries the complete offline library: no account, no analytics and no connection "
+    "needed to play. What this release changed is the list above; what has never been exercised "
+    "on a phone is recorded in README.md under \"Never checked on hardware\"."
+)
+
+# The long-form notes a subject line cannot carry: what a notable release *is*, what it measures
+# and which parts of it are still unverified. A version with no entry falls back to DEFAULT_NOTES,
+# so this map holds only the releases whose paragraph someone actually wrote and checked.
+RELEASE_NOTES = {
+    "2.0": (
+        "Nightfall 2.0 is not a rewrite. It is the release where the app became small, "
+        "configurable and current.\n\n"
+        "- 11.7 MB instead of 79.5. The seven bundled recordings ship as 10,089,142 bytes of Opus "
+        "in place of 77,449,472 bytes of raw PCM, in both channels. The arm64-v8a APK is "
+        "11,737,776 bytes against 79,465,722 for the same file on 1.11, the last release that "
+        "shipped PCM.\n"
+        "- Endless night. An optional switch on Home lets the mix evolve over hours instead of "
+        "looping one fixed bed: companion layers from the same families as your own arrive and "
+        "leave, and every layer's tone drifts around its setting. Over eight hours the hourly "
+        "level stays within 0.22 LU of the same mix with the night off.\n"
+        "- A home-screen play/pause widget that drives the app's own media session, so its state "
+        "follows what is playing rather than the last tap.\n"
+        "- Hidden, opt-in diagnostics: five taps on the Settings version row. Off until you turn "
+        "it on, a bounded local journal (200 entries, 64 KB or 30 days, closed-set tokens and no "
+        "free text), a Share action you start yourself, and no transport in either channel.\n"
+        "- Android 16. targetSdk 36, with a CI job that runs the app's own suite on an API 36 "
+        "runtime, so the behaviour a 36 target turns on is executed rather than read.\n"
+        "- Every UI string in resources, with a build-time guard that fails the build on the next "
+        "literal typed into a Compose call.\n\n"
+        "What none of that proves, said as plainly as the wins:\n\n"
+        "- The Opus decoder has never run on a device. 1.12 was the first build to depend on it, "
+        "and if a platform refuses Opus the app says so at start-up instead of playing silence.\n"
+        "- No ear has heard the current catalogue on a phone.\n"
+        "- The widget has never been seen on a launcher.\n"
+        "- Diagnostics has never recorded a real crash."
+    ),
+}
+
+
+def notes_body(version):
+    return RELEASE_NOTES.get(version, DEFAULT_NOTES)
+
 
 def parts(version):
     match = VERSION.fullmatch(version)
@@ -112,19 +155,13 @@ def main():
         folder = ROOT / "artifacts"
         folder.mkdir(exist_ok=True)
         (folder / "release-notes.md").write_text(
-            f"Nightfall {version}\n\n{notes}\n\n"
+            f"Nightfall {version}\n\n{notes}\n\n{notes_body(version)}\n\n"
             "**Pixel 7:** choose the arm64-v8a APK. Choose Universal if unsure. "
             "All APKs include the full offline audio library and require Android 8.0+. "
             "The `-fdroid-universal` APK has no updater and no network permission; it is for "
             "stores and installers that refuse a self-updating build.\n\n"
             "Use the same GitHub signing channel for updates. Export mixes before "
             "switching from the earlier dev.nightfall package or another signing channel.\n\n"
-            "The seven field recordings now ship as Opus and are decoded by the phone's own "
-            "decoder, which takes the download from 79 MB to about 12 MB. The containers are "
-            "verified by a test that decodes every one of them with an independent Opus decoder, "
-            "but playback through Android's decoder has not been exercised on a device: no phone "
-            "has played them. If a phone cannot decode Opus the app says so at launch rather than "
-            "playing silence, and every earlier release stays published and installable.\n\n"
             "Physical Pixel 7 / Bluetooth / overnight validation remains pending. "
             "See docs/TESTING.md for executed checks.\n"
         )

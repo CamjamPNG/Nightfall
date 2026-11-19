@@ -116,6 +116,22 @@ Ordinary maintenance also produces a patch; `[skip release]` suppresses an
 explicitly non-release commit. Manual Actions → Publish Android release → Run
 workflow can override the level with `major`, `minor`, `patch` or `hotfix`.
 
+## Release notes
+
+The notes on a release are generated, not typed. `tools/release_version.py` writes
+`artifacts/release-notes.md`, and the workflow publishes that file verbatim: the one-line
+summary is the list of commit subjects since the last tag — which is why a squash-merged
+PR's **title is the public release note for its change** — and the paragraphs under it
+come from `RELEASE_NOTES` in the same file, keyed by version, falling back to
+`DEFAULT_NOTES` for a version nobody wrote a body for.
+
+When a release needs to say what it *is* and what it has not verified, write that under
+its own key. Keep it to facts the repository or its release assets can be checked
+against, and name the unverified parts in the same place as the claims: 2.0's entry is
+the worked example, and its four limits match the *Never checked on hardware* table in
+`README.md`. The workflow still owns `CHANGELOG.md`, the F-Droid metadata and the store
+changelog; those are written from the same commit subjects and are not edited by hand.
+
 ## Automatic publication
 
 `.github/workflows/release.yml` runs for pushes to `main` and manual dispatch.

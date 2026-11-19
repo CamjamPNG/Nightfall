@@ -26,6 +26,18 @@ artifact = load("release_artifact")
 site = load("assemble_site")
 
 
+class ReleaseNotesTest(unittest.TestCase):
+    def test_a_notable_version_keeps_its_own_notes_and_the_rest_fall_back(self):
+        self.assertNotEqual(version.notes_body("2.0"), version.DEFAULT_NOTES)
+        self.assertEqual(version.notes_body("2.1"), version.DEFAULT_NOTES)
+
+    def test_the_2_0_notes_state_what_is_still_unverified(self):
+        body = version.notes_body("2.0")
+        for limit in ["never run on a device", "No ear has heard", "never been seen on a launcher",
+                      "never recorded a real crash"]:
+            self.assertIn(limit, body)
+
+
 class VersionPolicyTest(unittest.TestCase):
     def test_requested_examples(self):
         for kind, expected in [("minor", "1.1"), ("patch", "1.0.1"), ("major", "2.0"), ("hotfix", "1.0.0.1")]:
