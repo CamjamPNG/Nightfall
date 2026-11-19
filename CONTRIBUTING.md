@@ -92,7 +92,7 @@ This is the command a change has to survive, and the same one CI runs in
 ./gradlew :core:test :app:assembleDebug :app:lintDebug
 ```
 
-- `:core:test` — the 97 deterministic JVM tests (96 run; one calibration generator is
+- `:core:test` — the 98 deterministic JVM tests (97 run; one calibration generator is
   opt-in): nine simultaneous sources,
   independent gain/mute/solo, phase continuity when layers are added or removed,
   limiting, colored-noise spectra, musical tuning, timers and fades, JSON

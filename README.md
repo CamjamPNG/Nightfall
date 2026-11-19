@@ -327,7 +327,7 @@ Needs JDK 17 and Android SDK 35 with build-tools 35.0.0. These three commands ar
 documented gate, and CI runs these three plus the rest of the list below.
 
 ```sh
-./gradlew :core:test :app:assembleDebug :app:lintDebug   # 97 core tests, both channels, lint aborts on error
+./gradlew :core:test :app:assembleDebug :app:lintDebug   # 98 core tests, both channels, lint aborts on error
 python3 -m unittest discover -s tools/tests              # 68 release-tooling tests
 python3 tools/check_release.py                           # store metadata, bundled audio, both channels
 ```

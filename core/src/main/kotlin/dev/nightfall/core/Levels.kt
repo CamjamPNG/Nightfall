@@ -27,6 +27,12 @@ import kotlin.math.*
  * and prints this table; re-run it after changing a source's amplitude:
  *
  *     NIGHTFALL_CALIBRATE=1 ./gradlew :core:test --tests '*LevelCalibrationTest*'
+ *
+ * That same measurement is a test the suite runs by default, so the table cannot be typed into
+ * disagreement with the sources and a new entry cannot arrive untrimmed: it fails when a stored trim
+ * has drifted from a fresh measurement, when a catalogue entry has no trim, and when a trim names an
+ * entry the catalogue no longer has. Correcting a failure means regenerating the table with the
+ * command above, never editing a row by ear.
  */
 object Levels {
     /** Gated integrated loudness of one layer at gain 1.0, master 1.0, pan centre. */
@@ -144,6 +150,9 @@ object Levels {
 
     /** The measured trim itself, for the calibration test to correct the table in one pass. */
     fun trimDb(sound: Sound): Float = trimsDb[sound.id] ?: 0f
+
+    /** Every id the table names, so the guard test can prove it still covers the catalogue. */
+    fun tableIds(): Set<String> = trimsDb.keys
 
     fun trim(sound: Sound): Float = 10f.pow(trimDb(sound) / 20)
 }
