@@ -10,6 +10,36 @@ its own updates and nothing else.
 
 Android 8.0+ (API 26) · Kotlin and Compose · MIT
 
+## Nightfall 2.0
+
+2.0 is not a rewrite. It is the release where the app became small, configurable and
+current:
+
+- **11.7 MB instead of 79.5.** The seven bundled recordings ship as 10,089,142 bytes of
+  Opus rather than 77,449,472 bytes of raw PCM, in both channels. The `arm64-v8a` APK is
+  11,737,776 bytes against 79,465,722 for the same file on 1.11, the last release that
+  carried PCM.
+- **Endless night.** A switch on Home lets the mix evolve over hours instead of looping one
+  fixed bed: companion layers drawn from the same families as your own arrive and leave, and
+  every layer's tone drifts around its setting. Measured on eight-hour renders of one preset
+  with the night on and off, the worst hour against hour moves the level by 0.22 LU.
+- **A home-screen play/pause widget** that drives the app's own media session, so its state
+  follows what is playing rather than the last tap.
+- **Hidden, opt-in diagnostics** — five taps on the Settings version row. Off until you turn
+  it on: a bounded local journal (200 entries, 64 KB or 30 days, closed-set tokens and no
+  free text), a Share action you start yourself, and no transport in either channel.
+- **Android 16.** `targetSdk` 36, with a CI job that runs the app's own suite on an API 36
+  runtime, so the behaviour a 36 target turns on is executed rather than read.
+- **Every UI string in resources**, with a build-time guard that fails the build on the next
+  literal typed into a Compose call.
+
+Those are the wins. The limits belong in the same breath: **the Opus decoder has never run on
+a device** — 1.12 was the first build to depend on it, and if a platform refuses Opus the app
+says so at start-up instead of playing silence; **no ear has heard the current catalogue on a
+phone**; **the widget has never been seen on a launcher**; and **diagnostics has never
+recorded a real crash.** Each of those four is repeated in *Never checked on hardware* below,
+and none of this section is a claim about how any of it sounds.
+
 ## What it does
 
 **Build a night out of 98 sounds.** Eleven noise colours, rain, storms, winter,
@@ -73,7 +103,7 @@ them, and what they cannot show.
 ### GitHub Releases — the channel that works today
 
 1. Open **[Releases](https://github.com/CamjamPNG/Nightfall/releases)** and take the
-   newest version. The current one is **1.8.2** (versionCode 22).
+   newest version. The current one is **2.0**.
 2. Pick **`arm64-v8a`** for a modern phone (a Pixel 7, most Android phones from the
    last five years), or **`universal`** if you are unsure. `armeabi-v7a`, `x86` and
    `x86_64` cover older 32-bit devices and Intel emulators, and
@@ -84,14 +114,15 @@ them, and what they cannot show.
    asks.
 
 The seven field recordings ship as Opus containers, 10,089,142 bytes for the set
-against 77,449,472 bytes as raw PCM. Measured on one machine at the commit that made
-the swap, the unsigned universal build is **11,662,953 bytes (11.1 MiB)** release and
-**30,374,368 bytes (29.0 MiB)** debug on the `github` channel, and 11,589,077 and
-30,292,276 on `fdroid`. The same builds carrying the PCM were 79,371,423 and
-98,083,910 bytes. The recordings are still most of the download — 10,089,142 bytes of
-11,662,953 — but the number they are most of is now 14.7% of what it was. R8
-minification and resource shrinking, which landed in 1.5.2, are what keep the rest
-small: 2,933,096 bytes of dex in 1.8.2.
+against 77,449,472 bytes as raw PCM. The `arm64-v8a` APK is **11,737,776 bytes (11.2 MiB)**
+in 1.13's release assets, `universal` 11,836,600 bytes and `fdroid-universal`
+11,754,680 bytes; 2.0 adds no code, so it publishes at the same size. The same
+`arm64-v8a` file was 79,465,722 bytes (75.8 MiB) in 1.11, the last release that carried
+PCM. The recordings are still most of the download — 10,089,142 bytes of 11,737,776 — but
+the number they are most of is now 14.7% of what it was. R8 minification and resource
+shrinking, which landed in 1.5.2, are what keep the rest small: 3,041,456 bytes of dex,
+read out of that APK's `classes.dex` and unchanged in a local release build of this
+commit.
 
 **What that switch costs in certainty, stated plainly:** the containers are verified by a
 test that decodes every one of the seven with an independent, conformant Opus decoder,
@@ -248,7 +279,7 @@ How many tests: **97 in `core`** (96 run, plus the opt-in `NIGHTFALL_CALIBRATE=1
 calibration generator, which is skipped by design), **34 Robolectric scenarios** in
 `app/src/test` (12 playback-lifecycle, 20 widget, 2 Android 16) that run twice, once
 per channel, plus 3 decoder-fallback tests, **51 updater tests** in
-`app/src/testGithub/java/dev/nightfall/update`, and **66 release-tooling tests**. The
+`app/src/testGithub/java/dev/nightfall/update`, and **68 release-tooling tests**. The
 six render classes in `app/src/testGithub/java/dev/nightfall/render` are not
 updater tests and are not counted there. They all run on a JVM with no device, no
 emulator and no network. Recount them with:
@@ -275,10 +306,12 @@ python3 -m unittest discover -s tools/tests
 
 | Gap | What is missing |
 | --- | --- |
-| That it sounds good, or that nine layers sound right | No listening test and no acoustic measurement exists; loudness is digital gain, not a sound-pressure claim |
+| That it sounds good, or that nine layers sound right | No listening test and no acoustic measurement exists — no ear has heard the current catalogue on a phone; loudness is digital gain, not a sound-pressure claim |
 | That the bundled recordings decode and play on a phone | The containers are verified against a conformant pure-Java Opus decoder in the test suite, which proves the format and says nothing about Android's `MediaCodec` binding to it. No device has decoded one, so the actual sound of all seven is unverified. A platform that refuses Opus is reported when the app starts instead of playing silence |
 | Whether a platform decoder wants initialization data beyond the identification header | The identification header is supplied as `csd-0` when the decoder accepts it and omitted when it does not, so both platform behaviours are handled by construction; no device has exercised either path. The containers carry no OpusTags or codec-delay bytes, because the encoder never produced them, and whether any decoder needs those to emit audio rather than only for gapless metadata is not established. A decoder that accepts a packet and yields nothing ends that read head with a visible "cannot be decoded" message instead of waiting forever |
 | Bluetooth sleep masks and headphones, disconnect and reconnect, media buttons | Never exercised on a real device |
+| The home-screen widget on a real launcher | Its twenty Robolectric scenarios drive the real media session and the widget's own views on a JVM, and two render tests draw it in both themes. No launcher has hosted it: placing it, resizing it, how a themed or third-party launcher draws its label and what it looks like at another density are unverified |
+| Diagnostics recording a real crash | Every entry kind is driven by tests, against exit history those tests supply. No phone has crashed under it, so a real crash, a real ANR and a real OEM kill have never been journaled, and nothing here can kill the app on a device to produce one |
 | An all-night run with the screen off — underruns, battery, OEM task killers | No overnight result exists for any phone |
 | The in-app update actually installing from a published release, unattended or not | `PackageInstaller` sessions and the Android 12+ prompt-free path are described from Android's documentation; the tests drive a local server speaking the same protocol. No install, no automatic restart and no post-install "What's new" has been observed on a phone. Also unverified: the waiting row and the release-log dialog rendered on a screen, the install a play-to-pause transition triggers, the commit-time deferral against Android's real installer, captive portals, proxies, and how each OEM prompts |
 | An F-Droid client adding the self-hosted repository and auto-updating | No deployment has served a request |
@@ -295,7 +328,7 @@ documented gate, and CI runs these three plus the rest of the list below.
 
 ```sh
 ./gradlew :core:test :app:assembleDebug :app:lintDebug   # 97 core tests, both channels, lint aborts on error
-python3 -m unittest discover -s tools/tests              # 66 release-tooling tests
+python3 -m unittest discover -s tools/tests              # 68 release-tooling tests
 python3 tools/check_release.py                           # store metadata, bundled audio, both channels
 ```
 
