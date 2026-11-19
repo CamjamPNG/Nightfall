@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The hidden diagnostics surface's copy. It lives in the GitHub channel's own resources rather
+    than in app/src/main so that the F-Droid build cannot carry a single line of it: there is no
+    switch, no report and no section in that build, and its strings table says the same.
+-->
+<resources>
+    <!--
+        Hidden, opt-in diagnostics. Five taps on the version row reveal this section; none of it is
+        drawn or recorded before that. The copy has to stand on its own — what is recorded, what never
+        is, where it goes, and how to erase it — in plain words rather than a policy paragraph.
+    -->
+    <string name="settings_section_diagnostics">Diagnostics</string>
+    <string name="settings_diagnostics_switch">Keep a diagnostics journal</string>
+    <string name="settings_diagnostics_switch_note">Off until you turn it on. Records how the app fails, on this device only.</string>
+    <string name="settings_diagnostics_off">Nothing is recorded while this is off, and nothing was recorded before you turned it on.</string>
+    <string name="settings_diagnostics_collects">What is recorded: the app and Android versions; how long the app takes to build its first screen; how many times playback finished and, in rough buckets, how long each session lasted; that playback failed, when it did; update checks and how they ended; and the crashes, freezes and other exits Android recorded for this app.</string>
+    <string name="settings_diagnostics_excludes">What is never recorded: audio, recordings, the names or contents of your mixes and presets, file paths, your location, contacts, device serial, advertising id or account, and no message text of any kind.</string>
+    <string name="settings_diagnostics_transport">Where it goes: nowhere. Nightfall has no server and no code that uploads this. The only way it leaves your phone is if you open the report and share it yourself.</string>
+    <string name="settings_diagnostics_limits">It stays on this device, capped at %1$d entries, %2$d kilobytes and %3$d days, and the oldest go first. Turn the switch off to stop recording, or erase it now.</string>
+    <string name="settings_diagnostics_view">View report</string>
+    <string name="settings_diagnostics_erase">Erase journal</string>
+    <string name="settings_diagnostics_erased">The journal is erased. Nothing is left on this device.</string>
+    <string name="settings_diagnostics_erase_failed">The journal file could not be deleted, so it is still on this device. Nothing was sent anywhere; try again.</string>
+    <string name="settings_diagnostics_hide">Hide diagnostics</string>
+    <string name="settings_diagnostics_report_title">Diagnostics report</string>
+    <string name="settings_diagnostics_report_intro">This is the exact text the app holds, formatted so you can read it. Nothing here has been sent anywhere.</string>
+    <string name="settings_diagnostics_share">Share report</string>
+    <string name="settings_diagnostics_share_subject">Nightfall diagnostics report</string>
+    <string name="settings_diagnostics_share_chooser">Share diagnostics report</string>
+    <string name="settings_diagnostics_share_failed">No app took the report. Nothing was sent.</string>
+</resources>

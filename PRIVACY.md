@@ -5,7 +5,15 @@ identifiers, usage history, audio, recordings, location, contacts, or account
 information. It has no account system, advertising SDK, purchases or microphone
 permission. There are no tokens, no logins and no third-party services.
 
-Nightfall ships in two builds, and they differ in exactly one respect.
+There is one deliberate exception, and it is off until you turn it on yourself, in
+a surface the app does not advertise: a local diagnostics journal, described at the
+end of this file. The F-Droid build does not contain it at all, and neither build
+has any code that could upload it.
+
+Nightfall ships in two builds. They are the same app except for two things, both
+of which exist only in the GitHub build: the updater described here, and the
+opt-in diagnostics journal described at the end. What follows about the updater is
+the GitHub build's.
 
 **The GitHub build** can update itself from this repository's releases. That is
 its only network access, and it is a download, never an upload:
@@ -70,3 +78,51 @@ may require internet access. Installed playback, music generation, timers,
 local presets and settings require none. In the GitHub build, turning
 **Update automatically** off means no APK is downloaded unless you tap *Update*;
 the F-Droid build has no updater and downloads nothing.
+
+## The diagnostics journal (GitHub build only, off by default)
+
+The GitHub build has a hidden surface: five taps on the version row at the bottom
+of Settings, inside three seconds. It holds one switch, off until you turn it on,
+and it names what is recorded before you decide. Once revealed, the section stays
+in Settings until you hide it again; uninstalling the app removes it with
+everything else.
+
+The switch records the shape of things that break, on the device, and nothing
+else:
+
+- the app's version name and version code, and the Android API level;
+- how long the app took to build its first screen, in buckets: under one second,
+  one to two, two to five, five to ten, ten or more;
+- one entry per finished playback session, with its length in buckets: under five
+  minutes, five to thirty, thirty minutes to two hours, two to eight hours, eight
+  hours or more;
+- that playback failed, and when — never the failure's message, which can carry a
+  file path;
+- every update check and how it ended: up to date, a newer release available,
+  downloading, ready to install, installing, failed, or inside the fifteen-minute
+  floor;
+- each crash, ANR or other process exit Android recorded for this app while the switch
+  was on, as a reason and a date. Android keeps those records from before you turned the
+  switch on too; they are not imported, and neither is anything from a stretch when the
+  switch was off.
+
+It records no audio, no recordings, no mix or preset names or contents, no file
+paths, no output-device name, no location, no contacts, no advertising id, no
+account and no device serial. No free text is stored anywhere in it: every value
+is one of the tokens listed above. Each entry holds the local date and never a
+clock time, because when in the night somebody listens is theirs.
+
+A playback session is measured from the moment collection was on: a night that started
+before the switch did, or that spans a stretch with it off, is recorded only for the part
+that was watched.
+
+The journal is capped at 200 entries, 64 kilobytes and 30 days. Past any of those
+the oldest entries are dropped first, so leaving the switch on for years cannot
+accumulate more. Turning the switch off stops the recording; **Erase journal**
+deletes the file, and the section says so when it has.
+
+**Nothing is uploaded, by any path.** The app has no server, no endpoint and no
+upload code. The report view shows the exact JSON held on the device, formatted to
+be read, and the only way it leaves your phone is if you press **Share report**
+and pick a destination in Android's own share sheet — the same deliberate action
+as sharing any other file, and the receiving app's privacy terms are then its own.

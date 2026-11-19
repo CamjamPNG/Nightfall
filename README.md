@@ -1,8 +1,8 @@
 # Nightfall
 
 **A free Android sleep sound mixer that never needs the internet.** No account,
-no analytics, no advertising, no microphone, no subscription — and nothing to sign
-into before it will play a fan noise. Sounds are layered and mixed on the device
+no analytics service, no advertising, no microphone, no subscription — and nothing
+to sign into before it will play a fan noise. Sounds are layered and mixed on the device
 through one 48 kHz stereo path, so ten layers of rain, wind, fire and music arrive
 as a single night rather than ten loops fighting each other. Everything you hear is
 generated or played locally; the one build that can reach the network uses it for

@@ -11,6 +11,44 @@
   The release-tool suite covers the manifest generator's schema, URLs and
   rejection cases, and asserts that each F-Droid recipe block selects the flavour
   its own tag defines.
+- 26 JVM tests in `app/src/testGithub/java/dev/nightfall/diagnostics` cover the hidden diagnostics
+  surface, and they measure the file and the screen rather than a mock. `JournalTest` runs against a
+  temporary directory: an entry is neither written nor held while the switch is off; five entries
+  under a three-entry cap leave the three newest, in order; sixty entries under a 400-byte cap keep
+  the newest ones and encode to no more than the cap; an entry older than thirty days is dropped
+  whole; entries written by one journal are read by a second one over the same file, which is what
+  proves they reached storage; erasing leaves no file, no entries and a report with zero of both, and
+  it also removes the `.writing` file an interrupted write leaves behind — that assertion was run
+  against the previous `erase()` and failed there, so it bites — and an erase that cannot delete the
+  file reports a failure instead of returning success.
+- The consent boundary is pinned in two places. `ConsentTest` (5) drives the real preferences: a
+  fresh install starts with no cutoff, the first consent is it, it only ever moves forward so a later
+  consent cannot re-open an interval collection was off for, an already-imported exit is never
+  re-opened, turning the switch on sets the cutoff to that moment, and the switch is off until it is
+  turned on. `SessionClockTest` (4) pins the other half: a session is measured from start to stop, a
+  night that ran while collection was off records nothing, turning collection off abandons the run
+  rather than pausing it so re-enabling mid-night measures only the part that was watched, and one
+  session is recorded once.
+  `TapGateTest` pins the gesture as arithmetic: four taps never open, five inside three seconds do,
+  five spread over ten seconds do not, a tap past the window restarts the run, and the tap after a
+  completed run does not continue it. `DiagnosticsGestureTest` drives the app's own version row in
+  Settings' own `LazyColumn` through the real activity: four taps leave Settings as it was, five
+  inside three seconds reveal the section with its copy, and five spread over ten seconds reveal
+  nothing. Every timed scenario asserts that the shadow clock actually advanced, so a clock that
+  refused to move would fail there instead of passing as if the gesture were merely inert.
+- The diagnostics half of `tools/check_release.py` is pinned from both sides, because a negative
+  assertion is only worth something when the build that must contain the names provably does: the
+  GitHub APK has to carry code from every file in `app/src/github/java/dev/nightfall/diagnostics`
+  (refused otherwise), `fdroid_violation` reports an F-Droid APK containing any of those class
+  descriptors, and an APK with neither package is still clean. Nine tool tests cover that, including
+  a class nested inside the one stub the F-Droid channel must carry and the surface's own copy found
+  in a resource table, and the names are compared as whole dex descriptors so `Diagnostics` cannot be
+  matched by `DiagnosticsSurface`. The entry-point groups are read from the directory — a file's own
+  name, the facade class Kotlin gives a file of top-level functions, and every type it declares — so
+  a class added to the package is covered the day it is written. Measured on the built APKs: the
+  GitHub dex holds 54 diagnostics descriptors, the F-Droid dex holds one (`DiagnosticsSurface`, the
+  stub), and the switch's copy appears in the GitHub resource table and nowhere in the F-Droid one.
+
 - The manifest's release notes are exercised in three shapes: present (version,
   date and the notes themselves, as the generator writes them), absent (a document
   without `log` or `schemaVersion`, which parses as schema 1 with an empty log and
@@ -101,7 +139,8 @@
   inventory has no GMS, Firebase, billing, ad or tracking SDK from the checked
   denylist. F-Droid's independent review remains necessary.
 
-- 13 Robolectric scenarios pass in both channels (see below): eleven
+- 13 Robolectric scenarios pass in both channels (see below), plus the three GitHub-only
+  diagnostics gesture scenarios described above: eleven
   playback-lifecycle ones, which replace the instrumented attempt that never went
   green, and two Android 16 assertions that need the API 36 sandbox CI now runs
   (`Android16RuntimeTest`).
@@ -381,6 +420,26 @@ Also unverified: a real download of a published release from GitHub (the tests u
 a local server with the same protocol), behaviour behind a captive portal or a
 proxy, and how each OEM image prompts. Releasing a version with this channel and
 installing it on a physical device is the check that closes this gap.
+
+## Hidden diagnostics that were not exercised
+
+The diagnostics surface was drawn and driven on a JVM and never on a phone. The gesture is measured
+against the real Settings screen, but Robolectric supplies its own touch dispatch and its own clock;
+whether five real taps inside three seconds feel like a natural hidden gesture, and whether the
+version row still reads as ordinary copy with the gesture on it, is not something a JVM can answer.
+
+Three things in the collection path have no measurement behind them at all. `ActivityManager
+.getHistoricalProcessExitReasons` is called on API 30 and newer and returns nothing meaningful under
+Robolectric, so no crash and no ANR record has ever been read out of a real device by this code; the
+token mapping is written from the platform's documented reason codes. The share sheet was never
+opened: `Share report` builds a `text/plain` `ACTION_SEND` intent and starts a chooser, and no test
+asserts that a device routes it. And playback sessions, playback failures and update outcomes are
+recorded as subscribers to flows that the JVM tests drive by hand — the wiring between a real night's
+playback and a journal entry has not been observed on hardware.
+
+What is verified is the part that could quietly become a hoard or a leak: the caps, the oldest-first
+drop, the emptiness before the switch is on, the erase, the closed token set, and the absence of the
+whole package from the F-Droid APK.
 
 ## Pending hardware checks
 

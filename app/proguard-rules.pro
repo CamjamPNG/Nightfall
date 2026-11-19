@@ -25,3 +25,8 @@
 # and that the github APK contains them. Obfuscated names would make the negative half of that check
 # find nothing and pass vacuously, which would quietly weaken the F-Droid "no network code" gate.
 -keepnames class dev.nightfall.update.**
+
+# The same rule for the same reason, over the hidden diagnostics package. These class descriptors
+# are what tools/check_release.py searches the F-Droid APK for, and what it requires the GitHub APK to
+# contain so that search cannot pass vacuously.
+-keepnames class dev.nightfall.diagnostics.**

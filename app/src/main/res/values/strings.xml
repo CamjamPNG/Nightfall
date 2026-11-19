@@ -271,7 +271,7 @@
     <string name="settings_capacity_note">There is no software layer limit. If rendering approaches 65% of the buffer budget or underruns accumulate, Nightfall warns you. Music layers use more processing than noise. Actual battery life and all-night playback depend on Android and device power policies.</string>
     <string name="settings_section_updates">Updates</string>
     <string name="settings_section_data">Your data &amp; audio</string>
-    <string name="settings_privacy_note">Everything that makes sound runs on your device. No account, advertising, analytics, tracking or purchases. Mixes and settings are stored locally. Keep listening levels comfortable; percentages describe layer gain, not acoustic loudness.</string>
+    <string name="settings_privacy_note">Everything that makes sound runs on your device. No account, advertising, analytics service, tracking or purchases, and the app uploads nothing: the only way your data leaves the phone is if you export or share it yourself. Mixes and settings are stored locally. Keep listening levels comfortable; percentages describe layer gain, not acoustic loudness.</string>
     <string name="settings_action_export">Export current mix as JSON</string>
     <string name="settings_action_credits">Audio credits &amp; open-source licenses</string>
     <string name="settings_about">%1$s\nFree forever. A small space for a quieter night.</string>

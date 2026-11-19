@@ -5,7 +5,7 @@ import argparse, hashlib, json, pathlib, re, struct, subprocess, sys, zipfile
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'tools'))
 import nfop  # noqa: E402  the container is shared with the encoder, so the checks cannot drift apart
-from release_artifact import NETWORK_PERMISSIONS, apk_manifest, build_tools, declares, fdroid_asset_name, fdroid_violation, universal_abis, updater_entry_points, updater_symbols
+from release_artifact import NETWORK_PERMISSIONS, apk_manifest, build_tools, declares, diagnostics_entry_points, diagnostics_symbols, fdroid_asset_name, fdroid_violation, universal_abis, updater_entry_points, updater_symbols
 p=argparse.ArgumentParser()
 p.add_argument('--apk',type=pathlib.Path,help='GitHub-channel APK, the one published for updates')
 p.add_argument('--fdroid-apk',type=pathlib.Path,help='F-Droid-channel APK, which must carry no network access')
@@ -125,6 +125,7 @@ if args.fdroid_apk:
     violation=fdroid_violation(args.fdroid_apk)
     if violation:raise ValueError('F-Droid APK '+violation)
 updater_check=None
+diagnostics_check=None
 if args.github_apk or args.apk:
     updater_apk=args.github_apk or args.apk
     binary=apk_manifest(updater_apk)
@@ -138,6 +139,14 @@ if args.github_apk or args.apk:
     absent=sorted(name for name,group in entry_points.items() if not found.intersection(group))
     require(not absent,'GitHub APK carries no code from '+', '.join(absent)+', so the F-Droid no-updater assertion would search for names this build does not contain')
     updater_check=dict(sources=len(entry_points),markers=len(found))
+    # The same vacuity guard over the hidden diagnostics package, which only this channel may have:
+    # `fdroid_violation` searches for these names, and that search proves something only if they are
+    # genuinely in the build that is supposed to contain them.
+    found_diagnostics=set(diagnostics_symbols(updater_apk))
+    groups=diagnostics_entry_points()
+    absent_diagnostics=sorted(name for name,group in groups.items() if not found_diagnostics.intersection(group))
+    require(not absent_diagnostics,'GitHub APK carries no code from the diagnostics package ('+', '.join(absent_diagnostics)+'), so the F-Droid no-diagnostics assertion would search for names this build does not contain')
+    diagnostics_check=dict(sources=len(groups),markers=len(found_diagnostics))
 if args.fdroid_asset:
     # The published F-Droid asset is what an outside repository index serves, so its name and its
     # signer are part of the contract, not just its contents.
@@ -148,4 +157,4 @@ if args.fdroid_asset:
     require(universal_abis(args.fdroid_asset)=={'arm64-v8a','armeabi-v7a','x86','x86_64'},'F-Droid asset must carry every architecture')
     violation=fdroid_violation(args.fdroid_asset)
     if violation:raise ValueError('F-Droid asset '+violation)
-print(json.dumps({'result':'pass','applicationId':appid,'versionName':version,'versionCode':code,'recordings':len(assets),'screenshots':len(shots),'codeLicense':'MIT','commercialCourtesy':'voluntary','apkChecked':str(args.apk) if args.apk else None,'fdroidApkChecked':str(args.fdroid_apk) if args.fdroid_apk else None,'fdroidAssetChecked':str(args.fdroid_asset) if args.fdroid_asset else None,'updaterCode':bool(args.github_apk or args.apk),'updaterSources':updater_check['sources'] if updater_check else None,'updaterMarkers':updater_check['markers'] if updater_check else None,'recipeTagsChecked':checked_tags},indent=2))
+print(json.dumps({'result':'pass','applicationId':appid,'versionName':version,'versionCode':code,'recordings':len(assets),'screenshots':len(shots),'codeLicense':'MIT','commercialCourtesy':'voluntary','apkChecked':str(args.apk) if args.apk else None,'fdroidApkChecked':str(args.fdroid_apk) if args.fdroid_apk else None,'fdroidAssetChecked':str(args.fdroid_asset) if args.fdroid_asset else None,'updaterCode':bool(args.github_apk or args.apk),'updaterSources':updater_check['sources'] if updater_check else None,'updaterMarkers':updater_check['markers'] if updater_check else None,'diagnosticsCode':bool(args.github_apk or args.apk),'diagnosticsSources':diagnostics_check['sources'] if diagnostics_check else None,'diagnosticsMarkers':diagnostics_check['markers'] if diagnostics_check else None,'recipeTagsChecked':checked_tags},indent=2))

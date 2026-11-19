@@ -145,6 +145,69 @@ it now runs, once: the log's newest entry must name the installed version and ca
 notes, the notes must not have been seen, and `dismissLog()` records that they
 were. There is no build flavour or instrumented path behind this beyond Compose.
 
+## Hidden diagnostics
+
+The second GitHub-only surface, and the only place this app writes anything about its own behaviour.
+It lives in `app/src/github/java/dev/nightfall/diagnostics`, built from the same source set split as
+the updater: `app/src/main` names three entry points — `DiagnosticsSurface.VersionTap`,
+`DiagnosticsSurface.Section` and `DiagnosticsSurface.Host` — and `app/src/fdroid` answers all three
+with stubs, so the F-Droid APK carries no journal, no switch, no gesture and no report. There is no
+transport in either channel: no endpoint, no upload code, no crash-reporting SDK. When one exists,
+sending is one more call behind the same switch and the collection below does not change.
+
+The gesture is five taps on the Settings version row inside three seconds, counted by `TapGate`
+against a window that starts at the first tap — so five taps over ten seconds are four short runs,
+not a slow way in. It is drawn with `pointerInput`, not `clickable`: no ripple and no click action, so
+nothing announces it. Revealing writes one boolean to the app's private preferences and shows a
+section at the bottom of Settings; that section stays until **Hide diagnostics**, and uninstalling
+takes it with everything else.
+
+The journal is a bounded file, `files/diagnostics/journal.json`, rewritten whole through a temporary
+file and a rename so an interrupted write leaves the previous journal. Erasing deletes both names —
+the journal and that temporary file — and reports `false` when either survives, because the surface
+says "nothing is left on this device" and has to be able to mean it. `JournalStore` enforces three
+caps — 200 entries, 64 kilobytes and 30 days — by dropping from the front of the list, oldest first;
+the surface's copy formats those numbers from the same limits rather than restating them.
+`DiagnosticsJournal` gates every write on the switch, so nothing is loaded, held or written before it
+is turned on, and it flushes on one daemon thread, so no caller — least of all the render loop — waits
+for storage.
+
+Consent is a boundary, not a filter. `DiagnosticsPrefs.adoptConsent` moves a stored cutoff forward
+to the moment the switch is turned on, and `recordExits` imports only exits newer than it — Android's
+exit history reaches back before consent, and it is the one place the journal could otherwise read
+backwards past it. `SessionClock` does the same for a night: the switch is part of the stream it
+consumes, so turning collection off abandons the run and turning it back on measures from there, and a
+session that began while the switch was off records nothing.
+
+Collection is four subscriptions taken from outside the code they watch, which is why no audio-path,
+`core` or updater file knows diagnostics exists: playback sessions and playback failures read
+`NightfallRuntime.status`; update outcomes read `UpdateApi.state` through `UpdateSupport`; and the
+crash, ANR and exit records come from `ActivityManager.getHistoricalProcessExitReasons` on the next
+start, since a process cannot report its own death. Every value is a token from a closed set in
+`DiagnosticsContract.kt`. Duration is bucketed (five ranges, start-up and playback) because the exact
+number describes a person's routine; an entry holds the local date and never a clock time; and a
+playback failure is recorded as one `playback` token with no message text, because that text is
+localized copy that can carry a file path. Startup timing is measured from `Process.getStartElapsedRealtime`
+to the activity's first composition, recorded once per process.
+
+The report is the journal plus the app's own versions, the date range it covers, the caps in force and
+a count per kind, pretty-printed so a person can check it before sharing it. **Share report** hands
+that text to Android's share sheet as `text/plain`: there is no file provider, no chooser of our own
+and no permission beyond the one the share sheet already has.
+
+The surface's copy lives in `app/src/github/res/values/strings.xml` rather than in `app/src/main`, so
+the F-Droid build cannot carry a line of it either.
+
+`tools/check_release.py` proves the split from the built APKs, not from this tree.
+`release_artifact.diagnostics_entry_points` reads the package directory and requires the GitHub APK to
+carry code from every file in it, so the negative half cannot pass vacuously if R8 dropped a name;
+`fdroid_violation` then reads every class descriptor the F-Droid APK holds from the package, allows
+only the one stub that `app/src/fdroid` must provide, and separately refuses an APK whose resource
+table carries any of the surface's strings. Names are matched as whole descriptors — `L…;` — because
+a prefix match finds `DiagnosticsSurface` when it is looking for `Diagnostics`.
+`-keepnames class dev.nightfall.diagnostics.**` keeps them searchable, for the same reason and in the
+same place as the updater's rule.
+
 ## Limits
 
 The update guard's residue: an install re-reads playback immediately before committing and defers if playback resumed, so the interval in which a play request can be overtaken by the commit is one binder write (microseconds) rather than the multi-second APK copy, which is guarded. That interval is not zero, and it is not closed by design: the alternative is the audio start path waiting on the installer, which would put update state in the audio path.
