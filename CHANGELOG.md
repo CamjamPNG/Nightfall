@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.3 — 2026-11-19
+
+- test: count open decoders per test so a neighbour's teardown cannot break the assertion (#31)
+
 ## 1.9.2 — 2026-11-19
 
 - test: run the app suite on an API 36 runtime in CI (#30)

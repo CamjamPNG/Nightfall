@@ -1,0 +1,1 @@
+- test: count open decoders per test so a neighbour's teardown cannot break the assertion (#31)
