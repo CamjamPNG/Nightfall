@@ -1,9 +1,10 @@
 # Security policy
 
 Nightfall is a single-purpose offline Android app: it mixes locally generated
-audio and locally bundled recordings and plays them. It has no account system,
-no analytics, no advertising, no purchases, no microphone access and **no
-`INTERNET` permission**. There is no server component, no cloud sync and no
+audio and locally bundled recordings and plays them. It has no account system, no
+analytics service, no advertising, no purchases, no microphone access and **no
+`INTERNET` permission**, and the only data it ever writes about your use is the opt-in
+diagnostics journal, which is local, bounded and transmitted nowhere. There is no server component, no cloud sync and no
 remote configuration. `tools/check_release.py` fails the release if an
 `INTERNET`, `RECORD_AUDIO` or advertising-ID permission appears in the manifest.
 

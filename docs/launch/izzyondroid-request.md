@@ -256,7 +256,7 @@ the form's own words; it is true only in the sense argued under Gate 1.
 
 **Summary**
 > A free, offline sleep-sound mixer with independent layers and original ambient
-> music: no account, no analytics, and the F-Droid build declares no network
+> music: no account, no analytics service, and the F-Droid build declares no network
 > permission at all.
 
 **Description**

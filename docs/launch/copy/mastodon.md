@@ -29,17 +29,19 @@ anyone who asks, and no boost requests to anyone.
 
 ## Draft
 
-Measured at 504 characters raw, **489 as Mastodon counts it** (a link costs 23
+Measured at 505 characters raw, **490 as Mastodon counts it** (a link costs 23
 characters, not its real length), so it fits a default 500-character instance with a
-little room. The draft this replaced was 521 and claimed to be ~480, which no default
+little room. The budget is why the privacy line is one clause rather than a paragraph:
+the full statement, including the diagnostics journal, is on the site this post links
+to. The draft this replaced was 521 and claimed to be ~480, which no default
 instance would have accepted. Add the demo clip if you have recorded it; leave the post
 as text if you haven't, because a clip is only worth showing once it exists. Recount it
 by pasting the paragraph into a character counter, not by trusting this line.
 
 > Nightfall: a sleep-sound mixer for Android. Independent layers of noise, weather,
-> recordings and generated music. No account, no analytics, no ads. Two builds: the
-> F-Droid one can't open a socket; the GitHub one's only network use is its update
-> check. 2.0 adds endless night and a home-screen widget, and it's 11.7 MB, not 79 MB.
+> recordings and music. No account, no ads, nothing recorded unless you opt in. Two
+> builds: the F-Droid one can't open a socket; the GitHub one's only network use is its
+> update check. 2.0 adds endless night and a home-screen widget, and it's 11.7 MB.
 > 97 tests, and a README listing what's unverified — no overnight pass yet, and the
 > widget has never met a launcher. MIT. https://github.com/CamjamPNG/Nightfall
 >

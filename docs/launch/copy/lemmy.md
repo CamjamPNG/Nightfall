@@ -45,7 +45,9 @@ Body:
 > repository's release manifest and, by default, installs a newer APK on its own once
 > nothing is playing; that is its only network use, it never interrupts a mix, and it
 > never uploads anything. Playback and music generation use no network in either
-> build. No account, no analytics, no ads. The whole sound library ships in the APK.
+> build. No account, no ads, and nothing recorded unless you switch its opt-in diagnostics
+> on yourself: a bounded local journal that transmits nothing. The whole sound library ships
+> in the APK.
 >
 > **The engine is a plain Kotlin module.** One 48 kHz stereo float mix, 1024-frame
 > blocks, one audio-priority thread, a soft limiter at the end. It has no Android
