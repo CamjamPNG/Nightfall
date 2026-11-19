@@ -163,6 +163,12 @@ object Library {
                 "Rivers" to "Wider water moving slowly: a low body with a gentle roll",
                 "Waterfalls" to "Falling water: a heavy low roar under a dense bright spray",
                 "Lakes" to "Still water: a soft low body with ripples barely moving",
+                "Rapids" to "Fast shallow water over rocks: a bright chatter with a quick swell",
+                "Creeks" to "Small water winding over stones: a gurgling midband bed",
+                "Waves on shingle" to
+                    "Slow surf on a stone shore: a deep swell with a fine grit over it",
+                "Lapping water" to
+                    "Water moving against a hull or a stone edge: slow low laps, little hiss",
             )
             .forEachIndexed { i, (n, description) ->
                 add(entry(n, "Nature", "water", i, description = description))
@@ -180,6 +186,11 @@ object Library {
         listOf("Campfires" to .25f, "Crackling wood" to .85f).forEachIndexed { i, (n, rate) ->
             add(entry(n, "Nature", "fire", i, eventRate = rate))
         }
+        // The four later fire names are their own textures too, not one crackle behind a different
+        // filter: the variant decides how dull the bed is, how fast a pop dies away and how high it
+        // rings.
+        listOf("Embers" to .35f, "Wood stove" to .45f, "Fire pit" to .60f, "Bonfire" to .90f)
+            .forEachIndexed { i, (n, rate) -> add(entry(n, "Nature", "fire", i + 2, eventRate = rate)) }
         // Field recordings are explicitly distinct from physical-model textures.
         listOf("Forest birds", "Crickets", "Frogs", "Nighttime forest").forEach {
             add(recording(it, "Nature"))

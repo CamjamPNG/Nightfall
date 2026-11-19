@@ -7,7 +7,7 @@ The count is `grep -c '<string name=\|<plurals name='` over the two files, and �
 inventory as it stood when the extraction landed: the keys added afterwards — the home-screen widget's,
 the diagnostics journal's, and the endless-night switch's — are counted but only the switch is listed
 (§2.23). What still ships as English in code
-is the catalogue — 98 names, 10 categories, 15 preset names in
+is the catalogue — 106 names, 10 categories, 15 preset names in
 `core/src/main/kotlin/dev/nightfall/core/Library.kt` — plus two defaults that are written into saved
 data rather than drawn (`Your soundscape`, `My night mix`). Both are listed in §5 as stages 5 and 6
 and both need work outside `app/`.
@@ -35,7 +35,7 @@ Included:
 - the media notification: channel name, title, text, and the Media3 metadata shown on the lock
   screen and on Bluetooth head units;
 - the launcher label in `AndroidManifest.xml`;
-- the catalogue: 98 sound names, 10 category names, the per-kind descriptions, and the 15 built-in
+- the catalogue: 106 sound names, 10 category names, the per-kind descriptions, and the 15 built-in
   preset names. They are content rather than chrome, but a person reads them off the screen, so an
   inventory that skipped them would be a lie about its own completeness.
 
@@ -50,7 +50,7 @@ Excluded, with the reason: §3.
 | App shell, dialogs, Home, layer row and options panel (§2.1-§2.12, §2.23) | 126 |
 | Library, Presets, Studio, Settings (§2.13-§2.16) | 103 |
 | Snackbars, errors, notification, waveform a11y, launcher label (§2.17-§2.21) | 23 |
-| Catalogue: 98 sound names, 10 categories, 6 descriptions, 15 preset names (§2.22) | 129 |
+| Catalogue: 106 sound names, 10 categories, 6 descriptions, 15 preset names (§2.22) | 137 |
 
 Keys follow `screen.feature.role`. `home`, `library`, `presets`, `studio`, `settings` match the five
 navigation tabs; `common.*` is shared vocabulary; `error.*` and `notification.*` are surfaces with no
@@ -531,8 +531,8 @@ resource. Same key as `home.title` (§2.5), which is the product name on screen.
 
 ### 2.22 Catalogue content — `core/src/main/kotlin/dev/nightfall/core/Library.kt`
 
-98 sound names, 10 category names, six description strings, and 15 built-in preset names. These are
-not chrome, and they do not extract the same way: for 86 of the 98 sounds the id is
+106 sound names, 10 category names, six description strings, and 15 built-in preset names. These are
+not chrome, and they do not extract the same way: for 94 of the 106 sounds the id is
 `Library.slug(name)` (line 230), computed from the English name at construction. Display name and id
 are the same information for those, which is why the id must be frozen as a literal before any name
 is translated.
@@ -577,7 +577,7 @@ the appendix exists to prevent.
 | `library.description.recording.missing` | 149 | Recording not bundled; no substitute audio |
 | `library.description.binaural` | 224 | 200 Hz carrier; frequency difference adjustable 1–20 Hz. Stereo headphones required. Sleep-stage and healing benefits are not established. |
 
-**Sound names** — the full 98-row list, with id and line, is Appendix A. Grouped by catalogue section:
+**Sound names** — the full 106-row list, with id and line, is Appendix A. Grouped by catalogue section:
 
 | Group | Count | Lines |
 | --- | --- | --- |
@@ -586,14 +586,14 @@ the appendix exists to prevent.
 | Storms | 8 | 72-79 |
 | Winter | 8 | 86-93 |
 | Wind | 8 | 100-107 |
-| Nature — water, wind, fire, field recordings | 15 | 113, 115, 116, 118 |
+| Nature — water, wind, fire, field recordings | 23 | 113, 115, 116, 118, 166-170, 192 |
 | Indoor — fire, hum, clock, unavailable | 9 | 130, 135-140, 146, 152 |
 | Travel | 5 | 157-161 |
 | Other — recordings, hums | 5 | 166, 176, 186, 194 |
 | Music | 18 | 197-214 |
 | Music — binaural | 1 | 220 |
 
-Total 98. Names are single words or short noun phrases (`Light drizzle`, `Wind through pine trees`,
+Total 106. Names are single words or short noun phrases (`Light drizzle`, `Wind through pine trees`,
 `Occasional lightning-associated thunder`); the longest is 37 characters and the row gives it one
 line at 14 sp, so a longer translation ellipsizes rather than wraps through the row.
 
@@ -865,7 +865,7 @@ without it.
 Stage 3's `plurals.xml` is needed by `home.layer.stop_after` in stage 2, so if stage 2 lands before
 stage 3, its unit suffixes have to stay literals and be picked up in stage 3.
 
-**Stage 5 — catalogue content.** 98 names, 10 categories, 6 descriptions, 15 preset names. Two
+**Stage 5 — catalogue content.** 106 names, 10 categories, 6 descriptions, 15 preset names. Two
 changes must precede any translated name: (a) every `Library.slug(name)` id becomes an explicit
 literal, so ids stop depending on English; (b) name lookup goes through a per-id resolution
 (`library.sound.<id>.name`) with the built-in name as fallback for ids a translation does not cover,
@@ -929,13 +929,15 @@ that name, stages 5 and 6 should stay unstarted and this document should stay th
 `stateDescription` in display units is from the mixer-UI thread's code and its own report, not from a
 listening test in this thread; no emulator exists on these machines to check it.
 
-## Appendix A — the 98 sound names
+## Appendix A — the 106 sound names
 
 Every name below is displayed by `Screens.kt:108` in the library list, `NightfallScreen.kt:755` in the
 layer row and `Screens.kt:283` in a preset's layer line. The id in each key is the real `Sound.id`,
 which is also the value stored in `Layer.soundId` and `SavedState`; for 86 of these it is
 `Library.slug(name)` (`Library.kt:230`), and the twelve exceptions are listed in §2.22. Display name
-and id are the same information today and must become two values. Line numbers are `Library.kt`.
+and id are the same information today and must become two values. Line numbers are `Library.kt` at
+`0df94ac`, except the eight entries added on 2026-11-19 (Rapids, Creeks, Waves on shingle, Lapping
+water, Embers, Wood stove, Fire pit, Bonfire), which carry their line numbers at that change.
 
 | Key | Name | Line |
 | --- | --- | --- |
@@ -990,11 +992,19 @@ and id are the same information today and must become two values. Line numbers a
 | `library.sound.rivers.name` | Rivers | 113 |
 | `library.sound.waterfalls.name` | Waterfalls | 113 |
 | `library.sound.lakes.name` | Lakes | 113 |
+| `library.sound.rapids.name` | Rapids | 166 |
+| `library.sound.creeks.name` | Creeks | 167 |
+| `library.sound.waves-on-shingle.name` | Waves on shingle | 168 |
+| `library.sound.lapping-water.name` | Lapping water | 170 |
 | `library.sound.wind-in-leaves.name` | Wind in leaves | 115 |
 | `library.sound.caves.name` | Caves | 115 |
 | `library.sound.mountain-ambience.name` | Mountain ambience | 115 |
 | `library.sound.campfires.name` | Campfires | 116 |
 | `library.sound.crackling-wood.name` | Crackling wood | 116 |
+| `library.sound.embers.name` | Embers | 192 |
+| `library.sound.wood-stove.name` | Wood stove | 192 |
+| `library.sound.fire-pit.name` | Fire pit | 192 |
+| `library.sound.bonfire.name` | Bonfire | 192 |
 | `library.sound.forest-birds.name` | Forest birds | 118 |
 | `library.sound.crickets.name` | Crickets | 118 |
 | `library.sound.frogs.name` | Frogs | 118 |

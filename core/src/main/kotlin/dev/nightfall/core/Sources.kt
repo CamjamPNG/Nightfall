@@ -135,6 +135,32 @@ class NoiseSource(private val rate: Int, seed: Long, private val color: Int) : S
     }
 }
 
+/**
+ * One fire name's character: how dull the bed is, how hard and how often a pop lands, how fast it
+ * dies away, how high it rings and how much air moves over it. A pop is a decaying sine whose pitch
+ * and decay set whether it reads as a dull thump in a stove or a bright snap over open flame.
+ */
+private class Firebed(
+    val bedCut: Float,
+    val pop: Float,
+    val rate: Float,
+    val decay: Float,
+    val pitch: Double,
+    val air: Float,
+    val gain: Float,
+)
+
+/** Indexed by [Sound.variant] for the `fire` kind; 0 and 1 keep the constants those entries had. */
+private val FIRES =
+    arrayOf(
+        Firebed(.06f, 1f, 1f, .997f, .08, .05f, 1.5f),
+        Firebed(.06f, 1f, 1f, .997f, .08, .05f, 1.5f),
+        Firebed(.027f, .5f, .2f, .9992f, .045, .02f, 1.25f),
+        Firebed(.0096f, .55f, .8f, .9995f, .028, .01f, 2f),
+        Firebed(.126f, .5f, 1.4f, .968f, .15, .15f, 1.05f),
+        Firebed(.102f, .62f, 2.2f, .982f, .11, .09f, 1.3f),
+    )
+
 /** Stochastic physical-model textures. These are labeled synthesis, never field recordings. */
 class EnvironmentSource(
     private val rate: Int,
@@ -182,6 +208,10 @@ class EnvironmentSource(
                 3 -> .031
                 4 -> .74
                 5 -> .011
+                6 -> .62
+                7 -> .19
+                8 -> .048
+                9 -> .024
                 else -> .09
             }
         val swellDepth =
@@ -192,6 +222,10 @@ class EnvironmentSource(
                 3 -> .42f
                 4 -> .3f
                 5 -> .08f
+                6 -> .22f
+                7 -> .34f
+                8 -> .78f
+                9 -> .52f
                 else -> .5f
             }
         val body =
@@ -202,6 +236,10 @@ class EnvironmentSource(
                 3 -> .68f
                 4 -> 1.5f
                 5 -> .34f
+                6 -> .6f
+                7 -> 1.05f
+                8 -> 1.45f
+                9 -> 1.7f
                 else -> 1.2f
             }
         val hiss =
@@ -212,6 +250,10 @@ class EnvironmentSource(
                 3 -> .24f
                 4 -> .52f
                 5 -> .1f
+                6 -> .85f
+                7 -> .28f
+                8 -> .55f
+                9 -> .12f
                 else -> .2f
             }
         val flutterRate =
@@ -222,6 +264,10 @@ class EnvironmentSource(
                 3 -> 1.4
                 4 -> 7.9
                 5 -> 1.1
+                6 -> 8.5
+                7 -> 2.9
+                8 -> 12.7
+                9 -> .7
                 else -> 3.0
             }
         val flutterDepth =
@@ -232,6 +278,10 @@ class EnvironmentSource(
                 3 -> .07f
                 4 -> .2f
                 5 -> .03f
+                6 -> .18f
+                7 -> .34f
+                8 -> .26f
+                9 -> .5f
                 else -> .06f
             }
         // Wind and winter names differ by the band they rustle in, the sub they carry and whether they
@@ -320,6 +370,8 @@ class EnvironmentSource(
         val ringChance = (18 + layer.eventRate * 150) / rate
         // Gentle snowfall is meant to be barely there; everything else in these families sits at one level.
         val bedAmount = if (kind == "winter") (if (variant == 1) .18f else .8f) else 1f
+        val fire = FIRES[variant.coerceIn(0, FIRES.lastIndex)]
+        val bedCut = if (kind == "fire") fire.bedCut else cutoff
         val storm = kind == "thunder"
         val thunderInterval = rate * (6f + (1 - layer.eventRate) * 65f)
         val transition =
@@ -333,8 +385,8 @@ class EnvironmentSource(
             frame++
             val w = n.next(0)
             val w2 = n2.next(0)
-            low += cutoff * (w - low)
-            low2 += cutoff * (w2 - low2)
+            low += bedCut * (w - low)
+            low2 += bedCut * (w2 - low2)
             val slow = if (settings.dynamicWeather) .8f + .2f * Wave.sin(t * .008 + variant) else 1f
             if (--gustCountdown <= 0) {
                 gustTarget = .45f + rng.unit() * .40f
@@ -368,16 +420,16 @@ class EnvironmentSource(
                     eventEnergy = event * (1 - transition)
                 }
                 "fire" -> {
-                    if (rng.unit() < (5 + layer.eventRate * 30) / rate) {
-                        ring = .1f + rng.unit() * .35f
+                    if (rng.unit() < (5 + layer.eventRate * 30) * fire.rate / rate) {
+                        ring = (.1f + rng.unit() * .35f) * fire.pop
                         ringPhase = rng.unit().toDouble()
                     }
-                    ring *= .997f
+                    ring *= fire.decay
                     val crack =
                         ring * Wave.sin(ringPhase) * (if (settings.lowDistraction) .65f else 1f)
-                    ringPhase += .08
-                    l = low * 1.5f + crack + w * .05f
-                    r = low2 * 1.5f + crack * .6f + w2 * .05f
+                    ringPhase += fire.pitch
+                    l = low * fire.gain + crack + w * fire.air
+                    r = low2 * fire.gain + crack * .6f + w2 * fire.air
                 }
                 "rain" -> {
                     if (rng.unit() < (70 + layer.eventRate * 500) / rate)
