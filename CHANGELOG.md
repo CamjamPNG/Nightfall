@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.2 — 2026-11-19
+
+- test: guard the level trim table against silent drift (#43)
+
 ## 2.1.1 — 2026-11-19
 
 - docs: bring the site and launch copy up to Nightfall 2.0 (#42)

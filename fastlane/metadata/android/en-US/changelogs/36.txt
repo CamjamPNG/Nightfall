@@ -1,0 +1,1 @@
+- test: guard the level trim table against silent drift (#43)
