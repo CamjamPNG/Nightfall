@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.1 — 2026-11-19
+
+- fix: pause and release the output track only from the thread that owns it (#45)
+
 ## 2.2 — 2026-11-19
 
 - ui: make the library navigable with pinned filters, sticky sections and a collapsible outline (#40)

@@ -1,0 +1,1 @@
+- fix: pause and release the output track only from the thread that owns it (#45)
