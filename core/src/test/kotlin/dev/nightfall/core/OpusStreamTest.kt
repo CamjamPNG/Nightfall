@@ -45,11 +45,11 @@ class OpusStreamTest {
     }
 
     /** Packet `i` carries its own index in four bytes, so a restarted decoder still knows where it is. */
-    private class Fake : OpusPackets {
+    private class Fake(private val open: AtomicInteger) : OpusPackets {
         override val outputRate = 24000
 
         init {
-            open.addAndGet(1)
+            open.incrementAndGet()
         }
 
         override fun decode(packet: ByteArray, length: Int, out: FloatArray): Int {
@@ -63,11 +63,7 @@ class OpusStreamTest {
         }
 
         override fun close() {
-            open.addAndGet(-1)
-        }
-
-        companion object {
-            val open = AtomicInteger()
+            open.decrementAndGet()
         }
     }
 
@@ -78,8 +74,16 @@ class OpusStreamTest {
             refused.addAndGet(1)
             return null
         }
-        return Fake()
+        return Fake(open)
     }
+
+    /**
+     * Decoders this test opened and has not yet seen closed. It is per instance because a cursor
+     * releases its decoder on its own worker after `close()` returns, so a neighbour's teardown can
+     * still be in flight when this test starts; counting per test makes a baseline only what this
+     * test moved.
+     */
+    private val open = AtomicInteger()
 
     private val refused = AtomicInteger()
 
@@ -90,9 +94,9 @@ class OpusStreamTest {
      */
     private fun awaitDecoders(count: Int, seconds: Long = 15, what: String = "decoders") {
         val deadline = System.nanoTime() + seconds * 1_000_000_000L
-        while (Fake.open.get() != count) {
+        while (open.get() != count) {
             if (System.nanoTime() > deadline)
-                fail("$what: ${Fake.open.get()} decoders open after ${seconds}s, expected $count")
+                fail("$what: ${open.get()} decoders open after ${seconds}s, expected $count")
             Thread.sleep(20)
         }
     }
@@ -100,9 +104,9 @@ class OpusStreamTest {
     /** Waits for at least [count] decoders to be open, for work a cursor does on its own thread. */
     private fun awaitDecodersAtLeast(count: Int, seconds: Long = 15, what: String = "decoders") {
         val deadline = System.nanoTime() + seconds * 1_000_000_000L
-        while (Fake.open.get() < count) {
+        while (open.get() < count) {
             if (System.nanoTime() > deadline)
-                fail("$what: ${Fake.open.get()} decoders open after ${seconds}s, expected at least $count")
+                fail("$what: ${open.get()} decoders open after ${seconds}s, expected at least $count")
             Thread.sleep(20)
         }
     }
@@ -110,9 +114,9 @@ class OpusStreamTest {
     /** Waits for a decoder count to fall below [limit], which is what pruning must achieve. */
     private fun awaitDecodersBelow(limit: Int, seconds: Long = 15, what: String = "decoders") {
         val deadline = System.nanoTime() + seconds * 1_000_000_000L
-        while (Fake.open.get() >= limit) {
+        while (open.get() >= limit) {
             if (System.nanoTime() > deadline)
-                fail("$what: ${Fake.open.get()} decoders open after ${seconds}s, expected under $limit")
+                fail("$what: ${open.get()} decoders open after ${seconds}s, expected under $limit")
             Thread.sleep(20)
         }
     }
@@ -237,20 +241,18 @@ class OpusStreamTest {
     @Test
     fun closingAReleasesEveryDecoderItOpened() {
         val file = container()
-        val before = Fake.open.get()
         val recording = OpusRecording(file, ::decoder)
         val cursors =
             listOf(recording.cursor(4.0), recording.cursor(4.0), recording.cursor(1.0), recording.cursor(1.0))
         cursors.forEach { it[0] }
-        awaitDecodersAtLeast(before + 1, what = "cursors opened decoders")
+        awaitDecodersAtLeast(1, what = "cursors opened decoders")
         recording.close()
-        awaitDecoders(before, what = "every decoder is released")
+        awaitDecoders(0, what = "every decoder is released")
     }
 
     @Test
     fun pruningALayerReleasesItsDecodersAndTheMixKeepsRunning() {
         val file = container()
-        val before = Fake.open.get()
         val recording = OpusRecording(file, ::decoder)
         val mix =
             Mix(
@@ -264,14 +266,14 @@ class OpusStreamTest {
         val out = FloatArray(2048)
         mixer.sync(mix)
         mixer.render(out, 1024)
-        val open = Fake.open.get() - before
-        assertTrue("two layers opened cursors", open >= 2)
+        val opened = open.get()
+        assertTrue("two layers opened cursors", opened >= 2)
         mixer.sync(mix.copy(layers = mix.layers.take(1)))
         repeat(200) { mixer.render(out, 1024) }
-        awaitDecodersBelow(before + open, what = "a pruned layer releases its decoders")
+        awaitDecodersBelow(opened, what = "a pruned layer releases its decoders")
         mixer.sync(Mix())
         repeat(200) { mixer.render(out, 1024) }
-        awaitDecoders(before, what = "an empty mix releases the rest")
+        awaitDecoders(0, what = "an empty mix releases the rest")
         recording.close()
     }
 
