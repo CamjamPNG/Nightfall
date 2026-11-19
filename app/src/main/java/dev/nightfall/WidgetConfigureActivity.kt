@@ -95,7 +95,7 @@ class WidgetConfigureActivity : ComponentActivity() {
                         )
                         Choice(
                             WidgetTap.OPEN_APP,
-                            stringResource(R.string.widget_configure_open),
+                            stringResource(R.string.widget_action_open),
                             stringResource(R.string.widget_configure_open_note),
                         )
                         Text(

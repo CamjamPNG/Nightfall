@@ -312,8 +312,15 @@ by the Robolectric scenarios above, which run on a JVM without an emulator.
   Every corner of the button is required to lie inside the surface's 20 dp rounded rect, the label
   must not be ellipsised, and the label must sit beside the button in the wide layout.
 - `WidgetTapModeTest`: the two tap behaviours are two intents — a broadcast to the provider with
-  no window, or an activity intent with `NEW_TASK` and no action — and the choice survives an
-  edit and dies with the widget.
+  no window, or an activity intent with `NEW_TASK` and no action — the announced action follows the
+  tap mode ("Open Nightfall. Playing." rather than a pause that will not happen), and the choice
+  survives an edit and dies with the widget.
+- `WidgetRebootStateTest`: a state written an hour into a previous boot reads as stopped, stays
+  stopped once this boot's uptime passes that mark, and is replaced on disk rather than skipped
+  past — the window in which a skip-over guard would resurrect "playing".
+- `WidgetCompactSelectionTest` (API 30 sandbox): before Android 12 there is no size-keyed map, so
+  the widget reads the launcher's reported width and picks the layout — one cell gets the compact
+  one, two cells the wide one, and a resize swaps them.
 - `WidgetConfigureTest`: the configure screen is driven as a person drives it; picking "Open
   Nightfall" and pressing Done records the choice, returns `RESULT_OK` with the widget id, and a
   second visit keeps the behaviour the widget already had. A screen opened with no widget id

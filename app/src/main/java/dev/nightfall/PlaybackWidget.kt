@@ -94,9 +94,22 @@ object PlaybackWidget {
     fun state(context: Context): WidgetState {
         val state = stored(context) ?: return WidgetState.STOPPED
         val at = prefs(context).getLong(KEY_STATE_AT, 0L)
-        if (state != WidgetState.STOPPED && SystemClock.elapsedRealtime() + REBOOT_SLACK_MS < at)
+        if (state != WidgetState.STOPPED && SystemClock.elapsedRealtime() + REBOOT_SLACK_MS < at) {
+            // The mark belongs to a boot this one never reached, so no audio is running: the stored
+            // picture is wrong, not merely old. Replace it rather than skip past it, or this same
+            // boot resurrects "playing" once uptime overtakes the old mark.
+            record(context, WidgetState.STOPPED)
             return WidgetState.STOPPED
+        }
         return state
+    }
+
+    private fun record(context: Context, state: WidgetState) {
+        prefs(context)
+            .edit()
+            .putString(KEY_STATE, state.name)
+            .putLong(KEY_STATE_AT, SystemClock.elapsedRealtime())
+            .apply()
     }
 
     /**
@@ -106,11 +119,7 @@ object PlaybackWidget {
      */
     fun publish(context: Context, state: WidgetState) {
         if (stored(context) == state) return
-        prefs(context)
-            .edit()
-            .putString(KEY_STATE, state.name)
-            .putLong(KEY_STATE_AT, SystemClock.elapsedRealtime())
-            .apply()
+        record(context, state)
         refresh(context)
     }
 
@@ -132,7 +141,10 @@ object PlaybackWidget {
      */
     fun views(context: Context, state: WidgetState, appWidgetId: Int): RemoteViews {
         val wide = wideViews(context, state, appWidgetId)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return wide
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S)
+            return if (cellWidth(context, appWidgetId) < WIDE_MIN_DP)
+                tinyViews(context, state, appWidgetId)
+            else wide
         return RemoteViews(
             mapOf(
                 SizeF(0f, 0f) to tinyViews(context, state, appWidgetId),
@@ -140,6 +152,15 @@ object PlaybackWidget {
             )
         )
     }
+
+    /**
+     * The width the launcher last reported for this widget, in dp. Before Android 12 there is no
+     * size-keyed map, so this is the only thing that knows the widget is one cell and not two.
+     */
+    private fun cellWidth(context: Context, appWidgetId: Int): Int =
+        AppWidgetManager.getInstance(context)
+            .getAppWidgetOptions(appWidgetId)
+            .getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
 
     /** The roughly 2x1 layout: the button and the state's name. */
     fun wideViews(context: Context, state: WidgetState, appWidgetId: Int): RemoteViews =
@@ -161,13 +182,21 @@ object PlaybackWidget {
         val spoken =
             context.getString(
                 R.string.widget_state_spoken,
-                context.getString(if (state == WidgetState.PLAYING) R.string.home_action_pause else R.string.home_action_play),
+                context.getString(action(context, appWidgetId, state)),
                 context.getString(label(state)),
             )
         views.setContentDescription(R.id.widget_root, spoken)
         views.setOnClickPendingIntent(R.id.widget_root, tapIntent(context, appWidgetId))
         return views
     }
+
+    /** What a tap does here, which is not the same thing from one widget to the next. */
+    private fun action(context: Context, appWidgetId: Int, state: WidgetState): Int =
+        when {
+            tap(context, appWidgetId) == WidgetTap.OPEN_APP -> R.string.widget_action_open
+            state == WidgetState.PLAYING -> R.string.home_action_pause
+            else -> R.string.home_action_play
+        }
 
     private fun glyph(state: WidgetState): Int =
         if (state == WidgetState.PLAYING) R.drawable.widget_pause else R.drawable.widget_play

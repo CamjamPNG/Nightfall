@@ -31,7 +31,7 @@ class WidgetConfigureTest {
         val controller = Robolectric.buildActivity(WidgetConfigureActivity::class.java, configureIntent()).setup()
         compose.waitForIdle()
 
-        compose.onNodeWithText(app.getString(R.string.widget_configure_open)).performClick()
+        compose.onNodeWithText(app.getString(R.string.widget_action_open)).performClick()
         compose.onNodeWithText(app.getString(R.string.common_done)).performClick()
 
         val activity = shadowOf(controller.get())

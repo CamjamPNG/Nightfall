@@ -48,6 +48,27 @@ class WidgetTapModeTest {
     }
 
     @Test
+    fun aWidgetThatOpensTheAppDoesNotAnnounceAPlaybackCommand() {
+        PlaybackWidget.setTap(app, WIDGET_ID, WidgetTap.OPEN_APP)
+        val playing = PlaybackWidget.wideViews(app, WidgetState.PLAYING, WIDGET_ID)
+        assertEquals(
+            "a screen-reader user must hear what the tap does, not a pause that will not happen",
+            "Open Nightfall. Playing.",
+            playing.spoken(app),
+        )
+        // The state is still announced: this widget opens the app, it does not stop reporting audio.
+        val stopped = PlaybackWidget.wideViews(app, WidgetState.STOPPED, WIDGET_ID)
+        assertEquals("Open Nightfall. Stopped.", stopped.spoken(app))
+
+        // And the default widget still says what a tap does to the audio.
+        PlaybackWidget.setTap(app, WIDGET_ID, WidgetTap.TOGGLE)
+        assertEquals(
+            "Pause soundscape. Playing.",
+            PlaybackWidget.wideViews(app, WidgetState.PLAYING, WIDGET_ID).spoken(app),
+        )
+    }
+
+    @Test
     fun theChoiceIsEditableAndDiesWithTheWidget() {
         PlaybackWidget.setTap(app, WIDGET_ID, WidgetTap.OPEN_APP)
         assertEquals(WidgetTap.OPEN_APP, PlaybackWidget.tap(app, WIDGET_ID))

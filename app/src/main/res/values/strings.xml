@@ -333,7 +333,7 @@
     <string name="widget_configure_prompt">What should a tap do?</string>
     <string name="widget_configure_toggle">Play or pause here</string>
     <string name="widget_configure_toggle_note">Starts or pauses your soundscape without opening the app.</string>
-    <string name="widget_configure_open">Open Nightfall</string>
+    <string name="widget_action_open">Open Nightfall</string>
     <string name="widget_configure_open_note">Opens the app and leaves playback alone.</string>
     <string name="widget_configure_note">You can change this later from the launcher’s widget options.</string>
 
