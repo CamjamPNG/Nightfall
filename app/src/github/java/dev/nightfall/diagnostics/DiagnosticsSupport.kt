@@ -9,6 +9,8 @@ import android.os.Build
 import android.os.Process
 import android.os.SystemClock
 import dev.nightfall.NightfallRuntime
+import dev.nightfall.OpusDecodeFailure
+import dev.nightfall.OpusFailures
 import dev.nightfall.update.UpdateState
 import dev.nightfall.update.UpdateSupport
 import java.io.File
@@ -85,6 +87,7 @@ class Diagnostics(context: Context) {
             store = JournalStore(File(app.filesDir, "diagnostics/journal.json")),
             enabled = { prefs.enabled },
         )
+    private val decoders = DecoderLog(journal)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _collecting = MutableStateFlow(prefs.enabled)
     private val _revealed = MutableStateFlow(prefs.revealed)
@@ -101,6 +104,9 @@ class Diagnostics(context: Context) {
 
     private var runtime: NightfallRuntime? = null
     private var watching = false
+
+    /** The decoder listener is separate because it has to exist before an activity does. */
+    @Volatile private var hearingDecoders = false
 
     /** A configuration change builds the activity again; the process has started once. */
     @Volatile private var startupRecorded = false
@@ -173,6 +179,21 @@ class Diagnostics(context: Context) {
         scope.launch { collectFailures() }
         scope.launch { collectUpdates() }
         scope.launch { recordExits() }
+        observeDecoders()
+    }
+
+    /**
+     * Subscribes to the decode path, and is safe to call before anything else: the app probes its Opus
+     * decoder during application start, which is earlier than the activity that attaches the observers
+     * above, and a token reported then is exactly the start-up failure this exists to name.
+     *
+     * The listener reports on the thread that hit the failure, not through a flow, and stays for the
+     * life of the process: turning the switch off stops the writing, it does not detach the observer.
+     */
+    fun observeDecoders() {
+        if (hearingDecoders) return
+        hearingDecoders = true
+        OpusFailures.listen { failure -> decoders.failure(failure, prefs.enabled) }
     }
 
     /**
@@ -319,6 +340,28 @@ internal class SessionClock(private val now: () -> Long) {
     /** Abandons the run in progress, so the next one is measured from where collection resumed. */
     fun reset() {
         startedAt = null
+    }
+}
+
+/**
+ * Decoder failures as journal entries: the step that refused, and nothing else.
+ *
+ * One entry per step per process. These are structural facts about the platform binding rather than
+ * events of a night — a header refused once will be refused on every seek — and a read head builds a
+ * decoder each time it restarts, so without this a single recording could fill the journal's cap with
+ * copies of one line.
+ *
+ * A failure reported while collection is off is dropped, not held: it is not written when the switch
+ * is turned on afterwards, and it does not use up its step's single entry either, so a stretch with
+ * the switch off cannot hide the same failure happening inside a stretch with it on.
+ */
+internal class DecoderLog(private val journal: DiagnosticsJournal) {
+    private val recorded = java.util.Collections.synchronizedSet(HashSet<OpusDecodeFailure>())
+
+    fun failure(failure: OpusDecodeFailure, collecting: Boolean) {
+        if (!collecting) return
+        if (recorded.add(failure))
+            journal.record(JournalEvent(Journal.DECODER, today(), detail = failure.token))
     }
 }
 

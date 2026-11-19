@@ -16,7 +16,7 @@ import kotlinx.serialization.json.Json
  * out of a crowd does not exist here — no path, no message text, no names.
  */
 object Journal {
-    /** Nine kinds of entry, each naming what happened and never what was heard. */
+    /** Six kinds of entry, each naming what happened and never what was heard. */
     const val STARTUP = "startup"
 
     const val PLAYBACK = "playback"
@@ -26,6 +26,13 @@ object Journal {
     const val UPDATE = "update"
 
     const val EXIT = "exit"
+
+    /**
+     * The Opus decoder refused, and which step refused it. The detail is one of the tokens
+     * `dev.nightfall.OpusDecodeFailure` defines — the decoder's own enum is the one definition of that
+     * set, so a token cannot exist here that the code cannot produce.
+     */
+    const val DECODER = "decoder"
 }
 
 /**

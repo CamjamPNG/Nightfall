@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.AndroidViewModel
 import dev.nightfall.core.*
+import dev.nightfall.diagnostics.DiagnosticsSurface
 import java.util.UUID
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -25,6 +26,9 @@ class NightfallApp : Application() {
     override fun onCreate() {
         super.onCreate()
         runtime = NightfallRuntime(this)
+        // Before the probe: a decoder that refuses at start-up is the failure this journal is for, and
+        // the channel's surface is the only thing that has to know.
+        DiagnosticsSurface.Begin(this)
         runtime.probeDecodeSupport()
     }
 }

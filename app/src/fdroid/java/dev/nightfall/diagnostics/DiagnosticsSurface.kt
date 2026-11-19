@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package dev.nightfall.diagnostics
 
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import dev.nightfall.NightfallRuntime
@@ -14,6 +15,8 @@ import dev.nightfall.NightfallRuntime
  * written.
  */
 object DiagnosticsSurface {
+
+    fun Begin(@Suppress("UNUSED_PARAMETER") context: Context) = Unit
 
     @Composable
     fun VersionTap(base: Modifier): Modifier = base
