@@ -364,6 +364,39 @@ What this cannot show: a finger on glass. Whether the pinned rail feels right, w
 header is where the eye expects it after a fast fling, and whether a 411 dp-tall window (the rail is
 then 31% of its height; 14% on a phone) has enough list left are judgements no JVM test makes.
 
+## Describe-a-mix phrase interpreter (core, JVM; screen, Robolectric)
+
+`core/src/test/kotlin/dev/nightfall/core/PhraseInterpreterTest.kt`: the interpreter is a parser, so it
+is held to a corpus rather than to a claim. 68 phrases are tabulated with the exact layers and gains
+each must become, and the table is compared as one assertion that names every phrase that parsed
+wrong instead of stopping at the first. The corpus covers the brief's own examples, each intensity
+word on its own and on two layers at once, names the person typed that carry their own intensity,
+surfaces that would
+otherwise be read as "rain" plus something, negation, timers in five spellings, a sound the catalogue
+lacks (reported with the closest entry), a contradiction, and phrases that must produce nothing.
+Three rows are regressions from review: `very quiet room` (a two-word intensity phrase must outrank
+the catalogue name that shares one of its words), `rain, don't play thunder` in both apostrophe
+styles (a contraction is one word, not "don t"), and `rain for 2147483648m` (a nonsense duration is
+clamped to the timer's own 24-hour ceiling before it can multiply into an overflow).
+
+Three more assertions guard the table rather than a phrase: every available catalogue entry resolves
+to itself when asked for by its own name (which is what catches an alias shadowing a name), every gain
+is one of the five on the documented scale and every target is an available entry, and the same phrase
+encodes to byte-identical JSON twice — including the music seeds — so a mix someone liked is
+reproducible by typing it again.
+
+`app/src/test/java/dev/nightfall/DescribeMixTest.kt` drives the shipped card through the real
+activity at a phone's size: the chips the route turned into are what the runtime then holds after one
+is removed and the mix is played, a phrase that names a timer sets it on the runtime, an unrecognised
+phrase says so and its action opens the Library, and a contradiction is explained with neither word
+dropped quietly. Four classes, one scenario each, because this suite runs one JVM per class: a JVM
+that has already driven several activities drops an injected touch silently, so the controls are
+pressed through their own semantics action.
+
+`DescribeMixRenderTest` (GitHub channel) writes two frames of the same understood phrase, dark and
+light. What they cannot show is the same limit every frame here has: no device, no finger, and no
+animation.
+
 ## Home-screen widget tests (Robolectric, JVM)
 
 `app/src/test/java/dev/nightfall`, run under both channels in CI and in the API 36 job:
