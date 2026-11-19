@@ -74,8 +74,9 @@ class CatalogueQualityTest {
     @Test
     fun namesInOneFamilyAreNotTheSameTextureBehindADifferentFilter() {
         // Water, wind and winter names used to share one texture apiece: four water names were
-        // byte-identical and the closest wind pair differed by 0.033.
-        for (family in listOf("water", "wind", "winter")) {
+        // byte-identical and the closest wind pair differed by 0.033. Fire joined the list when its
+        // family grew: a pop's rate, decay and pitch are per-name now, so the bound covers it too.
+        for (family in listOf("water", "wind", "winter", "fire")) {
             val ids = Library.all.filter { it.kind == family }.map { it.id }
             val rendered = ids.associateWith { CatalogueMetrics.solo(it, 2.0) }
             var closest = "" to 1.0

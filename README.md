@@ -42,7 +42,7 @@ and none of this section is a claim about how any of it sounds.
 
 ## What it does
 
-**Build a night out of 98 sounds.** Eleven noise colours, rain, storms, winter,
+**Build a night out of 106 sounds.** Eleven noise colours, rain, storms, winter,
 wind, water, fire, indoor hum, travel, seven bundled field recordings and eighteen
 generated music profiles. One row — *Distant household ambience* — is declared and
 **disabled** rather than filled with substitute audio, because no recording we may
