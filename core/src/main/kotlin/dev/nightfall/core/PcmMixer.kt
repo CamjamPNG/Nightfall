@@ -29,6 +29,10 @@ class PcmMixer(
 
         /** This block's endless level for the layer, 1 when endless night is off. */
         var endless = 1f
+
+        /** This block's tone drift, decided once and used by both the compensation and the loop. */
+        var sweep = 0f
+        var spread = 0f
         var removed = false
         var gain = 0f
         var life = 0f
@@ -163,32 +167,45 @@ class PcmMixer(
             for (n in 0 until count) {
                 val ch = active[n]
                 val c = ch.layer
+                val salt = ch.driftSalt xor night.salt
+                // Decided here and reused by the sample loop, so the power below is the power the loop
+                // actually renders rather than an approximation of it.
+                ch.sweep = Endless.wobble(salt xor 0x51ED, seconds) * depth
+                ch.spread = Endless.wobble(salt xor 0x2F79, seconds) * depth
+                val tone =
+                    tonePower(
+                        c.bass,
+                        c.mid,
+                        c.treble,
+                        (c.tilt + ch.sweep * .18f).coerceIn(-1f, 1f),
+                        (c.brightness + ch.sweep * .10f).coerceIn(0f, 1f),
+                    )
                 // A layer on its way out is outside both sums, so removing one still lowers the mix
                 // the way an unnormalised sum says it does; only the companions are compensated.
                 if (ch.removed) {
                     ch.endless = if (ch.companion) 0f else 1f
                     continue
                 }
+                val audible = c.enabled && !c.mute && (!solo || c.solo)
                 if (ch.companion) {
-                    val e =
-                        if (c.enabled && !c.mute && (!solo || c.solo))
-                            Endless.envelope(ch.driftSalt xor night.salt, seconds, depth, ramp)
-                        else 0f
+                    val e = if (audible) Endless.envelope(salt, seconds, depth, ramp) else 0f
                     ch.endless = e
-                    total += c.gain * c.gain * e * e
+                    total += c.gain * c.gain * tone * e * e
                 } else {
                     ch.endless = 1f
-                    if (c.enabled && !c.mute && (!solo || c.solo)) {
-                        total += c.gain * c.gain
-                        user += c.gain * c.gain
+                    if (audible) {
+                        total += c.gain * c.gain * tone
+                        user += c.gain * c.gain * tone
                     }
                 }
             }
-            // Levels already holds every source at one reference loudness, so a companion that enters
-            // adds exactly its own power: scaling the whole mix by sqrt(user power / total power)
-            // keeps the night's loudness at the mix the person set, whether a source is coming or
-            // going. It is never above 1, so endless night cannot make a mix louder or push the
-            // limiter where the plain mix did not.
+            // Levels holds every source at one reference loudness, so a companion that enters adds
+            // its own power and nothing else: scaling the whole mix by sqrt(the person's power / the
+            // total) keeps the night's loudness at the mix they set, coming or going. It is never
+            // above 1, so the night cannot make a mix louder or push the limiter where the plain mix
+            // did not. `tone` is what makes the two sums the power the loop renders: a layer pulled
+            // 12 dB down by its own tone controls is quieter than its slider says, and a companion
+            // entering must not read that as headroom to fill.
             comp = if (user > 1e-9f && total > 1e-9f) sqrt(user / total).coerceIn(.25f, 1f) else 1f
         }
         var index = 0
@@ -239,14 +256,10 @@ class PcmMixer(
                 // slider still means what it says while the night moves. Tilt, brightness, width and
                 // pan are all level-neutral by construction, which is why the drift cannot quietly
                 // undo the compensation above.
-                val amp = night.config.depth
-                val salt = ch.driftSalt xor night.salt
-                val sweep = Endless.wobble(salt xor 0x51ED, seconds) * amp
-                val spread = Endless.wobble(salt xor 0x2F79, seconds) * amp
-                tilt = (c.tilt + sweep * .18f).coerceIn(-1f, 1f)
-                bright = (c.brightness + sweep * .10f).coerceIn(0f, 1f)
-                width = (c.width + spread * .15f).coerceIn(0f, 1f)
-                pan = (c.pan + spread * .12f).coerceIn(-1f, 1f)
+                tilt = (c.tilt + ch.sweep * .18f).coerceIn(-1f, 1f)
+                bright = (c.brightness + ch.sweep * .10f).coerceIn(0f, 1f)
+                width = (c.width + ch.spread * .15f).coerceIn(0f, 1f)
+                pan = (c.pan + ch.spread * .12f).coerceIn(-1f, 1f)
             }
             val hp = (1 - exp(-2 * PI * c.highPass / sampleRate)).toFloat()
             val lp = (1 - exp(-2 * PI * c.lowPass / sampleRate)).toFloat()
@@ -305,6 +318,19 @@ class PcmMixer(
     }
 
     companion object {
+        /**
+         * How far a layer's own tone controls attenuate it, as one relative power factor: 1.0 with the
+         * controls flat, and the answer to "is this layer quieter than its slider says". The three
+         * bands are weighted equally, which is exactly right at flat settings and a deliberate
+         * approximation away from them — it is the layer's own settings, not a measured level table.
+         */
+        fun tonePower(bass: Float, mid: Float, treble: Float, tilt: Float, bright: Float): Float {
+            val b = 10f.pow((bass + tilt * -4) / 20)
+            val m = 10f.pow(mid / 20)
+            val t = 10f.pow((treble + tilt * 4 + (bright - .5f) * 6) / 20)
+            return (b * b + m * m + t * t) / 3f
+        }
+
         /** Samples below this pass untouched (-6.9 dBFS): the limiter works on peaks, not the mix. */
         const val LIMIT_KNEE = .45f
 

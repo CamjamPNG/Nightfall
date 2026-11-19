@@ -262,17 +262,35 @@ class NightPlan(val config: EndlessConfig, val companions: List<Layer>) {
             return Library
                 .layer(
                     sound.id,
-                    (parent.gain * .60f).coerceIn(.10f, .40f),
+                    // Sixty per cent of its parent, with no floor: a companion of a silent layer is
+                    // silent, and a companion can never be louder than the layer it came from.
+                    (parent.gain * .60f).coerceIn(0f, .40f),
                     "$GUEST$index:${sound.id}",
                 )
                 .copy(
                     pan = (parent.pan * -.5f + (rng.unit() - .5f) * .7f).coerceIn(-1f, 1f),
                     width = (.85f + rng.unit() * .15f).coerceIn(0f, 1f),
-                    lowPass = (9000f + rng.unit() * 7000f).coerceIn(200f, 20000f),
-                    highPass = 50f + rng.unit() * 40f,
+                    // The parent's tone, kept, and only ever narrowed: a companion of a layer the
+                    // person pulled down is pulled down with it, so their equalisation cannot become
+                    // headroom for a source they never set. Its own band is narrower than its
+                    // parent's, which is what keeps it behind the mix.
+                    bass = parent.bass,
+                    mid = parent.mid,
+                    treble = parent.treble,
+                    tilt = parent.tilt,
+                    lowPass = minOf(parent.lowPass, 9000f + rng.unit() * 7000f),
+                    highPass = maxOf(parent.highPass, 50f + rng.unit() * 40f),
                     // Long enough that turning endless night off mid-night rests the bed rather
-                    // than cutting it, since a companion never has a stop time of its own.
+                    // than cutting it.
                     fadeSeconds = 8f,
+                    // A companion belongs to its parent, so everything the person can do to that layer
+                    // it does too: muted, disabled and solo follow it, and so does a stop schedule, so
+                    // a night that ends on the visible layers ends on the invisible ones with them.
+                    // Anything else would be sound the person cannot see a control for.
+                    enabled = parent.enabled,
+                    mute = parent.mute,
+                    solo = parent.solo,
+                    stopAfterMinutes = parent.stopAfterMinutes,
                 )
         }
     }

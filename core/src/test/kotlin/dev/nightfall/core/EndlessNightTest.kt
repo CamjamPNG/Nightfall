@@ -318,6 +318,12 @@ class EndlessNightTest {
 
     private fun db(x: Float) = 20 * kotlin.math.log10(x.toDouble() + 1e-30)
 
+    private fun peakDb(a: FloatArray): Double {
+        var p = 0f
+        for (v in a) if (abs(v) > p) p = abs(v)
+        return db(p)
+    }
+
     @Test
     fun noSeamWhereACompanionArrivesOrLeaves() {
         val mix = night()
@@ -441,6 +447,75 @@ class EndlessNightTest {
     }
 
     @Test
+    fun aCompanionFollowsEverythingThePersonCanDoToItsParent() {
+        // A companion the person cannot see must still obey the controls of the layer it belongs to.
+        // Each case renders the same mix with the night on and asks whether anything is left.
+        fun peakOf(mix: Mix, seconds: Double = 20.0) = M.peakDb(M.render(mix, seconds, loader))
+        val muted = night().let { n -> n.copy(layers = n.layers.map { it.copy(mute = true) }) }
+        val disabled = night().let { n -> n.copy(layers = n.layers.map { it.copy(enabled = false) }) }
+        val silent = night().let { n -> n.copy(layers = n.layers.map { it.copy(gain = 0f) }) }
+        for ((label, mix) in listOf("muted" to muted, "disabled" to disabled, "at zero gain" to silent)) {
+            // The plain mix is silence in all three cases, so any sound here is a companion that
+            // outlived the layer it came from.
+            val plain = M.peakDb(M.render(base.copy(layers = mix.layers), 20.0, loader))
+            val withNight = peakOf(mix)
+            println("%s: %.1f dBFS with the night, %.1f dBFS without".format(label, withNight, plain))
+            assertEquals("a companion kept playing after its layer was $label", plain, withNight, .5)
+        }
+        // A stop schedule that ends the visible layer has to end the companion too.
+        val stopping = night().let { n ->
+            n.copy(layers = n.layers.map { it.copy(stopAfterMinutes = 1f) })
+        }
+        val transcript = stream(stopping, 200.0)
+        val tail = stream(stopping, 200.0, windows = listOf(150.0 to 180.0)).captured[0]
+        println("after its layer's stop schedule: %.1f dBFS in minutes two to three".format(peakDb(tail)))
+        assertTrue("a companion outlived its layer's stop schedule", peakDb(tail) < -60.0)
+        assertTrue("nothing was rendered at all", transcript.step > 0f)
+    }
+
+    @Test
+    fun aMixAttenuatedByItsOwnToneControlsKeepsItsLevel() {
+        // A layer pulled down by its own EQ is quieter than its slider says. Compensation that counted
+        // the slider alone would treat that quiet as headroom and let a companion raise the mix.
+        val attenuated =
+            night().let { n ->
+                n.copy(
+                    layers =
+                        n.layers.map {
+                            it.copy(bass = -12f, mid = -12f, treble = -12f)
+                        }
+                )
+            }
+        val plain =
+            base.let { b ->
+                b.copy(layers = b.layers.map { it.copy(bass = -12f, mid = -12f, treble = -12f) })
+            }
+        val arrival = crossings(attenuated, 0, 60 * 60.0).first { it.second }.first
+        val at = arrival + 150.0
+        val windows = listOf(at to at + 30.0)
+        val seconds = at + 60.0
+        val evolving = stream(attenuated, seconds, windows = windows).captured[0]
+        val reference = stream(plain, seconds, windows = windows).captured[0]
+        fun lufs(x: FloatArray) = M.integratedLufs(M.Signal(x, x))
+        println(
+            "EQ-attenuated mix with a companion in %.2f LUFS, the same mix plain %.2f LUFS"
+                .format(lufs(evolving), lufs(reference))
+        )
+        // Measured 1.1 LU on a ten-second window and less on thirty. The bound is the 1.5 LU
+        // `LevelCalibrationTest` already allows a catalogue source against its reference, and the
+        // residual is the one thing power compensation cannot fix: it equalises power, not loudness,
+        // so a companion whose spectrum differs from its parent's shifts the K-weighted sum slightly.
+        assertTrue(
+            "a companion raised an attenuated mix's level (${lufs(evolving)} vs ${lufs(reference)})",
+            abs(lufs(evolving) - lufs(reference)) < 1.5,
+        )
+        // And the tone factor is exactly 1 at flat controls, so nothing about this moved the measured
+        // level of a plain mix.
+        assertEquals(1f, PcmMixer.tonePower(0f, 0f, 0f, 0f, .5f), .001f)
+        assertEquals(.0625f, PcmMixer.tonePower(-12f, -12f, -12f, 0f, .5f), .005f)
+    }
+
+    @Test
     fun endlessRendersWithoutAllocating() {
         val bean =
             java.lang.management.ManagementFactory.getThreadMXBean() as com.sun.management.ThreadMXBean
@@ -485,7 +560,10 @@ class EndlessNightTest {
         val s = M.render(mix.copy(master = .5f), 120.0, loader)
         val peak = M.peakDb(s)
         val plain = M.peakDb(M.render(base.copy(master = .5f), 120.0, loader))
-        println("peak %.3f with the night, %.3f without".format(peak, plain))
-        assertTrue("the night pushed the peak to $peak", peak < PcmMixer.LIMIT_KNEE)
+        val kneeDb = 20 * kotlin.math.log10(PcmMixer.LIMIT_KNEE.toDouble())
+        println("peak %.3f dBFS with the night, %.3f dBFS without, knee %.3f dBFS".format(peak, plain, kneeDb))
+        // `peakDb` is dBFS and the knee is a linear amplitude; comparing them directly would pass at
+        // any output at all, which is what this test used to do.
+        assertTrue("the night pushed the peak to $peak dBFS", peak < kneeDb)
     }
 }
