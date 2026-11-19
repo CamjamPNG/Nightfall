@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nightfall — an offline sleep sound mixer for Android</title>
-<meta name="description" content="Nightfall is a free Android sleep sound mixer with independent layers, original ambient music, no account and no analytics. The F-Droid build carries no network permission at all. MIT licensed.">
+<meta name="description" content="Nightfall is a free Android sleep sound mixer with independent layers and original ambient music. No account, no ads, and no log of how you use it unless you switch its opt-in diagnostics on yourself. The F-Droid build carries no network permission at all. MIT licensed.">
 <link rel="icon" href="icon.png" type="image/png">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -15,8 +15,8 @@
     <div>
       <h1>Nightfall</h1>
       <p class="tagline">A sleep sound mixer for Android that works with no network. Independent
-      layers, original ambient music, no account, no analytics — and an F-Droid build with no
-      network permission at all.</p>
+      layers, original ambient music, no account, and no log of how you use it unless you switch
+      the opt-in diagnostics on yourself — and an F-Droid build with no network permission at all.</p>
     </div>
   </div>
 </header>
@@ -34,11 +34,38 @@
     <p>It is a native app — Kotlin and Jetpack Compose, Android 8.0 and later — and it ships in
     two builds that differ in exactly one respect. Playback, generation, presets and timers need
     no network in either of them, and neither build has an analytics SDK, advertising, an
-    account or a purchase.</p>
+    account or a purchase. The current release is <strong>2.0</strong>, and it is the release
+    where the app got small and picked up a few things it did not have before; each one is
+    listed below next to what it has not been shown to do.</p>
 
     <ul class="facts">
       <li><strong>Any number of layers.</strong> There is no fixed cap. The app measures its own
       render load and warns when the device is struggling, instead of refusing a tenth layer.</li>
+      <li><strong>A night that keeps moving.</strong> A switch on Home lets a mix evolve instead of
+      settling into one bed: companion layers drawn from the same families as the ones you chose
+      arrive and leave, and every layer's tone drifts around its setting. On eight-hour renders of
+      one preset, the largest level difference between the night on and the night off, at the
+      same sampled hour, was 0.22&nbsp;LU. That is a measurement of level, not of whether the drift
+      sounds good to you, and nobody has listened to a night of it on a phone.</li>
+      <li><strong>A home-screen widget.</strong> Play and pause from the launcher. It drives the
+      app's own media session, so its state follows what is actually playing rather than the last
+      tap. Twenty Robolectric scenarios drive its buttons, state and layout on a JVM and two more
+      draw it in both themes — but no launcher has hosted it, so placing it, resizing it and how a
+      themed launcher draws its label are untested.</li>
+      <li><strong>Diagnostics you have to ask for.</strong> Five taps on the version row in
+      Settings, and off until then. What is behind it is a bounded local journal — 200 entries,
+      64&nbsp;KB or 30 days, whichever comes first — written in fixed tokens with no free text,
+      plus a Share action you start yourself. Nothing is transmitted: it is a file on your phone,
+      and nothing reaches anyone unless you send it. The F-Droid build has none of this — no
+      journal, no switch, no gesture — and the release script proves that from the built APK's dex
+      rather than from a comment.</li>
+      <li><strong>Android 16.</strong> It targets API 36 and still installs on Android 8.0. A CI
+      job runs the app's own suite on an API 36 runtime, so the behaviour a 36 target switches on
+      is executed rather than read to be true.</li>
+      <li><strong>Ready to translate.</strong> Every string the app draws now comes from a
+      resource file, and a build task fails on the next literal typed into a Compose call. No
+      translation exists yet: English is the only locale, and the catalogue's 98 sound names and
+      its preset names still live in Kotlin, outside the resource files.</li>
       <li><strong>Loops that do not betray themselves.</strong> Every bundled recording runs at
       least 180&nbsp;seconds before it repeats, with overlap; most are around four minutes.</li>
       <li><strong>Honest labeling.</strong> Synthesized environments say they are synthesized.
@@ -47,8 +74,8 @@
       <li><strong>Timers that fade.</strong> Sleep timers fade out rather than cut, and single
       layers can stop on their own schedules.</li>
       <li><strong>A testable engine.</strong> The mixer is a Kotlin module with no Android
-      dependency and 69 JVM tests, including zero per-block allocation inside the render path and
-      one that renders a whole eight-hour night through the real path.</li>
+      dependency and 97 JVM tests (96 run by default), including zero per-block allocation inside
+      the render path and one that renders a whole eight-hour night through the real path.</li>
       <li><strong>Two builds.</strong> The F-Droid build has no updater, no network code and no
       network permission — it cannot open a socket. The GitHub build adds an updater that reads
       this repository's release manifest and, by default, installs a newer APK on its own when
@@ -62,8 +89,8 @@
       <li>
         <figure>
           <img src="shots/01-home-playing.png" width="540" height="1201" loading="lazy"
-               decoding="async" alt="Home while the Nine-Layer Dream mix plays: the mix title, the now-playing transport and the first layer rows.">
-          <figcaption>Home, nine layers playing.</figcaption>
+               decoding="async" alt="Home while the Nine-Layer Dream mix plays: the mix title, the now-playing transport, the master volume, the endless-night switch and the first layer rows.">
+          <figcaption>Home, nine layers playing, with the endless-night switch under the transport.</figcaption>
         </figure>
       </li>
       <li>
@@ -103,18 +130,21 @@
       </li>
     </ul>
     <p>The six frames above are the shipped Compose interface, rendered on a JVM by the build's own
-    renderer at 1078×2399 — the same six files the store listing uses. Each was reached through the
-    app's own controls, and each caption names what is actually in the frame, not everything the
-    screen holds. They are not mockups and nothing was composited by hand, but they are also not
-    device captures: no status bar, no gesture bar, no animation, and the render-load and underrun
-    figures lower down in Settings are the test harness's rather than a phone's.
-    <code>docs/TESTING.md</code> records how they are produced and what a still render cannot show.</p>
+    renderer at 1078×2399 — the same six files the store listing uses, re-rendered for 2.0 so the
+    Home frames show the endless-night switch. Each was reached through the app's own controls, and
+    each caption names what is actually in the frame, not everything the screen holds. They are not
+    mockups and nothing was composited by hand, but they are also not device captures: no status
+    bar, no gesture bar, no animation, and the render-load and underrun figures lower down in
+    Settings are the test harness's rather than a phone's. The widget is not shown here — it is drawn
+    by the same harness at 1×1 and 2×1 in both themes, and no launcher has hosted it.
+    <code>docs/TESTING.md</code> records how the frames are produced and what a still render cannot
+    show.</p>
   </section>
 
   <section id="install">
     <h2>Install</h2>
     <p>Signed APKs are attached to <a href="https://github.com/CamjamPNG/Nightfall/releases">GitHub
-    Releases</a>. Six APKs are attached to the current release. Five are the
+    Releases</a>. Six APKs are attached to the current release, 2.0. Five are the
     <strong>GitHub build</strong>: it can update itself, and that is why it asks for
     <code>INTERNET</code>. The sixth, <code>fdroid-universal</code>, is the <strong>F-Droid
     build</strong> — no updater, no network code, no network permission, and updates arrive by
@@ -125,34 +155,34 @@
     been submitted to either, so treat any listing you find elsewhere with suspicion.</p>
 
     <table>
-      <caption>Options in the current release (1.8.2), with what each one costs you.</caption>
+      <caption>Options in the current release (2.0), with what each one costs you.</caption>
       <thead>
         <tr><th scope="col">Option</th><th scope="col">Download</th><th scope="col">Choose it when</th></tr>
       </thead>
       <tbody>
         <tr>
           <th scope="row"><code>arm64-v8a</code></th>
-          <td>79.2&nbsp;MB</td>
+          <td>11.7&nbsp;MB</td>
           <td>You have a 64-bit phone — the last several years of devices, Pixel&nbsp;7 included.</td>
         </tr>
         <tr>
           <th scope="row"><code>armeabi-v7a</code></th>
-          <td>79.2&nbsp;MB</td>
+          <td>11.7&nbsp;MB</td>
           <td>You have an older or 32-bit-only device.</td>
         </tr>
         <tr>
           <th scope="row"><code>x86</code>, <code>x86_64</code></th>
-          <td>79.2&nbsp;MB</td>
+          <td>11.7&nbsp;MB</td>
           <td>You are installing into an emulator or an Intel-based device.</td>
         </tr>
         <tr>
           <th scope="row"><code>universal</code></th>
-          <td>79.3&nbsp;MB</td>
+          <td>11.8&nbsp;MB</td>
           <td>You do not know which one you need. It contains every architecture.</td>
         </tr>
         <tr>
           <th scope="row"><code>fdroid-universal</code></th>
-          <td>79.2&nbsp;MB</td>
+          <td>11.8&nbsp;MB</td>
           <td>The same app with no network permission at all, and no updater — you update it by
           installing the next APK yourself. It installs over the GitHub build without
           uninstalling, because both are signed with the same key.</td>
@@ -160,19 +190,24 @@
         <tr>
           <th scope="row">F-Droid / IzzyOnDroid store</th>
           <td>—</td>
-          <td>Not available. Not submitted; the size rule and a stated policy against
-          AI-generated code are both open questions.</td>
+          <td>Not available. Not submitted. Size is no longer the objection — 11.7&nbsp;MB is well
+          inside the 30&nbsp;MB rule of thumb that stopped 1.8 at the door — but each store's
+          stated position on AI-generated code is a decision for the maintainer, not something
+          copy can settle.</td>
         </tr>
       </tbody>
     </table>
 
-    <p class="note"><strong>The size.</strong> Every APK is about 79&nbsp;MB, and almost all of it
-    is the sound library: 77.4&nbsp;MB of 16-bit mono PCM that the mixer memory-maps, so it can
-    loop without gaps or decoding cost. Code is the smaller half now — the release build is
-    minified, and its dex is 2.8&nbsp;MB rather than the 47&nbsp;MB it was before minification was
-    turned on. The per-architecture split saves about 100&nbsp;KB, not hundreds of megabytes. If
-    79&nbsp;MB is too much, this app is not the right tool for you yet — the honest alternatives are
-    smaller and stream their audio.</p>
+    <p class="note"><strong>The size.</strong> Every APK is between 11.7 and 11.8&nbsp;MB, and most
+    of that is still the sound library: 10,089,142 bytes of Opus in seven containers, against the
+    77,449,472 bytes of 16-bit mono PCM the same seven recordings used to be. That swap is the
+    whole distance from 1.11 to 2.0 — <code>arm64-v8a</code> went from 79,465,722 bytes to
+    11,737,776, so the download is 14.7% of what it was. The per-architecture split still saves
+    about 100&nbsp;KB and is not what makes the download small. Code is 3,041,456 bytes of
+    <code>classes.dex</code>, minified by R8, down from 47,367,428 before minification landed in
+    1.5.2. What the smaller number costs in certainty: the mixer now parses those containers and
+    hands packets to the platform's Opus decoder instead of memory-mapping raw PCM, and that
+    decode path has not been run on a phone. It is in the table below, not buried here.</p>
 
     <p class="note"><strong>Signatures.</strong> The APKs are signed with one release certificate,
     published with each release as <code>nightfall-release-certificate.pem</code>. A store that
@@ -205,10 +240,33 @@
       </thead>
       <tbody>
         <tr>
-          <td>69 deterministic JVM tests on the audio engine</td>
-          <td><code>core/src/test</code>, with <code>./gradlew :core:test</code>; 68 run every
+          <td>97 deterministic JVM tests on the audio engine</td>
+          <td><code>core/src/test</code>, with <code>./gradlew :core:test</code>; 96 run every
           time and the opt-in level-calibration generator is skipped unless
           <code>NIGHTFALL_CALIBRATE=1</code></td>
+        </tr>
+        <tr>
+          <td>Endless night is deterministic, and switching it off gives back the mix you saved</td>
+          <td><code>EndlessNightTest</code> renders the same seed bit-identically, a different seed
+          differently, asserts that a mix saved before the switch existed still means what it
+          meant, and that an endless render allocates nothing per block</td>
+        </tr>
+        <tr>
+          <td>The widget drives the real media session, not a copy of its state</td>
+          <td>Twenty Robolectric scenarios bind a <code>MediaController</code> to the app's own
+          <code>MediaSessionService</code> and drive play and pause through it; two render tests
+          draw the widget at one cell and two, in both themes</td>
+        </tr>
+        <tr>
+          <td>The app's own suite runs on an API 36 runtime</td>
+          <td>the <code>api36</code> job in <code>.github/workflows/android.yml</code>, on every
+          push — the behaviour a 16 target changes is executed, not assumed</td>
+        </tr>
+        <tr>
+          <td>No UI copy is a Kotlin literal</td>
+          <td><code>verifyNoHardcodedCopy</code> in <code>app/build.gradle.kts</code> fails the
+          build on a literal typed into a Compose call — the check lint's
+          <code>HardcodedText</code> cannot see</td>
         </tr>
         <tr>
           <td>The F-Droid build declares no network or install permission</td>
@@ -251,6 +309,32 @@
           find out on yours.</td>
         </tr>
         <tr>
+          <td>The Opus decoder has never run on a phone</td>
+          <td>The seven containers are decoded in the test suite by an independent, conformant Opus
+          decoder, so the format and the packet framing are real. Android's own
+          <code>MediaCodec</code> binding to them is untested: no device has decoded one. If a
+          platform refuses Opus the app says so when it starts instead of playing silence, and
+          every earlier release stays published and installable.</td>
+        </tr>
+        <tr>
+          <td>Nobody has heard the catalogue on a phone</td>
+          <td>No listening test and no acoustic measurement exists. Loudness here is digital gain
+          and signal behaviour, not a sound-pressure claim, and the Opus versions of the seven
+          recordings are younger than that gap, not exempt from it.</td>
+        </tr>
+        <tr>
+          <td>The widget has never met a launcher</td>
+          <td>Its tests drive the app's media session and draw its own views on a JVM. What it
+          looks like placed on a home screen, resized, at another density, or drawn by a themed or
+          third-party launcher is unverified.</td>
+        </tr>
+        <tr>
+          <td>Diagnostics has never recorded a real crash</td>
+          <td>Every entry kind and the journal's caps are driven by tests against exit history
+          those tests supply. No phone has crashed or been killed under it, so a real crash, a real
+          ANR and a real OEM kill have never been journaled.</td>
+        </tr>
+        <tr>
           <td>No update has actually been installed on a phone, by us or unattended</td>
           <td>Android's installer sessions are described from Android's documentation and driven
           against a local server speaking the same protocol. If the automatic install misbehaves on
@@ -278,10 +362,19 @@
 
   <section id="privacy">
     <h2>Privacy</h2>
-    <p>There is no account, no analytics, no advertising identifier, no usage history and no
-    microphone. Mixes, presets and settings live in the app's private storage and are removed when
-    you uninstall. Export to JSON uses Android's file picker and writes wherever you point it. The
-    app reads the selected audio route so it can name your output.</p>
+    <p>There is no account, no analytics service, no advertising identifier and no microphone. It
+    keeps no log of how you use the app unless you turn the opt-in diagnostics on yourself. Mixes,
+    presets and settings live in the app's private storage — that is where your mix is — and are
+    removed when you uninstall. Export to JSON uses Android's file picker and writes wherever you
+    point it. The app reads the selected audio route so it can name your output.</p>
+
+    <p>2.0 added a diagnostics journal, and it is worth being exact about what it is. It is off
+    until you tap the version row five times. When it is on, it writes a bounded local file — 200
+    entries, 64&nbsp;KB or 30 days, whichever comes first — in fixed tokens with no free text, so
+    it records which of the app's own entry kinds happened and nothing you typed, named or
+    listened to. Nothing is transmitted: the only way it leaves the phone is the Share action you
+    press, and you choose where it goes. The F-Droid build contains no journal at all, and the
+    release script checks that from its dex tables.</p>
 
     <p>The GitHub build's updater is the only network code in the product, and it is a download,
     never an upload. It reads one public file, <code>release-manifest.json</code>, from this

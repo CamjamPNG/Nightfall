@@ -13,9 +13,10 @@ VERSION = re.compile(r"^(\d+)\.(\d+)(?:\.(\d+))?(?:\.(\d+))?$")
 KINDS = ("hotfix", "patch", "minor", "major")
 
 DEFAULT_NOTES = (
-    "Each APK carries the complete offline library: no account, no analytics and no connection "
-    "needed to play. What this release changed is the list above; what has never been exercised "
-    "on a phone is recorded in README.md under \"Never checked on hardware\"."
+    "Each APK carries the complete offline library: no account, no log of how you use it unless "
+    "you turn the opt-in diagnostics on yourself, and no connection needed to play. What this release "
+    "changed is the list above; what has never been exercised on a phone is recorded in README.md "
+    "under \"Never checked on hardware\"."
 )
 
 # The long-form notes a subject line cannot carry: what a notable release *is*, what it measures

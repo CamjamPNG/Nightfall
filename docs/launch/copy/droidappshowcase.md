@@ -36,7 +36,7 @@ established posting history, which is why this channel comes before r/Android.
 
 Suggested title (no editorialising, no invented numbers):
 
-> Nightfall — a sleep-sound mixer with independent layers, no account, no analytics and no network permission in the F-Droid build
+> Nightfall — a sleep-sound mixer with independent layers, no account, no usage log unless you opt in, and no network permission in the F-Droid build
 
 Body:
 
@@ -53,8 +53,11 @@ Body:
 >
 > Some details I care about:
 >
-> - **No accounts, no analytics, no ads, no trackers.** All playback and music generation
->   run on the phone.
+> - **No accounts, no ads, no trackers.** All playback and music generation run on the
+>   phone. It keeps no log of how you use it unless you switch the hidden diagnostics on
+>   yourself — five taps on the version row — and even then it is a bounded local file with
+>   no free text that never leaves the device unless you share it. It is not in the F-Droid
+>   build at all.
 >
 > - **Two builds, and the difference is the network.** The F-Droid build has no updater, no
 >   network code and no network permission at all — it cannot open a socket. The build on
@@ -69,14 +72,22 @@ Body:
 >   instead of being passed off as field recordings.
 > - **Sleep timers fade out** rather than cut, and individual layers can stop on their
 >   own schedules.
+> - **The mix can keep moving.** 2.0 added an endless-night switch: companion layers from
+>   the same families as the ones you picked drift in and out, and each layer's tone
+>   drifts around its setting. No ear has heard a whole night of it on a phone yet.
+> - **A home-screen play/pause widget**, plus hidden opt-in diagnostics you have to ask
+>   for (five taps on the version row) and that never transmit anything. Android 16
+>   targeting, and every UI string is now in resources so the app can be translated —
+>   nothing has been translated yet.
 > - **MIT licensed**, source is readable, and the audio engine is a Kotlin module with
->   no Android dependency and 69 tests, so the DSP is inspectable rather than hidden.
+>   no Android dependency and 97 tests, so the DSP is inspectable rather than hidden.
 >
 > What it isn't: there is no iOS version, no cloud sync, no Android Auto.
 > A physical-device pass (Pixel 7, Bluetooth mask, overnight battery) is still pending
 > — I've documented that honestly in the README's limitations section instead of
-> claiming all-night reliability I haven't measured. And it's a large download: about
-> 79 MB, because 77 MB of it is the bundled uncompressed recordings.
+> claiming all-night reliability I haven't measured. The widget has never been placed on
+> a real launcher, and the Opus decoder the recordings now go through has never run on a
+> phone. The download is 11.7 MB.
 >
 > Free, no account, no strings.
 >
@@ -84,7 +95,7 @@ Body:
 >
 > MIT licensed. I'm the developer — questions welcome in the thread.
 
-Notes for Camden before posting: put the size line in your own words if you like,
-but keep it, because it is the first thing someone will notice in the download and
-answering it up front is the difference between a curious reply and a hostile one.
-Do not add a review count, a user count, or a star count.
+Notes for Camden before posting: the size line changed in 2.0 — the APK is 11.7 MB, not
+79 MB, because the recordings ship as Opus instead of raw PCM. Keep the line about what
+has not been verified with it; four things are unverified, not one, and the README lists
+them by name. Do not add a review count, a user count, or a star count.

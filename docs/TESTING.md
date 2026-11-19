@@ -186,7 +186,7 @@ the Compose screens, `PlaybackService`, `AudioHost`, its PCM worker thread and t
 core `PcmMixer` on a JVM. Only the Android edges are shadowed: `AudioTrack` is a
 float sink that records what the mixer wrote and plays nothing, `AudioManager`
 records the focus request without arbitrating between apps, plus the power,
-notification and activity managers. Eleven scenarios, all asserting measured
+notification and activity managers. Twelve scenarios, all asserting measured
 behavior rather than that a method was called:
 
 - `NineLayerPlaybackTest`: the transport control starts the nine-layer mix; the
@@ -220,6 +220,10 @@ behavior rather than that a method was called:
 - `BackGestureTest`: back on a tab returns to Home and back on Home closes the
   screen, and after the screen is finished the audio thread is still writing
   samples and the foreground service has not stopped itself.
+- `EndlessNightToggleTest`: the endless-night switch is on the mix screen below the
+  fold, so it is reached by scrolling; clicking it writes the mix, the setting
+  survives a save, and playback keeps running while the mixer carries the extra
+  beds.
 - `TeardownTest`: destroying the service ends the `Nightfall PCM` thread, drops
   playback state, releases the wake lock, and stops sample writes.
 

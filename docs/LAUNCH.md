@@ -23,32 +23,33 @@ an app cannot phone home, and they notice when a mixer labels synthesized rain a
 a field recording.
 
 The secondary audience reads or changes the DSP: the audio engine is a Kotlin
-module with no Android dependency and 73 JVM tests. Most of them finish in seconds;
+module with no Android dependency and 97 JVM tests. Most of them finish in seconds;
 one renders a whole eight-hour night through the real render path and takes a couple
 of minutes.
 
 ## State of the product today
 
 Everything in this section was read out of the tree or measured from the published
-release on 18 November 2026. Copy that contradicts it is wrong. Each row carries the
+release on 19 November 2026. Copy that contradicts it is wrong. Each row carries the
 command that produced it, because a number without one is a number nobody re-checked.
 
 | Fact | Value | Where |
 | --- | --- | --- |
-| Latest release | `v1.8.2`, versionCode 22, published 2026-11-18T11:39:18Z | `gh release list --limit 3`; `app/build.gradle.kts` (`versionCode = 22`); `CHANGELOG.md` |
+| Latest release | `v2.0`, versionCode 33, published 2026-11-19T14:56:02Z | `gh release view v2.0 --json publishedAt`; `app/build.gradle.kts` (`versionCode = 33`); `CHANGELOG.md` |
 | Builds | two: `github` (updater, four network and install permissions) and `fdroid` (none of them) | `app/build.gradle.kts`, `flavorDimensions += "channel"` |
-| Published APK options | six: five **`github`** splits — `arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64`, `universal` — and `fdroid-universal`, the offline channel in one universal APK | `gh release view v1.8.2 --json assets` |
-| `arm64-v8a` size | 79,190,898 bytes (75.5 MiB) | release asset metadata for `v1.8.2` |
-| `universal` size | 79,289,722 bytes (75.6 MiB) | release asset metadata for `v1.8.2` |
-| `fdroid-universal` size | 79,232,378 bytes (75.6 MiB) | release asset metadata for `v1.8.2` |
-| Payload split | 77,449,472 bytes of PCM under `assets/audio` (73.9 MiB; 77,453,797 with the seven `.license` sidecars), 2,933,096 bytes of dex (2.8 MiB, R8-minified), 17,208 bytes of native libraries | `unzip -l Nightfall-1.8.2-arm64-v8a.apk` summed per entry type |
-| Audio format | 7 recordings, mono 24 kHz, cycles 180.5–240 s with a 1 s overlap, resampled into the 48 kHz mix. Shipped as Opus containers from 19 November 2026 (`OpusFile` parses them, `MediaCodec` decodes each read head), PCM in the v1.8.2 assets above | PCM entry sizes in the published APK; `Sources.kt` (`RecordingSource`, `OVERLAP`); `OpusStream.kt` |
-| Permissions, `github` | `INTERNET`, `ACCESS_NETWORK_STATE`, `REQUEST_INSTALL_PACKAGES`, `UPDATE_PACKAGES_WITHOUT_USER_ACTION`, plus foreground service, media-playback foreground type, notifications and wake lock — read out of the published `v1.8.2` `arm64-v8a` APK | `strings -el` on the APK's `AndroidManifest.xml`; `app/src/github/AndroidManifest.xml` |
-| Permissions, `fdroid` | the same four are `tools:node="remove"`d, and the published `fdroid-universal` APK declares none of them and carries no class from the updater package | `tools/check_release.py`'s `fdroid_violation()` and `updater_symbols()` on the downloaded asset — both empty |
-| Mapping files | the release workflow now attaches one R8 `mapping.txt` per channel; `v1.8.2` predates that step, so its assets have none and the next release will | `.github/workflows/release.yml` upload line; `git show v1.8.2:.github/workflows/release.yml` has no mapping step |
-| Tests | 97 `@Test` in `core/src/test` (96 execute; the level-calibration generator is skipped unless `NIGHTFALL_CALIBRATE=1`), 12 playback scenarios that run under both channels, 51 updater tests in `app/src/testGithub/java/dev/nightfall/update`, 68 release-tooling tests | `grep -rhA2 '@Test' core/src/test --include=*.kt \| grep -c 'fun '`; the same grep per suite; `python3 -m unittest discover -s tools/tests` |
+| Published APK options | six: five **`github`** splits — `arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64`, `universal` — and `fdroid-universal`, the offline channel in one universal APK | `gh release view v2.0 --json assets` |
+| `arm64-v8a` size | 11,737,776 bytes (11.2 MiB) | release asset metadata for `v2.0` |
+| `universal` size | 11,836,600 bytes (11.3 MiB) | release asset metadata for `v2.0` |
+| `fdroid-universal` size | 11,754,680 bytes (11.2 MiB) | release asset metadata for `v2.0` |
+| Payload split | 10,089,142 bytes of Opus in seven `.nfop` containers under `assets/audio` (9.6 MiB), 3,041,456 bytes of dex (2.9 MiB, R8-minified) | `unzip -l Nightfall-2.0-arm64-v8a.apk`, summed over `assets/audio/*` and `classes.dex` |
+| Audio format | 7 recordings, mono 24 kHz captured, cycles 180.5–240 s with a 1 s overlap, resampled into the 48 kHz mix. Shipped as Opus containers since 1.12 (`OpusFile` parses them, `MediaCodec` decodes each read head, ahead of the render path); 1.11 and earlier carried raw PCM at 77,449,472 bytes | the entry sizes in the published APK; `Sources.kt` (`RecordingSource`, `OVERLAP`); `OpusStream.kt` |
+| Permissions, `github` | `INTERNET`, `ACCESS_NETWORK_STATE`, `REQUEST_INSTALL_PACKAGES`, `UPDATE_PACKAGES_WITHOUT_USER_ACTION`, plus foreground service, media-playback foreground type, notifications and wake lock — read out of the published `v2.0` `arm64-v8a` APK | `tools/check_release.py --apk` on the downloaded asset; `app/src/github/AndroidManifest.xml` |
+| Permissions, `fdroid` | the same four are `tools:node="remove"`d, and the published `fdroid-universal` APK declares none of them and carries no class from the updater package | `tools/check_release.py --fdroid-apk` on the downloaded asset — both lists empty |
+| Mapping files | each release attaches one R8 `mapping.txt` per channel: `Nightfall-<version>-github-mapping.txt` and `-fdroid-mapping.txt`. `v2.0` has both, which were its largest assets (35,019,412 and 33,746,541 bytes) | `gh release view v2.0 --json assets` |
+| Diagnostics | hidden behind five taps on the version row, off by default, bounded to 200 entries / 64 KB / 30 days, fixed tokens and no free text, nothing transmitted; compiled out of the `fdroid` channel entirely | `app/src/github/java/dev/nightfall/diagnostics/DiagnosticsJournal.kt`; the `fdroid` stub in `app/src/fdroid/java/dev/nightfall/diagnostics/`; `tools/check_release.py`'s dex check |
+| Tests | 97 `@Test` in `core/src/test` (96 execute; the level-calibration generator is skipped unless `NIGHTFALL_CALIBRATE=1`), 37 in `app/src/test` (12 playback-lifecycle, 20 widget, 2 Android 16, 3 decoder fallback), 51 updater tests in `app/src/testGithub/java/dev/nightfall/update`, 68 release-tooling tests | `grep -rhA2 '@Test' core/src/test --include=*.kt \| grep -c 'fun '`; the same grep per suite; `python3 -m unittest discover -s tools/tests` |
 | Licence | MIT code; recordings CC BY / CC BY-SA / CC0 | `LICENSE`, `AUDIO_LICENSES.md` |
-| Not verified | anything on hardware: Pixel 7 pass, Bluetooth, loudness, overnight battery, and an update actually installing on a phone | `docs/TESTING.md` |
+| Not verified | anything on hardware: Pixel 7 pass, Bluetooth, loudness, overnight battery, an update actually installing on a phone — and the four 2.0 gaps, the Opus decoder on a phone, the catalogue heard on a device, the widget on a real launcher, diagnostics recording a real crash | `docs/TESTING.md`; `README.md` *Never checked on hardware* |
 
 ### The two builds, in the words the copy has to use
 
@@ -86,24 +87,31 @@ F-Droid channel — including the published `fdroid-universal` APK — and false
 download here can update itself, and that is the only thing it uses the network for; the
 F-Droid build has no network permission at all."
 
-The size is still the number that decides two of the channels below, but it has moved.
-The APK is 79.2 MB, not 91.2 MB, because R8 minification and resource shrinking landed
-in 1.5.2 (`isMinifyEnabled = true`, `isShrinkResources = true` in
-`app/build.gradle.kts`) and took the dex from 47,367,428 bytes to 2,933,096. Those are
-uncompressed entry sizes and dex is compressed inside the APK, so the download fell by
-the smaller measured 11,971,730 bytes — quote the payload figure as payload and the
-APK delta as the download. What is left
-is almost entirely the sound library: 77,449,472 bytes of uncompressed PCM
-(`noCompress += "pcm"`, so the mixer can map the files), which is 97.8% of the download.
-Native libraries are not the cause and never were: all five per-ABI APKs are within
-103 KB of each other. **The size lever was the recordings, not the code.** An Opus decode
-path landed behind `-PnightfallOpus=true` and shipped off by default in 1.8, so no
-published APK at the time of this kit had been encoded smaller. It was switched on and
-the PCM left the build on 19 November 2026: measured on one machine, the unsigned
-universal release build is 11,662,953 bytes and the universal debug build 30,374,368,
-down from 79,371,423 and 98,083,910 bytes for the same two builds carrying the PCM. The
-payload rows above stay the v1.8.2 record they are sourced to, and the launch copy that
-quotes 79 MB is historical copy.
+The size used to be the number that decided two of the channels below. It has moved
+twice, and both moves matter to copy that quotes a download size.
+
+The first was R8: minification and resource shrinking landed in 1.5.2
+(`isMinifyEnabled = true`, `isShrinkResources = true` in `app/build.gradle.kts`) and took
+the dex from 47,367,428 bytes to 2,933,096, which is why the APK fell from 91.2 MB to
+79.2 MB rather than staying above 90. Those are uncompressed entry sizes and dex is
+compressed inside the APK, so the download fell by the smaller measured 11,971,730 bytes
+— quote the payload figure as payload and the APK delta as the download.
+
+The second was the recordings, and it finished in 1.12. The seven field recordings now
+ship as Opus containers totalling 10,089,142 bytes, where every release up to 1.11
+carried 77,449,472 bytes of uncompressed PCM (`noCompress += "pcm"`, so the mixer could
+map the files). `arm64-v8a` measured 79,465,722 bytes in 1.11 and 11,737,776 in 2.0, so
+the download is 14.7% of what it was; 2.0 adds no code and publishes at 1.12's size. The
+per-ABI split still saves about 100 KB and is not what makes the download small. **The
+size lever was the recordings, not the code, and the lever has been pulled.**
+
+What that move cost is a decoder in the render path. The mixer parses the containers and
+hands packets to the platform's Opus decoder ahead of the render path instead of mapping
+raw PCM, and that platform binding has never run on a phone: the test suite decodes every
+container with an independent conformant decoder (`OpusAssetDecodeTest`), which proves the
+format and says nothing about `MediaCodec`. A platform that refuses Opus is reported at
+start-up rather than played as silence. Every row above is the `v2.0` record; the `v1.8.2`
+figure of 79,190,898 bytes is history and should not appear in current copy.
 
 ## Channels, with the rule that actually bites
 
@@ -149,17 +157,15 @@ ready-to-paste request. Short version, in the order the blockers matter:
    Camden's call to make, not a copy problem to be worked around, and the form
    must not be filed with "None". Both versions of the request are drafted:
    `docs/launch/izzyondroid-request.md` defaults to the honest disclosure.
-2. **Size.** 30 MB rule of thumb, and the contributing page states plainly: "We
-   cannot currently accept APK files over 30 MB." The smallest published APK is
-   79,186,790 bytes — 75.5 MiB, which is 2.6× that ceiling. Per-ABI splits are their
-   usual remedy and are already in place, so they cannot help: native libraries are
-   17 KB and the bulk is 77,449,472 bytes of raw recordings. R8 has since landed
-   (1.5.2) and took the dex from 47.26 MB to 2.93 MB, which is why the APK was 79 MB
-   instead of 91 MB. The recordings were the rest of it, and from 19 November 2026 they
-   ship as Opus: the unsigned universal release build measures 11,662,953 bytes, under
-   that 30 MB ceiling. **No published APK was under 75 MiB**, which is what this kit was
-   written against; the first release carrying the containers settles the size blocker,
-   and `docs/launch/izzyondroid-request.md` keeps the measurements it was drafted from.
+2. **Size was the second, and it is settled.** 30 MB rule of thumb, and the
+   contributing page states plainly: "We cannot currently accept APK files over 30 MB."
+   When this kit was written the smallest published APK was 79,186,790 bytes (75.5 MiB,
+   2.6× that ceiling) and the bulk of it was 77,449,472 bytes of raw PCM, so per-ABI
+   splits could not help. That is over: every APK in `v2.0` is between 11,737,764 and
+   11,836,600 bytes, because the seven recordings ship as 10,089,142 bytes of Opus
+   instead of PCM. The smallest is now 0.39× the ceiling rather than 2.6×. What the
+   smaller number costs is stated next to it — the platform Opus decoder has never run
+   on a phone.
 3. **They ship our APK, not their build.** Their FAQ: "App Source — APK provided
    by the app's dev team". Reproducible-build verification is optional trust on
    top, so our `apksigcopier` gap does not block inclusion. This used to be blocked
@@ -168,7 +174,7 @@ ready-to-paste request. Short version, in the order the blockers matter:
    `Nightfall-<version>-fdroid-universal.apk`, the offline channel with no updater,
    no network code and no network permission, and it is deliberately kept out of
    `release-manifest.json` so the in-app updater never offers it. The request should
-   name `Nightfall-1.8.2-fdroid-universal.apk`.
+   name `Nightfall-2.0-fdroid-universal.apk`.
 4. **Submission is a Codeberg issue**, using the `App Inclusion Request` form in
    `IzzyOnDroid/repodata`. That needs a Codeberg account, which only Camden can
    create.
@@ -181,7 +187,7 @@ containers, leaving the AI-use disclosure.
 
 The F-Droid listing is the repository's own work (`fdroid/`, `docs/FDROID.md`).
 Nothing in this document submits to F-Droid or claims it has been submitted. Two
-things about it are current as of `v1.8.2`: the `fdroid`-channel APK *is* published,
+things about it are current as of `v2.0`: the `fdroid`-channel APK *is* published,
 as `Nightfall-<version>-fdroid-universal.apk` on every release, so the offline build
 is downloadable without building it; and the self-hosted repository the project
 intends to serve (`https://camjampng.github.io/Nightfall/fdroid/repo`) returns `404`
@@ -232,13 +238,13 @@ Each claim is checkable in the repository and each has its limit stated next to 
 | --- | --- | --- |
 | Playback needs no network, in either build | `PRIVACY.md`; the `fdroid` channel removes `INTERNET`, `ACCESS_NETWORK_STATE`, `REQUEST_INSTALL_PACKAGES` and `UPDATE_PACKAGES_WITHOUT_USER_ACTION` (`app/src/fdroid/AndroidManifest.xml`), and `tools/check_release.py` fails a release if either channel's permissions drift | The GitHub APK *does* have `INTERNET`, for its own update check; the claim is about playback and about the F-Droid build, not about every download |
 | The update channel is bounded, and it never interrupts a night | `README.md` "Updates"; `PRIVACY.md`: one manifest read at most every six hours after a successful check and never more than once every fifteen minutes, no upload; an install is refused while audio is playing or while playback state is unknown (`UpdateAutomation.mayInstallNow`) and waits for the stop | Installing needs no tap by default. The automatic check can be switched off, but *Check for updates* stays, so a check is always something the app can be made to do; it is still a network call from an app whose selling point is not making them, and no automatic update has been watched on a phone |
-| A DSP core with real tests | 73 JVM tests in `core/src/test/` (72 execute; the calibration generator is opt-in), free of Android dependencies, one of which renders an eight-hour night | Tests prove signal behavior, not that it sounds good to you |
+| A DSP core with real tests | 97 JVM tests in `core/src/test/` (96 execute; the calibration generator is opt-in), free of Android dependencies, one of which renders an eight-hour night | Tests prove signal behavior, not that it sounds good to you |
 | No layer-count cap, and measured capacity instead | `MixerTest` no-cap case; the render-budget warning on Home | Your phone has finite CPU; a heavy mix can still underrun |
 | Bundled recordings loop for at least 180 seconds | `docs/audio-credits.json` cycle lengths; enforced by `tools/prepare_audio.py` and `tools/check_release.py` | Long loops are not the same as a well-recorded loop |
 | Synthesis is labeled as synthesis | Catalogue descriptions; "distant household ambience" is declared unavailable rather than faked | Some sounds are interpretations, not recordings of that place |
 | MIT licence, voluntary commercial courtesy | `LICENSE`, `COMMERCIAL_COURTESY.md` | The courtesy request is not a licence condition |
 | Two local release builds are byte-identical | `docs/verification/reproducibility.json`, tag `v1.0.1.2` | Not an independent F-Droid build, and not a signature reproduction |
-| Six APKs plus `SHA256SUMS.txt` and the release certificate | release assets for `v1.8.2` | Five of them are the `github` channel; only the sixth, `fdroid-universal`, has no network permission. All of them are 79.2 MB, and 77.4 MB of each is recordings |
+| Six APKs plus two R8 mappings, `SHA256SUMS.txt`, `release-manifest.json` and the release certificate | release assets for `v2.0` | Five of them are the `github` channel; only the sixth, `fdroid-universal`, has no network permission. All six are between 11.7 and 11.8 MB, and 10,089,142 bytes of each is the Opus recording set |
 
 **Never say:** "clinically proven", "improves sleep quality", "scientifically
 tuned", "500,000 users", "rated 4.8", "bestseller", "tested on hundreds of
