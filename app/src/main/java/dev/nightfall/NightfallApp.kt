@@ -120,8 +120,8 @@ class NightfallRuntime(
     fun probeDecodeSupport() {
         scope.launch {
             val reason = withContext(Dispatchers.IO) { OpusAssets.probe(context) } ?: return@launch
-            // TODO(CAM-48): the opt-in diagnostics journal records a `decode_failure` event carrying
-            // `reason` here once it exists.
+            // Reaching status.error is what the opt-in diagnostics journal reports, as a `failure`
+            // event with a closed token; the platform's own words stay out of the journal.
             if (status.value.error == null)
                 status.value =
                     status.value.copy(error = context.getString(R.string.error_opus_unsupported))

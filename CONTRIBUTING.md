@@ -92,7 +92,7 @@ This is the command a change has to survive, and the same one CI runs in
 ./gradlew :core:test :app:assembleDebug :app:lintDebug
 ```
 
-- `:core:test` — the 71 deterministic JVM tests (70 run; one calibration generator is
+- `:core:test` — the 73 deterministic JVM tests (72 run; one calibration generator is
   opt-in): nine simultaneous sources,
   independent gain/mute/solo, phase continuity when layers are added or removed,
   limiting, colored-noise spectra, musical tuning, timers and fades, JSON
@@ -163,7 +163,7 @@ persistence, say plainly in the PR what you ran on a device and what you did not
 | Path | What lives there |
 | --- | --- |
 | `core/src/main/kotlin/dev/nightfall/core/` | Android-free DSP: `Library.kt` catalogue, `Sources.kt` renderers, `MusicSource.kt`, `PcmMixer.kt`, `Models.kt` state and JSON |
-| `core/src/test/kotlin/` | The 71 JVM tests (70 run; one calibration generator is opt-in) |
+| `core/src/test/kotlin/` | The 73 JVM tests (72 run; one calibration generator is opt-in) |
 | `app/src/main/java/dev/nightfall/` | Compose UI, `AudioHost` (the single output stream), `PlaybackService` (Media3), DataStore persistence |
 | `app/src/opus/assets/audio/` | Bundled 24 kHz mono Opus containers, one per field recording |
 | `app/src/pcm/assets/audio/` | The raw PCM capture those containers were encoded from plus its `.pcm.license` sidecars: read by the host measurement tests, no longer an asset source, so no build packs it |

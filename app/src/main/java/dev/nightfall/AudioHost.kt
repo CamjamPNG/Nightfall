@@ -338,8 +338,8 @@ class AudioHost(private val runtime: NightfallRuntime) {
      * saying so is the worst failure a mixer can have.
      */
     private fun reportDecodeFailure(reason: String) {
-        // TODO(CAM-48): when the opt-in diagnostics journal lands, this is where a `decode_failure`
-        // event with `reason` is recorded. Nothing to call yet, so the seam is this line.
+        // The opt-in diagnostics journal records a `failure` event for anything that lands here: it
+        // observes status.error and keeps a closed token, never this message's text.
         val message = context.getString(R.string.error_recording_undecodable, reason)
         // The main thread owns playback status; a decoder's worker reports through it rather than
         // writing the state flow itself, which could resurrect a stale copy of `playing`.

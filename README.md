@@ -248,7 +248,7 @@ How many tests: **73 in `core`** (72 run, plus the opt-in `NIGHTFALL_CALIBRATE=1
 calibration generator, which is skipped by design), **33 Robolectric scenarios** in
 `app/src/test` (11 playback-lifecycle, 20 widget, 2 Android 16) that run twice, once
 per channel, plus 3 decoder-fallback tests, **51 updater tests** in
-`app/src/testGithub/java/dev/nightfall/update`, and **53 release-tooling tests**. The
+`app/src/testGithub/java/dev/nightfall/update`, and **66 release-tooling tests**. The
 six render classes in `app/src/testGithub/java/dev/nightfall/render` are not
 updater tests and are not counted there. They all run on a JVM with no device, no
 emulator and no network. Recount them with:
@@ -294,8 +294,8 @@ Needs JDK 17 and Android SDK 35 with build-tools 35.0.0. These three commands ar
 documented gate, and CI runs these three plus the rest of the list below.
 
 ```sh
-./gradlew :core:test :app:assembleDebug :app:lintDebug   # 71 core tests, both channels, lint aborts on error
-python3 -m unittest discover -s tools/tests              # 53 release-tooling tests
+./gradlew :core:test :app:assembleDebug :app:lintDebug   # 73 core tests, both channels, lint aborts on error
+python3 -m unittest discover -s tools/tests              # 66 release-tooling tests
 python3 tools/check_release.py                           # store metadata, bundled audio, both channels
 ```
 
