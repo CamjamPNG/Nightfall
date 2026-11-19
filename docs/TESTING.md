@@ -325,6 +325,40 @@ moved off the main thread; this does not establish that every device issue has
 been resolved. That never-green `PlaybackIntegrationTest` has since been replaced
 by the Robolectric scenarios above, which run on a JVM without an emulator.
 
+## Library navigation tests (Robolectric, JVM)
+
+`app/src/test/java/dev/nightfall`, run under both channels in CI and in the API 36 job. Every
+scenario drives the shipped `SoundLibrary` through the real activity at a phone's own size
+(`@Config(qualifiers = "w411dp-h914dp-420dpi")`): the app-level default window is 320×470 px, in
+which the list's viewport is 249 px and a matching row is simply not composed, so an assertion there
+measures the window rather than the screen.
+
+- `LibraryNavigationTest` (5): a category chip leaves one section with its own count and the first
+  entry of that category, and takes the catalogue's first row away rather than leaving it four
+  screens up; a search narrows the list to the names that match; the empty state appears and its
+  "Show all sounds" action empties the field (asserted through `EditableText`, not through a
+  substring of the placeholder), restores the catalogue and removes itself; both filters are still
+  applied after leaving the tab for Presets and returning, which the tab's own
+  `SaveableStateProvider` does and this now pins; and a section closes to nothing but its header and
+  opens again, asserted through the header's `stateDescription`.
+- `LibraryAddTest` (1, its own JVM because it writes the runtime's persisted state): the row's own
+  add control adds that sound in one activation, and the one entry no recording is bundled for says
+  "Recording not bundled" with its add control disabled.
+- `LibraryNavigationRenderTest` writes five frames — the grouped list, the list scrolled twelve
+  items, one category, a closed section, and the empty state — and pins the one thing a still frame
+  cannot state: the search field's top edge is compared before and after the scroll and must be
+  unchanged, which is what "pinned" means.
+
+Measured on the frames rather than by eye: the top 336 px of the library at rest and after scrolling
+twelve items are byte-identical (0.0000% of sampled pixels differ) while the list area below differs
+by 34.8%, and the same band in the before pair — the screen as it shipped — differs by 74.6%, which
+is the controls scrolling away. Card bands in every frame measure 87 to 152 px tall, the same set of
+heights in each, so no row is drawn clipped.
+
+What this cannot show: a finger on glass. Whether the pinned rail feels right, whether a sticky
+header is where the eye expects it after a fast fling, and whether a 411 dp-tall window (the rail is
+then 31% of its height; 14% on a phone) has enough list left are judgements no JVM test makes.
+
 ## Home-screen widget tests (Robolectric, JVM)
 
 `app/src/test/java/dev/nightfall`, run under both channels in CI and in the API 36 job:

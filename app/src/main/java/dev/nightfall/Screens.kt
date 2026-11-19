@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.platform.LocalContext
@@ -57,6 +58,9 @@ private fun LayerCount(r: NightfallRuntime, soundId: String) {
         )
 }
 
+/** One catalogue section: its name and the entries the current filters leave in it. */
+private data class LibrarySection(val name: String, val sounds: List<Sound>)
+
 @Composable
 fun SoundLibrary(r: NightfallRuntime) {
     val context = LocalContext.current
@@ -64,22 +68,47 @@ fun SoundLibrary(r: NightfallRuntime) {
     // English word deciding behaviour. The label is a label, the value is a value.
     var category by rememberSaveable { mutableStateOf<String?>(null) }
     var query by rememberSaveable { mutableStateOf("") }
-    val sounds =
-        Library.all.filter {
-            (category == null || it.category == category) &&
-                (it.name.contains(query, true) || it.category.contains(query, true))
+    // Which sections are closed is part of what someone was doing here, so it is saved beside the
+    // filters and comes back with them.
+    var closed by
+        rememberSaveable(stateSaver = listSaver<Set<String>, String>({ it.toList() }, { it.toSet() })) {
+            mutableStateOf(emptySet<String>())
         }
-    LazyColumn(
-        contentPadding = PaddingValues(22.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        item {
-            PageHeading(
-                stringResource(R.string.library_title),
-                stringResource(R.string.library_subtitle),
-            )
+    // The catalogue is fixed and its order is editorial — a drizzle before a downpour, a breeze
+    // before a gale — so the register of categories is read once and the grouping is built when a
+    // filter changes, not on every frame.
+    val categories = remember { Library.all.map { it.category }.distinct() }
+    val sections =
+        remember(query, category) {
+            Library.all
+                .filter { category == null || it.category == category }
+                .filter { it.name.contains(query, true) || it.category.contains(query, true) }
+                .groupBy { it.category }
+                .map { (name, sounds) -> LibrarySection(name, sounds) }
         }
-        item {
+    val list = rememberLazyListState()
+    // A changed filter is a different list and starts at its own top: from four screens down, the
+    // filter used to land on the short list's last row rather than on its first. A tab that is
+    // restored with the same filter is the same list, so it keeps the row it was left on — which is
+    // why this compares against the filter last applied instead of always scrolling.
+    var appliedCategory by rememberSaveable { mutableStateOf(category) }
+    var appliedQuery by rememberSaveable { mutableStateOf(query) }
+    LaunchedEffect(category, query) {
+        if (category != appliedCategory || query != appliedQuery) {
+            appliedCategory = category
+            appliedQuery = query
+            list.scrollToItem(0)
+        }
+    }
+    Column(Modifier.fillMaxSize()) {
+        // The filters sit above the list instead of being its first items. A search field that
+        // scrolls away is what turned finding one sound into a scroll through ninety-eight rows.
+        Column(
+            Modifier.fillMaxWidth()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(horizontal = 22.dp)
+                .padding(top = 6.dp, bottom = 10.dp)
+        ) {
             OutlinedTextField(
                 query,
                 { query = it },
@@ -92,10 +121,9 @@ fun SoundLibrary(r: NightfallRuntime) {
                         contentDescription = context.getString(R.string.library_a11y_search)
                     },
             )
-        }
-        item {
+            Spacer(Modifier.height(8.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(listOf<String?>(null) + Library.all.map { it.category }.distinct()) { c ->
+                items(listOf<String?>(null) + categories) { c ->
                     FilterChip(
                         selected = category == c,
                         onClick = { category = c },
@@ -104,72 +132,146 @@ fun SoundLibrary(r: NightfallRuntime) {
                 }
             }
         }
-        item {
-            SectionLabel(
-                category ?: stringResource(R.string.library_section_explore),
-                pluralStringResource(
-                    R.plurals.library_available,
-                    sounds.count { it.available },
-                    sounds.count { it.available },
-                ),
-            )
-        }
-        items(sounds, key = { it.id }) { sound ->
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        soundIcon(sound),
-                        null,
-                        Modifier.size(26.dp),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                    Spacer(Modifier.width(14.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(sound.name, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            when (sound.kind) {
-                                "recording" -> stringResource(R.string.library_kind_recording)
-                                "unavailable" ->
-                                    stringResource(R.string.library_unavailable)
-                                "music" -> stringResource(R.string.library_kind_music)
-                                else -> sound.description
-                            },
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        LayerCount(r, sound.id)
-                    }
-                    IconButton(onClick = { r.add(sound) }, enabled = sound.available) {
-                        Icon(
-                            if (sound.available) Icons.Outlined.AddCircleOutline
-                            else Icons.Outlined.Info,
-                            stringResource(R.string.library_add, sound.name),
-                        )
-                    }
-                }
-            }
-        }
-        if (sounds.isEmpty())
-            item {
-                Text(
-                    stringResource(R.string.library_no_match),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+        LazyColumn(
+            Modifier.weight(1f).fillMaxWidth(),
+            state = list,
+            contentPadding = PaddingValues(start = 22.dp, end = 22.dp, bottom = 22.dp),
+        ) {
+            item(key = "heading") {
+                PageHeading(
+                    stringResource(R.string.library_title),
+                    stringResource(R.string.library_subtitle),
                 )
             }
-        item {
+            if (sections.isEmpty())
+                item(key = "empty") {
+                    Column {
+                        Text(
+                            stringResource(R.string.library_no_match),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        TextButton(
+                            onClick = {
+                                query = ""
+                                category = null
+                            },
+                            contentPadding = PaddingValues(horizontal = 0.dp),
+                        ) {
+                            Text(stringResource(R.string.library_no_match_action))
+                        }
+                    }
+                }
+            sections.forEach { section ->
+                val open = section.name !in closed
+                stickyHeader(key = "section-${section.name}", contentType = "section") {
+                    LibrarySectionHeader(
+                        section.name,
+                        section.sounds.count { it.available },
+                        open,
+                    ) {
+                        closed =
+                            if (open) closed + section.name else closed - section.name
+                    }
+                }
+                if (open)
+                    items(section.sounds, key = { it.id }, contentType = { "sound" }) { sound ->
+                        LibraryRow(sound, r)
+                    }
+            }
+            item(key = "disclaimer") {
+                Text(
+                    stringResource(R.string.library_disclaimer),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 12.dp),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * A category's outline row: the name, how many of its entries are available, and whether it is
+ * closed. It sticks to the top of the list so the section a row belongs to is never off screen.
+ */
+@Composable
+private fun LibrarySectionHeader(name: String, available: Int, open: Boolean, onToggle: () -> Unit) {
+    val state =
+        stringResource(
+            if (open) R.string.library_section_expanded else R.string.library_section_collapsed
+        )
+    Row(
+        Modifier.fillMaxWidth()
+            // Opaque on purpose: rows scroll underneath a sticky header.
+            .background(MaterialTheme.colorScheme.background)
+            .clickable(role = Role.Button, onClick = onToggle)
+            .semantics {
+                heading()
+                stateDescription = state
+            }
+            .padding(top = 14.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                stringResource(R.string.library_disclaimer),
-                fontSize = 12.sp,
+                pluralStringResource(R.plurals.library_available, available, available),
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(vertical = 12.dp),
             )
+            Spacer(Modifier.width(4.dp))
+            Icon(
+                if (open) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                null,
+                Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun LibraryRow(sound: Sound, r: NightfallRuntime) {
+    Card(
+        modifier = Modifier.padding(bottom = 10.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                soundIcon(sound),
+                null,
+                Modifier.size(26.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(sound.name, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    when (sound.kind) {
+                        "recording" -> stringResource(R.string.library_kind_recording)
+                        "unavailable" -> stringResource(R.string.library_unavailable)
+                        "music" -> stringResource(R.string.library_kind_music)
+                        else -> sound.description
+                    },
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                LayerCount(r, sound.id)
+            }
+            IconButton(onClick = { r.add(sound) }, enabled = sound.available) {
+                Icon(
+                    if (sound.available) Icons.Outlined.AddCircleOutline
+                    else Icons.Outlined.Info,
+                    stringResource(R.string.library_add, sound.name),
+                )
+            }
         }
     }
 }

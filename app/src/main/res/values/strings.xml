@@ -170,12 +170,14 @@
     <string name="library_search_hint">Find your sound</string>
     <string name="library_a11y_search">Search sounds</string>
     <string name="library_category_all">All</string>
-    <string name="library_section_explore">Explore sounds</string>
     <string name="library_unavailable">Recording not bundled</string>
     <string name="library_kind_recording">Field recording · offline</string>
     <string name="library_kind_music">Original generative music</string>
     <string name="library_add">Add %1$s</string>
     <string name="library_no_match">No sounds match your search.</string>
+    <string name="library_no_match_action">Show all sounds</string>
+    <string name="library_section_expanded">Expanded</string>
+    <string name="library_section_collapsed">Collapsed</string>
     <string name="library_disclaimer">Environmental synthesis is an interpretation of a sound, not a field recording. Gray, green, black and velvet are labeled configurable presets. All music is generated on your device.</string>
 
     <!-- Presets. -->

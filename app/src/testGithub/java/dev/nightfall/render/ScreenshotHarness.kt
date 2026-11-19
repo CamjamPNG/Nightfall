@@ -3,6 +3,7 @@ package dev.nightfall.render
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
@@ -108,9 +109,19 @@ abstract class ScreenshotHarness : PlaybackHarness() {
             .fetchSemanticsNodes()
             .isNotEmpty()
 
-    /** The first scrollable in the tree is the screen's own list; cards and strips nest inside it. */
+    /**
+     * The screen's own list is the tallest scrollable in the tree. It used to be simply the first
+     * one, until the Library put a horizontal chip rail above its list: that rail is a scrollable
+     * too, and scrolling it by index scrolls the wrong thing.
+     */
+    protected fun screenList(): SemanticsNodeInteraction {
+        val scrollables = compose.onAllNodes(hasScrollAction()).fetchSemanticsNodes()
+        val tallest = scrollables.indices.maxBy { scrollables[it].boundsInRoot.height }
+        return compose.onAllNodes(hasScrollAction())[tallest]
+    }
+
     protected fun scrollScreenTo(index: Int) {
-        compose.onAllNodes(hasScrollAction())[0].performScrollToIndex(index)
+        screenList().performScrollToIndex(index)
         compose.waitForIdle()
     }
 

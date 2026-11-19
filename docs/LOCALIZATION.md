@@ -1,7 +1,7 @@
 # Localization
 
 Every string Nightfall shows a person used to be a Kotlin literal in `app/src/main/java/dev/nightfall/`.
-The app's own chrome is now in `app/src/main/res/values/strings.xml` and `plurals.xml`: 276 keys,
+The app's own chrome is now in `app/src/main/res/values/strings.xml` and `plurals.xml`: 278 keys,
 every one of them used, extracted against `main` at `1ffbee1` and counted again at this branch's head.
 The count is `grep -c '<string name=\|<plurals name='` over the two files, and §2 below is the
 inventory as it stood when the extraction landed: the keys added afterwards — the home-screen widget's,
@@ -289,31 +289,38 @@ collapsed summary, and each is also the value behind the "N adjusted" count:
 
 `home.timer_dialog.title` duplicates `home.timer.content_description` (605): one key can serve both.
 
-### 2.13 Library — `Screens.kt:37-148`
+### 2.13 Library — `Screens.kt:61-283`
 
 | Key | Line | Text |
 | --- | --- | --- |
-| `library.count_in_mix` | 45 | `{count}` in your mix |
-| `library.title` | 61 | Sound library |
-| `library.subtitle` | 61 | A little of everything. As many layers as you like. |
-| `library.search.placeholder` | 67 | Find your sound |
-| `library.search.content_description` | 71 | Search sounds |
-| `library.category.all` | 50, 76, 87 | All |
-| `library.section.explore` | 87 | Explore sounds |
-| `library.section.available` | 88 | `{count}` available |
-| `library.item.subtitle.recording` | 112 | Field recording · offline |
-| `library.item.subtitle.unavailable` | 113 | Recording not bundled |
-| `library.item.subtitle.music` | 114 | Original generative music |
-| `library.item.action.add` | 126 | Add `{name}` |
-| `library.empty` | 135 | No sounds match your search. |
-| `library.disclaimer` | 141 | Environmental synthesis is an interpretation of a sound, not a field recording. Gray, green, black and velvet are labeled configurable presets. All music is generated on your device. |
+| `library.count_in_mix` | 55 | `{count}` in your mix |
+| `library.search.placeholder` | 116 | Find your sound |
+| `library.search.content_description` | 121 | Search sounds |
+| `library.category.all` | 130 | All |
+| `library.title` | 143 | Sound library |
+| `library.subtitle` | 144 | A little of everything. As many layers as you like. |
+| `library.empty` | 151 | No sounds match your search. |
+| `library.empty.action` | 161 | Show all sounds |
+| `library.disclaimer` | 184 | Environmental synthesis is an interpretation of a sound, not a field recording. Gray, green, black and velvet are labeled configurable presets. All music is generated on your device. |
+| `library.section.collapsed` | 202, 203 | Collapsed |
+| `library.section.expanded` | 202, 203 | Expanded |
+| `library.section.available` | 220 | `{count}` available |
+| `library.item.subtitle.recording` | 258 | Field recording · offline |
+| `library.item.subtitle.unavailable` | 259 | Recording not bundled |
+| `library.item.subtitle.music` | 260 | Original generative music |
+| `library.item.action.add` | 272 | Add `{name}` |
 
-`library.category.all` is the sharpest structural problem in the file. `"All"` is simultaneously a
-button label and a sentinel compared against the current filter at lines 50, 54 and 87. Translating
-it without changing the comparison breaks the filter; the sentinel has to become `null` or a sealed
-value first. `library.disclaimer` also names four catalogue entries ("Gray, green, black and velvet")
-that must stay recognisable against the names in §2.22, so this sentence has to be translated with
-the catalogue in front of the translator.
+`library.category.all` is the sharpest structural problem in the file, and it has since been solved
+the way this document said it had to be: `"All"` used to be both a button label and the filter
+sentinel, so translating it broke the comparison. The chip's value is `null` for every category, and
+the word is only ever a label. `library.disclaimer` also names four catalogue entries ("Gray, green,
+black and velvet") that must stay recognisable against the names in §2.22, so this sentence has to be
+translated with the catalogue in front of the translator.
+
+`library.section.explore` ("Explore sounds") was the one label over a single 98-row list. The list is
+now grouped by category with a header per section, so that key was deleted rather than left unused,
+and the three keys added in its place are the empty state's way out and a section's two states, which
+TalkBack reads as the chip's `stateDescription`.
 
 ### 2.14 Presets — `Screens.kt:150-298`
 
