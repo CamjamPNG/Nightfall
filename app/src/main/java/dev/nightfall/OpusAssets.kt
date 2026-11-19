@@ -17,40 +17,67 @@ import java.nio.ByteOrder
  * `core` where a host test covers them; nothing here is exercised by a unit test, because only a
  * device has `MediaCodec`.
  */
+/**
+ * A decoder that may or may not accept the Opus identification header as its codec-specific data.
+ *
+ * The platform submits `csd-0` when the codec **starts**, not when it configures, so one attempt
+ * covers both calls: a decoder that refuses the header can fail at either, and a fallback that only
+ * wrapped configuration would never run for the very device class it exists for. On any failure a
+ * half-built decoder is released by [build] and a fresh one is built without the header.
+ */
+internal fun <T> openOpusDecoder(header: ByteArray, build: (header: ByteArray?) -> T): T =
+    try {
+        build(header)
+    } catch (_: Exception) {
+        build(null)
+    }
+
 private class MediaCodecOpus(private val config: ByteArray) : OpusPackets {
     override var outputRate = 48000
         private set
 
-    private val codec = MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_AUDIO_OPUS)
+    private val codec = openOpusDecoder(config) { header -> startedDecoder(header) }
     private val info = MediaCodec.BufferInfo()
     private var encoding = 0
     private var pending = -1
     /** The first output of a codec that has just started is the slowest one it will ever produce. */
     private var starting = true
 
-    init {
-        // Two platform behaviours have to work, and neither can be checked from here. Most decoders
-        // take the Opus identification header as the codec-specific data `csd-0` and reject input
-        // without it; some reject it instead. So the header is supplied first and configuration is
-        // retried once without it, which leaves a decoder on both classes of device rather than a
-        // recording that cannot sound on all of them.
-        val format =
-            MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_OPUS, SOURCE_RATE, 1).apply {
-                setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, MAX_PACKET)
+    private companion object {
+        const val SOURCE_RATE = 24000
+        const val TIMEOUT_US = 4_000L
+
+        /** Room for any single Opus packet at this bitrate, comfortably. */
+        const val MAX_PACKET = 1500
+
+        /** About 200 ms, well inside the 500 ms a cursor's read will wait before counting a stall. */
+        const val MAX_POLLS = 50
+
+        /**
+         * About 500 ms, spent only on the first output after a codec starts: every read head builds a
+         * fresh decoder on its first read and on each seek, and killing it for being slow to start
+         * would mark the whole recording unavailable for the session.
+         */
+        const val START_POLLS = 125
+
+        /** A decoder configured — with the identification header or without it — and started. */
+        fun startedDecoder(header: ByteArray?): MediaCodec {
+            val codec = MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_AUDIO_OPUS)
+            val format =
+                MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_OPUS, SOURCE_RATE, 1).apply {
+                    setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, MAX_PACKET)
+                    header?.let { setByteBuffer("csd-0", ByteBuffer.wrap(it)) }
+                }
+            try {
+                codec.configure(format, null, null, 0)
+                codec.start()
+                return codec
+            } catch (e: Exception) {
+                // A codec that failed to start is not reusable, so the fallback gets a fresh one.
+                runCatching { codec.release() }
+                throw e
             }
-        val withHeader =
-            MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_OPUS, SOURCE_RATE, 1).apply {
-                setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, MAX_PACKET)
-                setByteBuffer("csd-0", ByteBuffer.wrap(config))
-            }
-        try {
-            codec.configure(withHeader, null, null, 0)
-        } catch (_: Exception) {
-            // A codec left in its error state only accepts a reset before it will configure again.
-            runCatching { codec.reset() }
-            codec.configure(format, null, null, 0)
         }
-        codec.start()
     }
 
     override fun decode(packet: ByteArray, length: Int, out: FloatArray): Int {
@@ -116,23 +143,6 @@ private class MediaCodecOpus(private val config: ByteArray) : OpusPackets {
         runCatching { codec.release() }
     }
 
-    private companion object {
-        const val SOURCE_RATE = 24000
-        const val TIMEOUT_US = 4_000L
-
-        /** Room for any single Opus packet at this bitrate, comfortably. */
-        const val MAX_PACKET = 1500
-
-        /** About 200 ms, well inside the 500 ms a cursor's read will wait before counting a stall. */
-        const val MAX_POLLS = 50
-
-        /**
-         * About 500 ms, spent only on the first output after a codec starts: every read head builds a
-         * fresh decoder on its first read and on each seek, and killing it for being slow to start
-         * would mark the whole recording unavailable for the session.
-         */
-        const val START_POLLS = 125
-    }
 }
 
 object OpusAssets {

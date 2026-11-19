@@ -350,7 +350,16 @@ class OpusCursor(
             index = nextPacket
             length = file.packet(index, packet)
         }
-        val produced = source.decode(packet, length, decoded)
+        // A platform decoder that throws — a CodecException from a rejected packet or a codec torn
+        // down underneath us — must reach the person, not kill this worker silently and leave the
+        // mixer reading zeros with nothing said.
+        val produced =
+            try {
+                source.decode(packet, length, decoded)
+            } catch (e: Exception) {
+                fail("the Opus decoder stopped: ${e.message ?: e.javaClass.simpleName}")
+                return
+            }
         if (produced <= 0) {
             fail("an Opus packet decoded to nothing")
             return

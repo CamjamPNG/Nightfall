@@ -374,6 +374,29 @@ class OpusStreamTest {
         recording.close()
     }
 
+    /** A platform decoder that throws must reach the person, not kill the worker silently. */
+    @Test
+    fun aDecoderThatThrowsIsReportedInsteadOfSilence() {
+        val recording =
+            OpusRecording(
+                container(),
+                { _ ->
+                object : OpusPackets {
+                    override val outputRate = 24000
+
+                    override fun decode(packet: ByteArray, length: Int, out: FloatArray): Int =
+                        throw IllegalStateException("codec torn down")
+                    }
+                },
+            )
+        assertEquals(0f, recording.cursor()[0], 0f)
+        awaitUnavailable(recording)
+        val reason = recording.unavailable
+        assertNotNull(reason)
+        assertTrue("the failure says nothing useful: $reason", reason!!.contains("Opus decoder stopped"))
+        recording.close()
+    }
+
     @Test
     fun aRecordingHoldsABoundedAmountOfMemory() {
         val file = container()
