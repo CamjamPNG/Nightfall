@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 package dev.nightfall.diagnostics
 
+import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -47,6 +48,14 @@ import dev.nightfall.SettingToggle
  * everything else.
  */
 object DiagnosticsSurface {
+
+    /**
+     * Hooks the journal to what can fail before an activity exists: the app probes its Opus decoder in
+     * `Application.onCreate`, and a failure there is the start-up one a report most needs to name.
+     */
+    fun Begin(context: Context) {
+        DiagnosticsSupport.of(context).observeDecoders()
+    }
 
     /** Adds the reveal gesture to the version row. */
     @Composable

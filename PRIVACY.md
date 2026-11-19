@@ -101,8 +101,9 @@ else:
 - that the Opus decoder refused, and which step refused it: this device has no Opus
   decoder, a decoder refused the format, it refused to start, it refused the
   recording's identification header (it was then built without one), it started and
-  produced no output in time, or it refused in a way that is none of those. Never the
-  platform's own words, which can name a codec, a path and a device;
+  produced no output in time, it threw while decoding a packet, or it refused in a way
+  that is none of those. Never the platform's own words, which can name a codec, a path
+  and a device;
 - every update check and how it ended: up to date, a newer release available,
   downloading, ready to install, installing, failed, or inside the fifteen-minute
   floor;

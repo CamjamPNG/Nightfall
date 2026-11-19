@@ -44,6 +44,9 @@ enum class OpusDecodeFailure(val token: String) {
     /** A decoder that started produced no output for its first packet: it refused it or emitted none. */
     FIRST_OUTPUT_TIMEOUT("first_output_timeout"),
 
+    /** A decoder that was running threw while decoding a packet: the platform died under us. */
+    DECODE("decode"),
+
     /** A refusal that came from none of those calls: never guessed into a finer token. */
     OTHER("other"),
 }
@@ -187,7 +190,18 @@ internal class MediaCodecOpus(private val config: ByteArray) : OpusPackets {
             )
     }
 
-    override fun decode(packet: ByteArray, length: Int, out: FloatArray): Int {
+    override fun decode(packet: ByteArray, length: Int, out: FloatArray): Int =
+        // A platform decoder that throws — a rejected packet, a codec torn down underneath us — ends
+        // as a layer of silence. The throw is rethrown untouched so the cursor's own handling stays
+        // what it was; the token is what says which failure this was.
+        try {
+            decodePacket(packet, length, out)
+        } catch (e: Exception) {
+            OpusFailures.report(OpusDecodeFailure.DECODE)
+            throw e
+        }
+
+    private fun decodePacket(packet: ByteArray, length: Int, out: FloatArray): Int {
         if (pending >= 0) {
             codec.releaseOutputBuffer(pending, false)
             pending = -1

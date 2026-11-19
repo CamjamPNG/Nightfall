@@ -105,6 +105,9 @@ class Diagnostics(context: Context) {
     private var runtime: NightfallRuntime? = null
     private var watching = false
 
+    /** The decoder listener is separate because it has to exist before an activity does. */
+    @Volatile private var hearingDecoders = false
+
     /** A configuration change builds the activity again; the process has started once. */
     @Volatile private var startupRecorded = false
 
@@ -176,10 +179,21 @@ class Diagnostics(context: Context) {
         scope.launch { collectFailures() }
         scope.launch { collectUpdates() }
         scope.launch { recordExits() }
-        // The decoder reports on the thread that hit the failure, not through a flow, and the
-        // listener stays for the life of the process: turning the switch off stops the writing, it
-        // does not detach the observers.
-        OpusFailures.listen { failure -> decoders.failure(failure, _collecting.value) }
+        observeDecoders()
+    }
+
+    /**
+     * Subscribes to the decode path, and is safe to call before anything else: the app probes its Opus
+     * decoder during application start, which is earlier than the activity that attaches the observers
+     * above, and a token reported then is exactly the start-up failure this exists to name.
+     *
+     * The listener reports on the thread that hit the failure, not through a flow, and stays for the
+     * life of the process: turning the switch off stops the writing, it does not detach the observer.
+     */
+    fun observeDecoders() {
+        if (hearingDecoders) return
+        hearingDecoders = true
+        OpusFailures.listen { failure -> decoders.failure(failure, prefs.enabled) }
     }
 
     /**

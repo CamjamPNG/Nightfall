@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 package dev.nightfall.diagnostics
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.nightfall.OpusDecodeFailure
 import dev.nightfall.OpusFailures
 import dev.nightfall.openCodec
@@ -14,6 +17,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 
 /**
  * Decoder failures in the journal, measured on the file.
@@ -22,9 +26,11 @@ import org.junit.Test
  * the decoder's three calls, reported through [OpusFailures] into [DecoderLog] — rather than by
  * constructing `JournalEvent`s by hand, so the payload under test is the payload a phone would write.
  */
+@RunWith(AndroidJUnit4::class)
 class DecoderJournalTest {
     private lateinit var folder: File
     private lateinit var file: File
+    /** Only the store's trimming clock is frozen; an entry is dated by the clock that writes it. */
     private val day = LocalDate.parse("2026-11-19")
     private val header = ByteArray(19) { 1 }
     private val tokens = OpusDecodeFailure.entries.map { it.token }.toSet()
@@ -71,6 +77,29 @@ class DecoderJournalTest {
     }
 
     private fun details(journal: DiagnosticsJournal) = journal.entries().map { it.detail }
+
+    /**
+     * The app probes its decoder in `Application.onCreate`, before any activity composes, so the
+     * listener cannot be something an activity attaches: the start-up failure is the one this exists
+     * for.
+     */
+    @Test
+    fun aFailureReportedBeforeAnyActivityIsStillRecorded() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        DiagnosticsPrefs(context.getSharedPreferences("diagnostics", Context.MODE_PRIVATE)).enabled =
+            true
+        val diagnostics = Diagnostics(context)
+
+        diagnostics.observeDecoders()
+        OpusFailures.report(OpusDecodeFailure.CONFIGURE)
+
+        assertTrue(
+            "a failure reported before the activity attached was not recorded",
+            diagnostics.report().contains("\"configure\""),
+        )
+        diagnostics.setCollecting(false)
+        diagnostics.erase()
+    }
 
     @Test
     fun everyRefusedStepIsWrittenWhileCollectionIsOn() {
@@ -166,7 +195,7 @@ class DecoderJournalTest {
             )
             assertEquals(
                 "a decoder entry is dated with something other than the local date",
-                day.toString(),
+                today(),
                 event.date,
             )
         }

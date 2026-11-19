@@ -134,6 +134,37 @@ class OpusDecodeFailureTest {
         )
     }
 
+    /** A platform that dies under a running decoder: the throw reaches the cursor as before. */
+    @Test
+    fun aDecoderThatThrowsWhileDecodingIsItsOwnToken() {
+        ShadowMediaCodec.addDecoder(
+            MediaFormat.MIMETYPE_AUDIO_OPUS,
+            ShadowMediaCodec.CodecConfig(
+                1500,
+                0x15,
+                object : ShadowMediaCodec.CodecConfig.Codec {
+                    override fun process(input: ByteBuffer, output: ByteBuffer) {
+                        throw IllegalStateException("codec died")
+                    }
+                },
+            ),
+        )
+        reported.clear()
+
+        val codec = MediaCodecOpus(header)
+        try {
+            runCatching { codec.decode(ByteArray(40) { 1 }, 40, FloatArray(5760)) }
+        } finally {
+            codec.close()
+        }
+
+        assertEquals(
+            "a decoder that threw while decoding was not reported, or was not reported as a throw",
+            listOf(OpusDecodeFailure.DECODE),
+            reported.toList(),
+        )
+    }
+
     @Test
     fun aWorkingDecoderReportsNothing() {
         ShadowMediaCodec.addDecoder(
