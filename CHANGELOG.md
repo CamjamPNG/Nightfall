@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.13 — 2026-11-19
+
+- feat: endless night, an engine that evolves a mix over hours (#35)
+
 ## 1.12 — 2026-11-19
 
 - sounds: ship the field recordings as Opus and drop 77 MB of PCM (#38)
