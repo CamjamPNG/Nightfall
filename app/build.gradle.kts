@@ -92,7 +92,14 @@ android {
 val verifyNoHardcodedCopy = tasks.register("verifyNoHardcodedCopy") {
     val sources = fileTree("src/main/java") { include("**/*.kt") }
     inputs.files(sources)
-    val markers = listOf("Text(\"", "contentDescription = \"", "stateDescription = \"", "showSnackbar(\"")
+    val markers =
+        listOf(
+            "Text(\"",
+            "contentDescription = \"",
+            "stateDescription = \"",
+            "showSnackbar(\"",
+            "-> \"",
+        )
     doLast {
         val offenders =
             sources.flatMap { file ->
@@ -103,8 +110,10 @@ val verifyNoHardcodedCopy = tasks.register("verifyNoHardcodedCopy") {
                         val allowed =
                             line.contains("hardcoded-copy-allowed") ||
                                 (index > 0 && lines[index - 1].contains("hardcoded-copy-allowed"))
+                        // An empty literal draws nothing, so it is not copy.
                         !allowed &&
                             !line.contains("R.string") &&
+                            !line.contains("-> \"\"") &&
                             markers.any { line.contains(it) }
                     }
                     .map { (index, line) -> "${file.path}:${index + 1}: ${line.trim()}" }

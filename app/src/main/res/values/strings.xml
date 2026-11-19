@@ -58,7 +58,7 @@
     <string name="home_section_your_soundscape">Your soundscape</string>
     <string name="home_action_add_sound">Add sound</string>
     <string name="home_action_add_another_sound">Add another sound</string>
-    <string name="home_tagline">OFFLINE BY NATURE  ·  FREE FOREVER</string>
+    <string name="home_tagline">"OFFLINE BY NATURE  ·  FREE FOREVER"</string>
     <string name="home_status_playing">NOW PLAYING</string>
     <string name="home_status_ready">READY WHEN YOU ARE</string>
     <string name="home_action_pause">Pause soundscape</string>
@@ -171,6 +171,8 @@
     <string name="library_section_explore">Explore sounds</string>
     <string name="library_available">%1$d available</string>
     <string name="library_unavailable">Recording not bundled</string>
+    <string name="library_kind_recording">Field recording · offline</string>
+    <string name="library_kind_music">Original generative music</string>
     <string name="library_add">Add %1$s</string>
     <string name="library_no_match">No sounds match your search.</string>
     <string name="library_disclaimer">Environmental synthesis is an interpretation of a sound, not a field recording. Gray, green, black and velvet are labeled configurable presets. All music is generated on your device.</string>
@@ -297,12 +299,16 @@
     <string name="a11y_soundscape_playing">Soundscape playing</string>
     <string name="a11y_soundscape_paused">Soundscape paused</string>
 
-    <!-- The media notification and its channel. -->
+    <!--
+        The media notification and its channel. The four timer suffixes and the tagline are quoted so
+        their spacing survives: aapt trims leading whitespace and collapses repeated spaces in an
+        unquoted value, which turned " · All night" into "· All night" on the lock screen.
+    -->
     <string name="notification_channel_playback">Nightfall playback</string>
     <string name="notification_preparing">Preparing your soundscape</string>
-    <string name="notification_timer_fading"> · Fading out</string>
-    <string name="notification_timer_remaining"> · %1$s remaining</string>
-    <string name="notification_timer_all_night"> · All night</string>
+    <string name="notification_timer_fading">" · Fading out"</string>
+    <string name="notification_timer_remaining">" · %1$s remaining"</string>
+    <string name="notification_timer_all_night">" · All night"</string>
 
     <!-- Runtime and playback errors. Each %1$s is a platform diagnostic. -->
     <string name="error_restore_failed">Could not restore saved mix: %1$s</string>

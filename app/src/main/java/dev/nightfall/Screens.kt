@@ -130,10 +130,10 @@ fun SoundLibrary(r: NightfallRuntime) {
                         Spacer(Modifier.height(4.dp))
                         Text(
                             when (sound.kind) {
-                                "recording" -> "Field recording · offline"
+                                "recording" -> stringResource(R.string.library_kind_recording)
                                 "unavailable" ->
                                     stringResource(R.string.library_unavailable)
-                                "music" -> "Original generative music"
+                                "music" -> stringResource(R.string.library_kind_music)
                                 else -> sound.description
                             },
                             fontSize = 11.sp,
