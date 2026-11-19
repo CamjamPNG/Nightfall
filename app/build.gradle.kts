@@ -6,6 +6,14 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+// Robolectric picks its Android sandbox from `sdk` in the `robolectric.properties` on the test
+// classpath, and has no system-property override for it — so the level is a build input here.
+// Temurin 17, which the release job and the F-Droid recipe build on, cannot start the API 36 sandbox
+// ("Android SDK 36 requires Java 21"), so 35 stays the default for every ordinary build and CI's
+// Android 16 job selects the 36 file with `-PnightfallRobolectricSdk=36`. The tests are the same
+// either way; only the platform runtime beneath them changes.
+val robolectricSdk = providers.gradleProperty("nightfallRobolectricSdk").getOrElse("35")
+
 android {
     namespace = "dev.nightfall"
     compileSdk = 36
@@ -65,6 +73,10 @@ android {
         // DataStore is a per-process singleton: one JVM per test class keeps scenarios isolated.
         unitTests.all { it.forkEvery = 1 }
     }
+    // The sandbox level itself, selected by -PnightfallRobolectricSdk as described above.
+    sourceSets.getByName("test").resources.setSrcDirs(
+        listOf("src/test/resources", "src/robolectricApi$robolectricSdk/resources"),
+    )
 }
 
 // The flavor split turns lintDebug/lintRelease into per-channel tasks; keep the aggregate names
