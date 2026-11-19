@@ -532,6 +532,16 @@ class EndlessNightTest {
         }
         val share = 100 * present / (8 * 3600)
         println("at the chosen depth a companion is present %d%% of a night, longest %d min".format(share, longest / 60))
+        // The other two rows of the table beside Endless.DEPTH, measured here so the table is not a
+        // claim about a run nobody can repeat: presence only, which costs a schedule evaluation.
+        for (depth in floatArrayOf(.2f, Endless.DEPTH, 1f)) {
+            var on = 0
+            for (seed in 1L..8L) for (second in 0 until 8 * 3600) {
+                val salt = salts(night(seed)).first()
+                if (Endless.envelope(salt, second.toDouble(), depth, Endless.ramp(second.toDouble())) > .02f) on++
+            }
+            println("depth %.2f: a companion is present %.0f%% of a night".format(depth, 100.0 * on / (8 * 8 * 3600)))
+        }
         assertTrue("a companion is present only $share% of a night", share >= 25)
         // Measured: 15 minutes for this mix; eight seeds average a longer one, so this bound is
         // well under that and still far above a blip.

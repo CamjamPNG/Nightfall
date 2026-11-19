@@ -63,17 +63,20 @@ object Endless {
      * How far a night travels, as one measured constant rather than a second control: the duty of the
      * gate that brings companions in, and the size of the tone drift.
      *
-     * Measured on the mix and method `EndlessNightTest.theChosenDepthIsWhereTheNightBecomesAudible`
-     * uses, at each end of the range and at the value chosen:
+     * Measured by `EndlessNightTest.theChosenDepthIsWhereTheNightBecomesAudible`, which prints the
+     * whole table on every run:
      *
      * | depth | a companion is present this much of a night | the drift alone, against the plain mix |
      * | --- | --- | --- |
-     * | 0.2 | 18% | -44.3 dB, a tint nobody hears |
+     * | 0.2 | 20% | -44.3 dB, a tint nobody hears |
      * | 0.65 | 39% | -34.1 dB, movement without a change of identity |
-     * | 1.0 | 51% | -30.4 dB, and the bed starts to sound like a different one |
+     * | 1.0 | 52% | -30.4 dB, and the bed starts to sound like a different one |
      *
-     * (Presence is the mean over eight seeds across eight hours; the drift figure is the waveform
-     * difference from the plain mix when no companion is in, on the test's mix.)
+     * Presence is the mean over eight seeds across eight hours, evaluated from the schedule and printed
+     * for all three depths by that test. The drift figure is the waveform difference from the plain mix
+     * at a moment no companion is in: the test measures and asserts it at 0.65, and the 0.2 and 1.0
+     * cells are the same test run with this constant set to those values (-9.4 dB and -8.9 dB with a
+     * companion in, for the record).
      *
      * 0.65 is the value where a source arrives and leaves often enough to be the point of the feature
      * without the night becoming a different mix. It is a constant because a second slider on a sleep

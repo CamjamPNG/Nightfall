@@ -1,9 +1,12 @@
 # Localization
 
 Every string Nightfall shows a person used to be a Kotlin literal in `app/src/main/java/dev/nightfall/`.
-The app's own chrome is now in `app/src/main/res/values/strings.xml` and `plurals.xml`: 263 keys,
-every one of them used, extracted against `main` at `1ffbee1` and counted again at `b7f581b` plus the
-endless-night switch. What still ships as English in code
+The app's own chrome is now in `app/src/main/res/values/strings.xml` and `plurals.xml`: 275 keys,
+every one of them used, extracted against `main` at `1ffbee1` and counted again at this branch's head.
+The count is `grep -c '<string name=\|<plurals name='` over the two files, and §2 below is the
+inventory as it stood when the extraction landed: the keys added afterwards — the home-screen widget's,
+the diagnostics journal's, and the endless-night switch's — are counted but only the switch is listed
+(§2.23). What still ships as English in code
 is the catalogue — 98 names, 10 categories, 15 preset names in
 `core/src/main/kotlin/dev/nightfall/core/Library.kt` — plus two defaults that are written into saved
 data rather than drawn (`Your soundscape`, `My night mix`). Both are listed in §5 as stages 5 and 6
