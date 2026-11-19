@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0 — 2026-11-19
+
+- feat!: Nightfall 2.0 (#39)
+
 ## 1.13 — 2026-11-19
 
 - feat: endless night, an engine that evolves a mix over hours (#35)
