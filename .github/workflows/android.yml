@@ -15,6 +15,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The F-Droid recipe test reads the build file at each release tag, so it fails on a checkout
+      # with no tags: "no release tag could be read, so nothing was verified".
+      - name: Fetch release tags for the F-Droid recipe check
+        run: git fetch --depth=1 origin '+refs/tags/*:refs/tags/*'
       - name: Release tooling tests
         run: python3 -m unittest discover -s tools/tests -v
   # The core module has no Android dependency: `:core:test` configures and runs with no
@@ -95,7 +99,7 @@ jobs:
             app/build/reports/lint-results-*.html
             app/build/reports/lint-results-*.txt
             app/build/reports/lint-results-*.xml
-            app/build/outputs/apk/debug/
+            app/build/outputs/apk/*/debug/*.apk
           retention-days: 14
   # Both release APKs are built and validated in one job, so `check_release.py` reads the APKs this
   # job just produced rather than downloading them from another one. It needs the release tags: the
