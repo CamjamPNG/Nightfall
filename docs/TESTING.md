@@ -344,16 +344,21 @@ measures the window rather than the screen.
 - `LibraryAddTest` (1, its own JVM because it writes the runtime's persisted state): the row's own
   add control adds that sound in one activation, and the one entry no recording is bundled for says
   "Recording not bundled" with its add control disabled.
-- `LibraryNavigationRenderTest` writes five frames — the grouped list, the list scrolled twelve
-  items, one category, a closed section, and the empty state — and pins the one thing a still frame
-  cannot state: the search field's top edge is compared before and after the scroll and must be
-  unchanged, which is what "pinned" means.
+- `LibraryNavigationRenderTest` writes six frames — the grouped list, the list scrolled twelve
+  items, one category, a closed section, the empty state, and the longest section entered at its far
+  end — and pins the two things a still frame cannot state. The search field's top edge is compared
+  before and after the scroll and must be unchanged, which is what "pinned" means. And the longest
+  section's header is reached by scrolling to a key 21 rows into it and must sit at the list
+  viewport's own top within 60 px, which is what a sticky header surviving a long section means; that
+  section is Nature at 23 of the catalogue's 106 entries.
 
 Measured on the frames rather than by eye: the top 336 px of the library at rest and after scrolling
 twelve items are byte-identical (0.0000% of sampled pixels differ) while the list area below differs
-by 34.8%, and the same band in the before pair — the screen as it shipped — differs by 74.6%, which
-is the controls scrolling away. Card bands in every frame measure 87 to 152 px tall, the same set of
-heights in each, so no row is drawn clipped.
+by 34.8%, and the same band in the before pair — the screen as it shipped at this change's base —
+differs by 80.7%, which is the controls scrolling away. Every fully visible card band in every frame
+matches one of four heights (85-89, 119-120, 150-152 px, set by how many lines an entry's subtitle
+takes), so the layout neither distorts nor clips a row; the one shorter band in a scrolled frame is
+the row the viewport's bottom edge cuts.
 
 What this cannot show: a finger on glass. Whether the pinned rail feels right, whether a sticky
 header is where the eye expects it after a fast fling, and whether a 411 dp-tall window (the rail is
