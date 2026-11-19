@@ -12,7 +12,7 @@ jobs:
   # has no reason to queue behind a Gradle build. Ten tests, seconds to run.
   tools:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # The F-Droid recipe test reads the build file at each release tag, so it fails on a checkout
@@ -25,7 +25,7 @@ jobs:
   # ANDROID_HOME and no local.properties, so this job installs no SDK packages.
   core:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
@@ -106,7 +106,7 @@ jobs:
   # F-Droid recipe block for a new release is checked against the build file at each tag.
   release-apks:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
