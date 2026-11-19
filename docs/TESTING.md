@@ -135,6 +135,11 @@
   run, and the actual sound of all seven recordings remains unheard. The asset
   directories are declared inputs of `:core:test`, so a changed or truncated
   container re-runs the suite instead of leaving an up-to-date green behind.
+- A read head that reaches the end of its file waits: `OpusCursor` waits on "ring full OR at end",
+  and the regression test measures the worker's CPU time over a quiet interval rather than its
+  decode count, because a busy loop at end-of-file issues no decodes. Verified red on the old
+  condition and green on the new one: less than 200 ms of CPU in two seconds, against a full
+  interval's worth before.
 - Debug and unsigned release APKs build. Release lint reports zero errors;
   remaining warnings include dependency-version advisories and intentional
   foreground-media/wake-lock patterns.

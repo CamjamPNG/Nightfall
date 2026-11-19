@@ -45,7 +45,13 @@ private class MediaCodecOpus(private val config: ByteArray) : OpusPackets {
             pending = -1
         }
         var wrote = 0
-        while (pending < 0) {
+        // Bounded, because a decoder that accepts this packet and then produces nothing — a missing
+        // initialization buffer, a packet it discards — used to leave this loop polling forever while
+        // the cursor's worker waited behind it. Returning 0 hands that to the cursor, which reports a
+        // recording it cannot decode instead of hanging the audio thread's helper.
+        var polls = 0
+        while (pending < 0 && polls < MAX_POLLS) {
+            polls++
             if (wrote == 0) wrote = feed(packet, length)
             pending = codec.dequeueOutputBuffer(info, TIMEOUT_US)
             if (pending == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
@@ -97,6 +103,9 @@ private class MediaCodecOpus(private val config: ByteArray) : OpusPackets {
     private companion object {
         const val SOURCE_RATE = 24000
         const val TIMEOUT_US = 4_000L
+
+        /** About 200 ms, well inside the 500 ms a cursor's read will wait before counting a stall. */
+        const val MAX_POLLS = 50
     }
 }
 

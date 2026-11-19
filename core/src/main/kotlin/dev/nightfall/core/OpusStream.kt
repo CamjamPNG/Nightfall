@@ -296,7 +296,10 @@ class OpusCursor(
                 // A failure is terminal: the worker exits rather than rebuilding a decoder that cannot
                 // be built, which would spin the core and hammer codec allocation on every iteration.
                 if (failure != null) return
-                while (running && restart < 0 && full()) lock.wait(20)
+                // Fullness is not the only reason to wait: at the end of the file the ring can never
+                // fill again, so waiting on it alone spun this worker at full speed until the head
+                // wrapped, and forever if playback paused in those last seconds.
+                while (running && restart < 0 && (full() || nextPacket >= file.packetCount)) lock.wait(20)
                 if (!running || failure != null) return
                 if (restart >= 0) {
                     seek = restart

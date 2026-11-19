@@ -6,7 +6,6 @@ import android.media.*
 import android.os.*
 import dev.nightfall.core.*
 import kotlin.math.*
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -101,13 +100,6 @@ class AudioHost(private val runtime: NightfallRuntime) {
             androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED,
         )
         manager.registerAudioDeviceCallback(devices, Handler(Looper.getMainLooper()))
-        // A platform with no Opus decoder must say so at launch: discovered only when a layer is added
-        // and read, it would be a mix that plays silence with no explanation. Off the main thread,
-        // because building a codec is not free and this runs while the app draws its first frame.
-        runtime.scope.launch(Dispatchers.Default) {
-            val reason = OpusAssets.probe(context) ?: return@launch
-            reportUnsupportedDecoder(reason)
-        }
         runtime.scope.launch {
             while (isActive && running) {
                 delay(250)
@@ -353,22 +345,6 @@ class AudioHost(private val runtime: NightfallRuntime) {
         // writing the state flow itself, which could resurrect a stale copy of `playing`.
         mainHandler.post {
             if (runtime.status.value.error != message)
-                runtime.status.value = runtime.status.value.copy(error = message)
-        }
-    }
-
-    /**
-     * The whole decode path is unavailable on this platform, not one recording: say what is wrong and
-     * that every earlier release still installs from GitHub Releases, which is where a person who
-     * would rather have the recordings has to get them — the release before this one carries them as
-     * PCM and needs no Opus decoder.
-     */
-    private fun reportUnsupportedDecoder(reason: String) {
-        // TODO(CAM-48): the opt-in diagnostics journal records a `decode_failure` event with `reason`
-        // here too, so a person who turned logging on can say what the platform refused.
-        val message = context.getString(R.string.error_opus_unsupported)
-        mainHandler.post {
-            if (runtime.status.value.error == null)
                 runtime.status.value = runtime.status.value.copy(error = message)
         }
     }
