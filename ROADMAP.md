@@ -14,7 +14,7 @@ though it is the least fun.
 Shipping today: a working offline mixer with no `INTERNET` permission, no layer
 cap, 21 built-in presets, local preset storage and JSON exchange, sleep timers
 with per-layer stop schedules, a Media3 foreground media session with lock-screen
-and Bluetooth controls, 93 deterministic core tests (92 run by default; one
+and Bluetooth controls, 97 deterministic core tests (96 run by default; one
 calibration generator is opt-in), 66 release-tooling tests and 12 playback-lifecycle
 scenarios. Signed GitHub releases with a pinned certificate. `docs/TESTING.md` records
 exactly what was executed and what was not.
