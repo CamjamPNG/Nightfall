@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.4 — 2026-11-20
+
+- feat: themed nights, presets that are a plan over the night (#48)
+
 ## 2.3 — 2026-11-19
 
 - feat: type what you want and get a mix, resolved on the device (#47)
