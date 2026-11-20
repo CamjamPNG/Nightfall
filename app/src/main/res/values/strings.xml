@@ -213,6 +213,15 @@
     <string name="presets_copy_suffix">%1$s copy</string>
     <string name="presets_action_export">Export JSON</string>
     <string name="presets_action_rename">Rename</string>
+    <!--
+      A themed night says what the night does, in layers and in times, because that is what the plan
+      actually decides. It is not a claim about how it feels, and the level is held all night: these
+      lines describe which sounds are playing, never how loud the night is.
+    -->
+    <string name="presets_theme_storm_that_passes">Heavy rain, thunder and howling wind for two hours, then moderate rain on a metal roof with rolling thunder, drizzle by four, a distant ocean bed and a quiet room after seven.</string>
+    <string name="presets_theme_rain_that_calms">Moderate rain with a window and leaves for ninety minutes, then window, drizzle by three and a half, a quiet room after six.</string>
+    <string name="presets_theme_forest_dusk">Birdsong and breeze at dusk, crickets after an hour, frogs by two and a half, a still wood after five.</string>
+    <string name="presets_theme_fire_that_burns_down">Bonfire and crackling wood for ninety minutes, then the hearth and embers by three, embers with soft piano after six.</string>
     <string name="presets_action_delete">Delete</string>
     <string name="presets_play">Play soundscape</string>
 

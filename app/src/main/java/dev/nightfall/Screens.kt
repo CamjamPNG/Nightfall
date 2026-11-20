@@ -342,6 +342,20 @@ fun PresetScreen(
     }
 }
 
+/**
+ * What a themed night does, in the words its own plan is written in. Only the built-in collection
+ * carries one: a copy can be edited into a different night, and a description that outlived that edit
+ * would be copy claiming something the mix no longer does.
+ */
+private fun themeDescription(id: String): Int? =
+    when (id) {
+        "storm-that-passes" -> R.string.presets_theme_storm_that_passes
+        "rain-that-calms" -> R.string.presets_theme_rain_that_calms
+        "forest-dusk" -> R.string.presets_theme_forest_dusk
+        "fire-that-burns-down" -> R.string.presets_theme_fire_that_burns_down
+        else -> null
+    }
+
 @Composable
 private fun PresetCard(
     p: Mix,
@@ -366,6 +380,14 @@ private fun PresetCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp),
                     )
+                    if (builtin) themeDescription(p.id)?.let { description ->
+                        Text(
+                            stringResource(description),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 6.dp),
+                        )
+                    }
                 }
                 IconButton(
                     onClick = {

@@ -62,6 +62,13 @@ class PcmMixer(
 
     /** Frames rendered since the night began: the schedule's only clock, and not the wall clock. */
     private var nightFrames = 0L
+
+    /** The config the night clock belongs to, so a different night can be told from an edited one. */
+    private var nightConfig: EndlessConfig? = null
+
+    /** Elapsed seconds of the night being played: for measurement, never read by the render path. */
+    val nightSeconds: Double
+        get() = nightFrames.toDouble() / sampleRate
     private var masterTarget = .5f
     private var master = .0f
     private var duck = 1f
@@ -80,6 +87,7 @@ class PcmMixer(
         active.clear()
         plan = null
         nightFrames = 0L
+        nightConfig = null
         master = 0f
         duck = 1f
         smoothedExternal = 1f
@@ -90,7 +98,13 @@ class PcmMixer(
         // The mix's layer set is the person's layers plus, with endless night on, the companions its
         // own families earned. Companions keep fixed ids, so a night's roster is stable across syncs
         // and a changed seed retires the old companion through the ordinary crossfade.
-        plan = NightPlan.of(mix)
+        val next = NightPlan.of(mix)
+        // A night's identity is the config that describes it, not the layer set: editing a gain must
+        // not restart the arc, but selecting another night is another night, and it starts at zero
+        // rather than hours in from the one that was playing.
+        if (next?.config != nightConfig) nightFrames = 0L
+        nightConfig = next?.config
+        plan = next
         for (n in 0 until active.size) active[n].removed = true
         for (layer in mix.layers) attach(layer, false)
         val roster = plan?.companions
@@ -161,9 +175,8 @@ class PcmMixer(
         var comp = 1f
         if (night != null) {
             val depth = Endless.DEPTH
-            val ramp = Endless.ramp(seconds)
-            var user = 0f
-            var total = 0f
+            var reference = 0f
+            var rendered = 0f
             for (n in 0 until count) {
                 val ch = active[n]
                 val c = ch.layer
@@ -181,9 +194,11 @@ class PcmMixer(
                         (c.brightness + ch.sweep * .10f).coerceIn(0f, 1f),
                     )
                 // A layer on its way out is outside both sums, so removing one still lowers the mix
-                // the way an unnormalised sum says it does; only the companions are compensated.
+                // the way an unnormalised sum says it does; only the night is compensated. A retiring
+                // layer keeps the share it was rendering at, so its fade starts where it was rather
+                // than at a level the plan had already taken away.
                 if (ch.removed) {
-                    ch.endless = if (ch.companion) 0f else 1f
+                    ch.endless = if (ch.companion) 0f else ch.endless
                     continue
                 }
                 val audible = !ch.expired && c.enabled && !c.mute && (!solo || c.solo)
@@ -195,25 +210,33 @@ class PcmMixer(
                     // night was switched on. Reading the parent's clock makes "this layer stops at
                     // thirty minutes" true of everything the layer put in the mix.
                     ch.played = night.parents[c.id]?.let { channels[it]?.played } ?: nightFrames
-                    val e = if (audible) Endless.envelope(salt, seconds, depth, ramp) else 0f
-                    ch.endless = e
-                    total += c.gain * c.gain * tone * e * e
-                } else {
-                    ch.endless = 1f
-                    if (audible) {
-                        total += c.gain * c.gain * tone
-                        user += c.gain * c.gain * tone
-                    }
                 }
+                // One question, whatever kind of night this is: endless night answers 1 for the
+                // person's own layers and a gate for a companion, a themed night answers the phase.
+                val e = if (audible) night.amount(c.id, salt, seconds) else 0f
+                ch.endless = e
+                // The reference is the mix with no night applied. In endless mode that is the person's
+                // own layers, so a companion may only bring the total back down to it. In a themed
+                // night every layer is the person's, so a phase that leaves some out may only restore
+                // the power it took away.
+                // A layer the person muted or disabled is out of the reference as well as out of what
+                // is rendered, so muting one layer cannot make another louder: the compensation only
+                // ever answers for what the night did, never for a control the person moved.
+                if (!ch.companion && audible) reference += c.gain * c.gain * tone
+                rendered += c.gain * c.gain * tone * e * e
             }
-            // Levels holds every source at one reference loudness, so a companion that enters adds
-            // its own power and nothing else: scaling the whole mix by sqrt(the person's power / the
-            // total) keeps the night's loudness at the mix they set, coming or going. It is never
-            // above 1, so the night cannot make a mix louder or push the limiter where the plain mix
-            // did not. `tone` is what makes the two sums the power the loop renders: a layer pulled
-            // 12 dB down by its own tone controls is quieter than its slider says, and a companion
-            // entering must not read that as headroom to fill.
-            comp = if (user > 1e-9f && total > 1e-9f) sqrt(user / total).coerceIn(.25f, 1f) else 1f
+            // Levels holds every source at one reference loudness, so the night's changes add or
+            // remove their own power and nothing else: scaling the whole mix by sqrt(reference /
+            // rendered) keeps the night's loudness at the mix they set, a source arriving in endless
+            // night or a phase thinning a theme. `tone` is what makes the two sums the power the loop
+            // renders: a layer pulled 12 dB down by its own tone controls is quieter than its slider
+            // says, and a bed entering must not read that as headroom to fill. The cap keeps a phase
+            // table that removes nearly everything from asking for unlimited make-up gain; the presets
+            // stay under 1.3 and `ThemedNightRunTest` measures it.
+            comp =
+                if (reference > 1e-9f && rendered > 1e-9f)
+                    sqrt(reference / rendered).coerceIn(.25f, 2f)
+                else 1f
         }
         var index = 0
         // active.size, not the pre-scan count: retiring a channel shrinks the list underneath us.
@@ -245,11 +268,14 @@ class PcmMixer(
                 ch.life = 0f
             }
             val audible = c.enabled && !c.mute && (!solo || c.solo)
-            // A companion whose gate is shut renders nothing at all, the way an expired layer does:
-            // two absent beds cost no synthesis for the hours they are away. The residual gain is
-            // below -80 dBFS by the time this trips, so snapping it to zero cannot be heard.
-            if (ch.companion && !ch.removed && ch.endless <= 0f && ch.gain <= 1e-4f) {
+            // A layer the night has taken away renders nothing at all, the way an expired layer does:
+            // two absent companion beds, or a phase's absent layers, cost no synthesis for the hours
+            // they are away. The residual gain is below -80 dBFS by the time this trips, so snapping
+            // it to zero cannot be heard. A layer with a stop schedule still ages while it is away, so
+            // "stop after thirty minutes" counts the night rather than the sound.
+            if (night != null && !ch.removed && ch.endless <= 0f && ch.gain <= 1e-4f) {
                 ch.gain = 0f
+                if (!ch.companion) ch.played += frames
                 continue
             }
             ch.source.render(scratchL, scratchR, frames, c, settings)

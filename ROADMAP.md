@@ -12,9 +12,10 @@ though it is the least fun.
 ## Where it stands
 
 Shipping today: a working offline mixer with no `INTERNET` permission, no layer
-cap, 21 built-in presets, local preset storage and JSON exchange, sleep timers
+cap, 25 built-in presets (four of them themed nights that change what plays over the night),
+local preset storage and JSON exchange, sleep timers
 with per-layer stop schedules, a Media3 foreground media session with lock-screen
-and Bluetooth controls, 98 deterministic core tests (97 run by default; one
+and Bluetooth controls, 119 deterministic core tests (118 run by default; one
 calibration generator is opt-in), 68 release-tooling tests and 12 playback-lifecycle
 scenarios. Signed GitHub releases with a pinned certificate. `docs/TESTING.md` records
 exactly what was executed and what was not.

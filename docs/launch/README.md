@@ -47,7 +47,7 @@ closed.
    ./gradlew :core:jar
    CP="core/build/libs/core.jar:$(find ~/.gradle/caches -name 'kotlin-stdlib-2.1.20.jar' | head -1):$(find ~/.gradle/caches -name 'kotlinx-serialization-core-jvm-*.jar' | head -1):$(find ~/.gradle/caches -name 'kotlinx-serialization-json-jvm-*.jar' | head -1)"
    printf 'var l = dev.nightfall.core.Library.INSTANCE;\nvar p = dev.nightfall.core.Presets.INSTANCE;\nSystem.out.println("catalogue=" + l.getAll().size() + " available=" + (int) l.getAll().stream().filter(s -> s.getAvailable()).count() + " presets=" + p.getAll().size());\n/exit\n' | jshell --class-path "$CP" -q -
-   # catalogue=106 available=105 presets=21
+   # catalogue=106 available=105 presets=25
    ```
 
    Run both before posting: these figures move whenever a release or the catalogue

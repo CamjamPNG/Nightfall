@@ -107,7 +107,7 @@
   rejection of duplicate versions and preservation of code/audio in ABI options.
   Signed APK variants are additionally checked with Android's apksigner, aapt,
   zipalign and source-tag audio hashes before publication.
-- 98 deterministic JVM/core tests pass (97 executed, 1 skipped by design: the
+- 119 deterministic JVM/core tests pass (118 executed, 1 skipped by design: the
   opt-in `NIGHTFALL_CALIBRATE=1` level-calibration generator). Two of them render
   a whole eight-hour night through the real render path. They cover nine
   simultaneous non-silent sources, 512 allocated layers, unrelated-source phase
@@ -130,6 +130,31 @@
   ten-minute spectrum drift both ways, because that number is *not* the night's: for a rain-dominated
   preset the material's own swells move it as much as the night does, and the honest measure of the
   feature is composition (which sources are sounding) rather than a slow tilt of the whole spectrum.
+- Themed nights are measured the same way, and they are one schedule rather than two. A themed mix's
+  `endless.phases` replaces endless night's shape table outright: `NightPlan.of` returns a plan with no
+  companions, so neither the shape table nor the companion draw can touch a themed night, and the test
+  asserts a phase's answer is exactly its share rather than a share multiplied by a presence duty. The
+  schedule is still a function of rendered frames alone. `ThemedNightTest` holds it directly: the plan
+  survives a JSON round trip and an old mix without the field still decodes as it did; every phase is
+  answered for its own layer set; across every real boundary of every theme the share moves at most
+  .0083 a second and never steps; and a phase boundary, rendered from the two tables that meet at it,
+  moves the level less between the half second either side than the same night moves between any other
+  two adjacent half seconds. Each phase is rendered on its own and compared by band profile — the
+  closest pair inside a theme is 0.6 dB and the closest phase to an existing preset 0.57 dB, against
+  the catalogue's own 0.1 dB "same texture" boundary and a 0.5 dB bound here. Phase levels are measured
+  uncompensated: a theme's phases differ by up to 2.6 LU, which is what the mixer's make-up gain spans
+  (at most 1.14× on the shipped themes). `ThemedNightRunTest` renders eight hours of a themed preset
+  beside the same preset with the plan switched off and reports the whole night's level, the hourly
+  column, the hourly spread and the CPU per block. Zero allocation is measured on a clean
+  two-thousand-block window by `ThemedNightTest`, because the eight-hour test allocates on purpose to
+  keep its hours. Four paths that a model test cannot reach are held too: applying a preset renames
+  the layers, so `Mix.reidentify` carries the phase targets through it and `ThemedPresetPlayTest`
+  saves a theme into Your mixes, taps its chip on Home and asserts the plan answers 1.0 at the start
+  and 0.0 at five hours; muting one layer does not move the level of the rest (muted against removed,
+  measured within a tenth of a LU on both nights); another themed night starts its clock at zero while
+  a gain edit continues the running one; and phases thirty seconds apart take over from the value that
+  was actually playing rather than from a target never reached. None of it is a listening test: nobody
+  has heard a themed night.
 - Duplicate noise layers have independent random streams. Pausing in the final
   timer fade preserves the fade level. Expired layer schedules stop source
   reads/rendering and can resume with a new schedule.
