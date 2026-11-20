@@ -25,7 +25,35 @@ import kotlinx.serialization.Serializable
 data class EndlessConfig(
     val enabled: Boolean = false,
     val seed: Long = 1L,
+    /**
+     * A themed night's plan, in order, starting at minute zero. Empty is endless night's own schedule.
+     *
+     * Non-empty **replaces** the shape table below for this mix: [Endless.presence] is not consulted,
+     * and no companions are added, because the plan already names every layer and how much of it
+     * plays. The two could be multiplied — a phase share times a shape-table duty — and that product
+     * would be a night neither the theme's author nor the depth constant described, so one of them
+     * owns the arc and it is this one whenever it is present. A mix saved before this field existed
+     * decodes with an empty list and keeps the behaviour it was saved with.
+     */
+    val phases: List<NightPhase> = emptyList(),
 )
+
+/**
+ * One step of a themed night: from [startMinutes] on, these layers play at these shares of their own
+ * gain, and any layer this phase does not name is absent until a later phase asks for it again.
+ *
+ * The shares are fractions of the layer's slider rather than gains of their own, so the slider keeps
+ * meaning what it says after a theme is picked, and a phase moving one layer up and another down
+ * changes the balance of the mix rather than its level.
+ */
+@Serializable
+data class NightPhase(
+    val startMinutes: Float = 0f,
+    val layers: List<NightPhaseLayer> = emptyList(),
+)
+
+@Serializable
+data class NightPhaseLayer(val layerId: String, val level: Float = 1f)
 
 /**
  * The night's schedule, evaluated from elapsed frames alone.
@@ -112,7 +140,13 @@ object Endless {
             .62f,
         )
 
-    /** How much of the catalogue the night is willing to bring in at [minutes], 0..1. */
+    /**
+     * How much of the catalogue the night is willing to bring in at [minutes], 0..1.
+     *
+     * Only endless night reads this. A themed night's plan replaces the shape table outright, so this
+     * function is never called for a mix that carries phases — see [NightPlan.amount] for the single
+     * place the render path asks what the night is doing.
+     */
     fun presence(minutes: Double): Float {
         if (minutes <= shape[0]) return shape[1]
         var i = 2
@@ -222,6 +256,87 @@ object Endless {
 }
 
 /**
+ * A themed night's plan, evaluated from elapsed frames alone: the phases a preset names, resolved to
+ * one answer per layer per instant.
+ *
+ * A phase begins at its start minute and takes over across [FADE_MINUTES] with a smoothstep, so a
+ * boundary has no step in it and no corner either — the share arrives with zero slope at both ends,
+ * and the level travels through the same 25 ms smoother every other gain change uses. A layer no phase
+ * names plays throughout at its own gain, which is what makes a sound added to a themed mix behave the
+ * way a sound added to any other mix does, and a layer a phase leaves out is absent rather than faint.
+ *
+ * Built on the thread that submits a mix, like the channels themselves; [level] allocates nothing.
+ */
+class PhaseSchedule private constructor(
+    private val starts: DoubleArray,
+    private val ids: Array<String>,
+    private val levels: FloatArray,
+) {
+    private val index = HashMap<String, Int>(ids.size * 2)
+
+    init {
+        ids.forEachIndexed { i, id -> index[id] = i }
+    }
+
+    /** How many layers the phases can name. */
+    val layerCount
+        get() = ids.size
+
+    fun level(layerId: String, seconds: Double): Float {
+        val i = index[layerId] ?: return 1f
+        val minutes = seconds / 60.0
+        var phase = 0
+        while (phase + 1 < starts.size && starts[phase + 1] <= minutes) phase++
+        val target = levels[phase * ids.size + i]
+        if (phase == 0) return target
+        val since = minutes - starts[phase]
+        if (since >= FADE_MINUTES) return target
+        val from = levels[(phase - 1) * ids.size + i]
+        val t = (since / FADE_MINUTES).toFloat()
+        return from + (target - from) * (t * t * (3 - 2 * t))
+    }
+
+    companion object {
+        /**
+         * How long a phase takes to take over. Three minutes is the shortest that is unambiguously a
+         * change of scene rather than a fade on a layer, and it is long enough that the largest
+         * sample-to-sample step it can cause is far below the beds' own.
+         */
+        const val FADE_MINUTES = 3.0
+
+        /** Null when the mix carries no phases, which is every mix that is not a themed night. */
+        fun of(mix: Mix): PhaseSchedule? {
+            val phases = mix.endless.phases
+            if (phases.isEmpty()) return null
+            // The mix's own layer order, so a plan and a re-decoded plan answer identically.
+            val ids = Array(mix.layers.size) { mix.layers[it].id }
+            val index = HashMap<String, Int>(ids.size * 2)
+            ids.forEachIndexed { i, id -> index[id] = i }
+            val ordered = phases.sortedBy { it.startMinutes }
+            val starts = DoubleArray(ordered.size)
+            val levels = FloatArray(ordered.size * ids.size)
+            val named = BooleanArray(ids.size)
+            ordered.forEachIndexed { h, phase ->
+                starts[h] = phase.startMinutes.toDouble()
+                for (target in phase.layers) {
+                    val i = index[target.layerId] ?: continue
+                    named[i] = true
+                    levels[h * ids.size + i] = target.level.coerceIn(0f, 1f)
+                }
+            }
+            // A layer no phase names is not part of the plan, so it is not the plan's to silence:
+            // it plays at its own gain all night. That is what makes a sound added to a themed mix
+            // behave the way a sound added to any other mix does.
+            for (i in ids.indices) {
+                if (named[i]) continue
+                for (h in ordered.indices) levels[h * ids.size + i] = 1f
+            }
+            return PhaseSchedule(starts, ids, levels)
+        }
+    }
+}
+
+/**
  * What endless night adds to one mix, decided once per [Mix] rather than per block.
  *
  * Companions are drawn from the catalogue *families* the person's own layers belong to — another rain,
@@ -236,9 +351,25 @@ class NightPlan(
     val companions: List<Layer>,
     /** Each companion's id to the id of the layer it belongs to, so the render path can read the parent. */
     val parents: Map<String, String>,
+    /**
+     * A themed night's plan, when the mix carries one. Then [companions] is empty and the shape table
+     * is not consulted: this is the whole schedule.
+     */
+    val phases: PhaseSchedule? = null,
 ) {
     /** The seed as an integer salt, so two nights of the same mix differ in schedule and in drift. */
     val salt: Int = (config.seed xor (config.seed ushr 32)).toInt()
+
+    /**
+     * How much of [layerId] plays at [seconds] into the night, 0..1: the one question the render path
+     * asks, and the one place the two kinds of night differ. The person's own layers answer 1 all
+     * night in endless mode, a companion answers its gate, and a themed night answers its phase.
+     */
+    fun amount(layerId: String, salt: Int, seconds: Double): Float =
+        phases?.level(layerId, seconds)
+            ?: if (parents.containsKey(layerId))
+                Endless.envelope(salt, seconds, Endless.DEPTH, Endless.ramp(seconds))
+            else 1f
 
     companion object {
         /** How many companion beds a mix may gain. Two is enough to be heard; each costs CPU. */
@@ -270,6 +401,10 @@ class NightPlan(
 
         fun of(mix: Mix): NightPlan? {
             if (!mix.endless.enabled) return null
+            // A themed mix's phase plan is the whole schedule: no shape table, no companions. Two arcs
+            // multiplying would be a night neither the theme's author nor `Endless.DEPTH` described.
+            val planned = PhaseSchedule.of(mix)
+            if (planned != null) return NightPlan(mix.endless, emptyList(), emptyMap(), planned)
             val rng = RandomStream(mix.endless.seed * 0x2545F491L + 17L)
             val taken = HashSet<String>(MAX_COMPANIONS)
             val companions = ArrayList<Layer>(MAX_COMPANIONS)

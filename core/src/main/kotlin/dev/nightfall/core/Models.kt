@@ -107,6 +107,7 @@ object PresetJson {
         val ids = HashSet<String>()
         return mix.copy(
             master = mix.master.coerceIn(0f, 1f),
+            endless = nights(mix.endless),
             layers =
                 mix.layers.map { l ->
                     require(ids.add(l.id) && l.id.length <= 200) { "Duplicate or invalid layer ID" }
@@ -173,6 +174,25 @@ object PresetJson {
                     )
                 },
         )
+    }
+
+    /** A themed night's plan, clamped to the times and shares the schedule can evaluate. */
+    private fun nights(config: EndlessConfig): EndlessConfig {
+        if (config.phases.isEmpty()) return config
+        val phases =
+            config.phases
+                .filter { it.startMinutes.isFinite() }
+                .map { phase ->
+                    phase.copy(
+                        startMinutes = phase.startMinutes.coerceIn(0f, 1440f),
+                        layers =
+                            phase.layers
+                                .filter { it.layerId.length <= 200 && it.level.isFinite() }
+                                .map { it.copy(level = it.level.coerceIn(0f, 1f)) },
+                    )
+                }
+                .sortedBy { it.startMinutes }
+        return config.copy(phases = phases)
     }
 }
 

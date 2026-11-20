@@ -62,6 +62,41 @@ and a companion whose gate is shut renders nothing at all, the way an expired la
 that are away cost no synthesis. The render path stays allocation-free with the night running, and the
 whole schedule is a handful of integer hashes per layer per block.
 
+## Themed nights
+
+A themed night is a preset that is a plan over the night rather than a snapshot of layers: four of
+them ship, each an ordinary mix with `endless.phases` filled in, so it is picked in the Presets tab,
+edited like any other mix, exported and imported with the same JSON. A phase names a start minute and
+the layers that play from then on, with a share of each layer's own gain; a layer a phase leaves out
+is absent, and a layer no phase names plays throughout, which is what makes a sound added to a themed
+mix behave like a sound added to any other.
+
+**There is one schedule, and the phase plan is it.** The mixer asks `NightPlan.amount` exactly once per
+channel per block, and that is the only place the two kinds of night differ: endless night answers 1
+for the person's own layers and a gate for a companion, a themed night answers the phase. A mix with
+phases gets **no companions and no shape table** — `Endless.presence` is never consulted for it. The
+alternative, a phase share multiplied by a presence duty, would have been two mechanisms owning one
+arc, and the product would have been a night neither the theme's author nor `Endless.DEPTH` described.
+This crew has already paid once for two mechanisms on one quantity (the level table), so the choice is
+structural rather than a convention: `NightPlan.of` returns a plan with `companions` empty and
+`phases` non-null, and `ThemedNightTest` asserts both.
+
+A phase takes over across three minutes with a smoothstep, so a boundary has no step and no corner in
+it; the level then travels through the same 25 ms smoother every other gain change uses. The schedule
+is a function of frames rendered, so a theme is not spent by a pause and two plays of one preset are
+the same night.
+
+Level is held the way endless night holds it, by the same expression: the mixer scales the whole mix by
+the square root of the reference power over the power the night is rendering. In endless mode the
+reference is the person's own layers, so a companion may only bring the total back down to it; in a
+themed night every layer is the person's, so a phase that leaves layers out may only restore the power
+it took away. The factor is capped at 2 so a phase table that removed nearly everything cannot ask for
+unlimited make-up gain, and the shipped themes ask for at most 1.3 (measured). What that means for the
+product is stated plainly: a theme changes *what* plays, and the night does not get quieter — a plan
+that also dropped six decibels would break the promise that a preset's loudness is the loudness you
+chose, which is the whole reason `Levels` exists. The descriptions in the Presets tab therefore
+describe which sounds play and when, never how loud the night is.
+
 ## Describe a mix
 
 A phrase box on Home turns free text into a mix with no network, no key and no model file: the app

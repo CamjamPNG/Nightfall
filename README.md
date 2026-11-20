@@ -23,6 +23,14 @@ current:
   fixed bed: companion layers drawn from the same families as your own arrive and leave, and
   every layer's tone drifts around its setting. Measured on eight-hour renders of one preset
   with the night on and off, the worst hour against hour moves the level by 0.22 LU.
+- **Themed nights.** Four presets are a plan over the night rather than a snapshot of layers:
+  *Storm That Passes* opens on heavy rain, thunder and howling wind for two hours, moves to rain
+  on a metal roof with rolling thunder, then drizzle, then a distant ocean bed. *Rain That Calms*,
+  *Forest Dusk* and *Fire That Burns Down* do the same in their own families. Each phase takes
+  over across three minutes, and the night keeps the loudness you set: over eight hours the whole
+  night lands within 0.01 dB of the same mix with its plan switched off. Every phase is also its own
+  texture — the closest pair inside a theme is 0.6 dB apart by band profile. Nobody has listened to
+  one yet, so that is a measurement and not a verdict.
 - **A home-screen play/pause widget** that drives the app's own media session, so its state
   follows what is playing rather than the last tap.
 - **Hidden, opt-in diagnostics** — five taps on the Settings version row. Off until you turn
@@ -327,7 +335,7 @@ Needs JDK 17 and Android SDK 35 with build-tools 35.0.0. These three commands ar
 documented gate, and CI runs these three plus the rest of the list below.
 
 ```sh
-./gradlew :core:test :app:assembleDebug :app:lintDebug   # 98 core tests, both channels, lint aborts on error
+./gradlew :core:test :app:assembleDebug :app:lintDebug   # 115 core tests, both channels, lint aborts on error
 python3 -m unittest discover -s tools/tests              # 68 release-tooling tests
 python3 tools/check_release.py                           # store metadata, bundled audio, both channels
 ```

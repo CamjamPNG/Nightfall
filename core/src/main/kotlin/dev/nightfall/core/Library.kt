@@ -388,6 +388,41 @@ object Presets {
         )
 
     /**
+     * A themed night: the preset's layers are everything its phases can ask for, and its plan says
+     * what plays when.
+     *
+     * A phase's number is the share of that layer's own gain it plays at, so the slider still means
+     * what it says and a phase changes the mix's balance instead of its level. The gains are the
+     * opening phase's balance, which is what `presetsShareOneOutputLevel` measures; the later phases
+     * are scaled to nearly the same total power, so the mixer's compensation only has to undo the
+     * couple of decibels a phase change takes away (measured by `ThemedNightRunTest`).
+     */
+    private fun theme(
+        name: String,
+        layers: List<Pair<String, Float>>,
+        phases: List<Pair<Float, List<Pair<String, Float>>>>,
+    ): Mix {
+        val slug = Library.slug(name)
+        fun id(soundId: String) = "$slug@$soundId"
+        return Mix(
+            id = slug,
+            name = name,
+            layers = layers.map { (soundId, gain) -> Library.layer(soundId, gain, id(soundId)) },
+            endless =
+                EndlessConfig(
+                    enabled = true,
+                    phases =
+                        phases.map { (start, targets) ->
+                            NightPhase(
+                                start,
+                                targets.map { (soundId, level) -> NightPhaseLayer(id(soundId), level) },
+                            )
+                        },
+                ),
+        )
+    }
+
+    /**
      * Every preset is trimmed to the same measured loudness — −24 LUFS integrated, a minute of audio
      * averaged over four seed draws — so switching presets no longer jumps, and every advertised
      * layer sits within 12 LU of the loudest layer it is mixed with, which is also the widest gain
@@ -435,6 +470,175 @@ object Presets {
             p("Dawn Birds", "forest-birds" to .90f, "wind-in-leaves" to .68f).at(.42f),
             p("Binaural Drift", "binaural" to .69f, "432-hz-ambient-music" to .79f).at(.46f),
             p("Piano Only", "soft-piano" to .90f).at(.54f),
+            // Themed nights, before the nine-layer default so a fresh install still opens on it. Each
+            // one says what the night does. The level is held by the mixer, so a theme changes the
+            // content of the night and not how loud it is — `ThemedNightRunTest` measures that.
+            theme(
+                    "Storm That Passes",
+                    listOf(
+                        "heavy-rain" to .52f,
+                        "thunderstorm" to .45f,
+                        "howling-wind" to .38f,
+                        "moderate-rain" to .48f,
+                        "rain-on-metal-roof" to .45f,
+                        "rolling-thunder" to .38f,
+                        "strong-wind" to .34f,
+                        "light-drizzle" to .50f,
+                        "rain-over-distant-ocean" to .62f,
+                        "quiet-room" to .32f,
+                    ),
+                    listOf(
+                        0f to
+                            listOf(
+                                "heavy-rain" to 1f,
+                                "thunderstorm" to 1f,
+                                "howling-wind" to 1f,
+                            ),
+                        120f to
+                            listOf(
+                                "moderate-rain" to 1f,
+                                "rain-on-metal-roof" to .55f,
+                                "rolling-thunder" to .8f,
+                                "strong-wind" to .9f,
+                            ),
+                        240f to
+                            listOf(
+                                "light-drizzle" to 1f,
+                                "moderate-rain" to .4f,
+                                "rain-over-distant-ocean" to .6f,
+                                "strong-wind" to .3f,
+                            ),
+                        420f to
+                            listOf(
+                                "rain-over-distant-ocean" to 1f,
+                                "light-drizzle" to .35f,
+                                "quiet-room" to .25f,
+                            ),
+                    ),
+                )
+                .at(.34f),
+            theme(
+                    "Rain That Calms",
+                    listOf(
+                        "moderate-rain" to .58f,
+                        "rain-on-window" to .52f,
+                        "rain-on-leaves" to .44f,
+                        "light-drizzle" to .50f,
+                        "quiet-room" to .50f,
+                        "rain-over-distant-ocean" to .48f,
+                    ),
+                    listOf(
+                        0f to
+                            listOf(
+                                "moderate-rain" to 1f,
+                                "rain-on-window" to .6f,
+                                "rain-on-leaves" to .5f,
+                            ),
+                        90f to
+                            listOf(
+                                "rain-on-window" to 1f,
+                                "moderate-rain" to .5f,
+                                "rain-on-leaves" to .4f,
+                                "light-drizzle" to .3f,
+                            ),
+                        210f to
+                            listOf(
+                                "light-drizzle" to 1f,
+                                "rain-on-window" to .3f,
+                                "rain-on-leaves" to .6f,
+                                "rain-over-distant-ocean" to .5f,
+                            ),
+                        360f to
+                            listOf(
+                                "quiet-room" to 1f,
+                                "light-drizzle" to .4f,
+                                "rain-over-distant-ocean" to .6f,
+                            ),
+                    ),
+                )
+                .at(.39f),
+            theme(
+                    "Forest Dusk",
+                    listOf(
+                        "forest-birds" to .55f,
+                        "gentle-breeze" to .35f,
+                        "wind-through-pine-trees" to .42f,
+                        "crickets" to .50f,
+                        "frogs" to .46f,
+                        "nighttime-forest" to .52f,
+                        "quiet-room" to .40f,
+                    ),
+                    listOf(
+                        0f to
+                            listOf(
+                                "forest-birds" to 1f,
+                                "gentle-breeze" to 1f,
+                                "wind-through-pine-trees" to .7f,
+                            ),
+                        75f to
+                            listOf(
+                                "crickets" to 1f,
+                                "wind-through-pine-trees" to .9f,
+                                "gentle-breeze" to .5f,
+                                "forest-birds" to .2f,
+                            ),
+                        150f to
+                            listOf(
+                                "frogs" to 1f,
+                                "crickets" to .6f,
+                                "nighttime-forest" to .8f,
+                                "wind-through-pine-trees" to .4f,
+                            ),
+                        300f to
+                            listOf(
+                                "nighttime-forest" to 1f,
+                                "frogs" to .4f,
+                                "quiet-room" to .4f,
+                                "gentle-breeze" to .4f,
+                            ),
+                    ),
+                )
+                .at(.42f),
+            theme(
+                    "Fire That Burns Down",
+                    listOf(
+                        "bonfire" to .55f,
+                        "crackling-wood" to .50f,
+                        "fireplace" to .46f,
+                        "embers" to .56f,
+                        "wood-stove" to .42f,
+                        "soft-piano" to .36f,
+                    ),
+                    listOf(
+                        0f to
+                            listOf(
+                                "bonfire" to 1f,
+                                "crackling-wood" to 1f,
+                                "fireplace" to .5f,
+                            ),
+                        90f to
+                            listOf(
+                                "crackling-wood" to 1f,
+                                "fireplace" to 1f,
+                                "bonfire" to .3f,
+                                "embers" to .3f,
+                            ),
+                        180f to
+                            listOf(
+                                "fireplace" to 1f,
+                                "embers" to .8f,
+                                "wood-stove" to .7f,
+                                "soft-piano" to .4f,
+                            ),
+                        360f to
+                            listOf(
+                                "embers" to 1f,
+                                "wood-stove" to .6f,
+                                "soft-piano" to .5f,
+                            ),
+                    ),
+                )
+                .at(.41f),
             p(
                 "Nine-Layer Dream",
                 "lo-fi-sleep-music" to .45f,

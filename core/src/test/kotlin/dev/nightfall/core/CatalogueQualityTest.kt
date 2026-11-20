@@ -160,7 +160,15 @@ class CatalogueQualityTest {
         for (p in Presets.all) {
             val perLayer = LinkedHashMap<String, Double>()
             for (layer in p.layers) {
-                val signal = M.render(p.copy(layers = listOf(layer)), 20.0, loader)
+                // A themed preset's layer is measured at its own gain, with the plan switched off: the
+                // claim is that no advertised layer sits under its neighbour, and a phase that leaves
+                // a layer out is a separate, deliberate choice measured by `ThemedNightTest`.
+                val signal =
+                    M.render(
+                        p.copy(layers = listOf(layer), endless = EndlessConfig()),
+                        20.0,
+                        loader,
+                    )
                 perLayer[layer.soundId] = M.shortTermLufs(signal, 3.0)
             }
             val spread = perLayer.values.max() - perLayer.values.min()
