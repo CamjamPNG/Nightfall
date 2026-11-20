@@ -107,7 +107,7 @@
   rejection of duplicate versions and preservation of code/audio in ABI options.
   Signed APK variants are additionally checked with Android's apksigner, aapt,
   zipalign and source-tag audio hashes before publication.
-- 115 deterministic JVM/core tests pass (114 executed, 1 skipped by design: the
+- 119 deterministic JVM/core tests pass (118 executed, 1 skipped by design: the
   opt-in `NIGHTFALL_CALIBRATE=1` level-calibration generator). Two of them render
   a whole eight-hour night through the real render path. They cover nine
   simultaneous non-silent sources, 512 allocated layers, unrelated-source phase
@@ -147,7 +147,14 @@
   beside the same preset with the plan switched off and reports the whole night's level, the hourly
   column, the hourly spread and the CPU per block. Zero allocation is measured on a clean
   two-thousand-block window by `ThemedNightTest`, because the eight-hour test allocates on purpose to
-  keep its hours. None of it is a listening test: nobody has heard a themed night.
+  keep its hours. Four paths that a model test cannot reach are held too: applying a preset renames
+  the layers, so `Mix.reidentify` carries the phase targets through it and `ThemedPresetPlayTest`
+  saves a theme into Your mixes, taps its chip on Home and asserts the plan answers 1.0 at the start
+  and 0.0 at five hours; muting one layer does not move the level of the rest (muted against removed,
+  measured within a tenth of a LU on both nights); another themed night starts its clock at zero while
+  a gain edit continues the running one; and phases thirty seconds apart take over from the value that
+  was actually playing rather than from a target never reached. None of it is a listening test: nobody
+  has heard a themed night.
 - Duplicate noise layers have independent random streams. Pausing in the final
   timer fade preserves the fade level. Expired layer schedules stop source
   reads/rendering and can resume with a new schedule.

@@ -365,6 +365,141 @@ class ThemedNightTest {
     }
 
     @Test
+    fun renamingLayersCarriesThePlanWithThem() {
+        // This is the model half of the Presets-tab defect: `usePreset` renames the layers so a whole
+        // mix crossfades in, and a plan written in the old ids would then name nothing. The rename and
+        // the plan move together or the night silently becomes a plain mix.
+        val renamed = storm.reidentify { "fresh-${it.soundId}" }
+        assertEquals("every layer got a new id", storm.layers.size, renamed.layers.size)
+        assertTrue(renamed.layers.none { l -> storm.layers.any { it.id == l.id } })
+        val oldIds = storm.layers.map { it.id }.toSet()
+        assertTrue(
+            "a phase target still names a layer that no longer exists",
+            renamed.endless.phases.flatMap { it.layers }.none { it.layerId in oldIds },
+        )
+        assertEquals(
+            "every share survived the rename",
+            storm.endless.phases.map { phase -> phase.layers.map { it.level } },
+            renamed.endless.phases.map { phase -> phase.layers.map { it.level } },
+        )
+        val plan = NightPlan.of(renamed)!!
+        val before = NightPlan.of(storm)!!
+        for (sound in listOf("heavy-rain", "rain-on-metal-roof", "quiet-room", "light-drizzle")) {
+            val old = storm.layers.first { it.soundId == sound }.id
+            val fresh = renamed.layers.first { it.soundId == sound }.id
+            assertEquals(
+                "$sound answers the same at every hour",
+                before.amount(old, 0, 300 * 60.0),
+                plan.amount(fresh, 0, 300 * 60.0),
+                0f,
+            )
+            assertEquals(
+                "$sound answers the same at the start",
+                before.amount(old, 0, 0.0),
+                plan.amount(fresh, 0, 0.0),
+                0f,
+            )
+        }
+    }
+
+    @Test
+    fun mutingOneLayerDoesNotMakeAnotherLouder() {
+        // Compensation answers for what the night did, never for a control the person moved: a muted
+        // layer leaves the reference as it leaves the output, so the layers still playing keep the
+        // level they had.
+        val themed = theme("rain-that-calms")
+        val target = themed.layers.first { it.soundId == "rain-on-leaves" }
+        val muted = themed.copy(layers = themed.layers.map { if (it.id == target.id) it.copy(mute = true) else it })
+        val removed = themed.copy(layers = themed.layers.filter { it.id != target.id })
+        val a = lufs(muted)
+        val b = lufs(removed)
+        println("themed: one layer muted %.2f LUFS, the same layer gone %.2f LUFS".format(a, b))
+        assertTrue("muting a layer moved the rest by %.2f LU".format(abs(a - b)), abs(a - b) < .5)
+
+        // And the same for endless night, which shares the expression.
+        val two =
+            Mix(
+                layers =
+                    listOf(
+                        Library.layer("moderate-rain", .45f, "mute-rain"),
+                        Library.layer("brown", .45f, "mute-brown"),
+                    ),
+                endless = EndlessConfig(enabled = true, seed = 3L),
+            )
+        val heldBack = two.copy(layers = two.layers.map { if (it.soundId == "brown") it.copy(mute = true) else it })
+        val absent = two.copy(layers = two.layers.filter { it.soundId != "brown" })
+        val c = lufs(heldBack)
+        val d = lufs(absent)
+        println("endless: one layer muted %.2f LUFS, the same layer gone %.2f LUFS".format(c, d))
+        assertTrue("muting a layer moved the night by %.2f LU".format(abs(c - d)), abs(c - d) < .5)
+    }
+
+    @Test
+    fun selectingAnotherNightStartsItAtZero() {
+        // A night's identity is the config, not the layer set: editing a gain continues the night,
+        // another night begins one.
+        val first = theme("storm-that-passes")
+        val second = theme("rain-that-calms")
+        val mixer = PcmMixer(rate, 1024, loader)
+        val buffer = FloatArray(2048)
+        mixer.sync(first)
+        repeat(2000) { mixer.render(buffer) }
+        val played = mixer.nightSeconds
+        assertTrue("the first night did not advance", played > 40.0)
+
+        mixer.sync(first.copy(layers = first.layers.map { it.copy(gain = it.gain * .5f) }))
+        repeat(100) { mixer.render(buffer) }
+        assertTrue(
+            "editing a gain restarted the night (${mixer.nightSeconds} s)",
+            mixer.nightSeconds > played,
+        )
+
+        mixer.sync(second)
+        assertEquals("another night started already elapsed", 0.0, mixer.nightSeconds, 0.0)
+    }
+
+    @Test
+    fun closelySpacedPhasesStartFromWhatIsPlaying() {
+        // Phases closer together than the three-minute transition are legal, and they must not step:
+        // the second transition begins from where the first one had actually got to, not from a target
+        // it never reached.
+        val mix =
+            Mix(
+                layers = listOf(Library.layer("brown", .4f, "phased")),
+                endless =
+                    EndlessConfig(
+                        enabled = true,
+                        phases =
+                            listOf(
+                                NightPhase(0f, listOf(NightPhaseLayer("phased", 1f))),
+                                NightPhase(.5f, listOf(NightPhaseLayer("phased", 0f))),
+                                NightPhase(1f, listOf(NightPhaseLayer("phased", 1f))),
+                            ),
+                    ),
+            )
+        val plan = NightPlan.of(mix)!!
+        val justBefore = plan.amount("phased", 0, 59.9)
+        val justAfter = plan.amount("phased", 0, 60.1)
+        println("across a 30 s phase: %.4f then %.4f".format(justBefore, justAfter))
+        assertTrue(
+            "a closely spaced phase steps from ${justBefore} to ${justAfter}",
+            abs(justAfter - justBefore) < .05,
+        )
+        // The whole plan, sample-dense, still moves at the documented rate and never steps.
+        var quickest = 0.0
+        var previous = plan.amount("phased", 0, 0.0)
+        var at = 0.001
+        while (at <= 200.0) {
+            val now = plan.amount("phased", 0, at)
+            quickest = max(quickest, abs(now - previous) / 0.001)
+            previous = now
+            at += 0.001
+        }
+        println("quickest change %.4f a second".format(quickest))
+        assertTrue("closely spaced phases move at %.4f a second".format(quickest), quickest < .02)
+    }
+
+    @Test
     fun aThemedNightRendersWithoutAllocating() {
         val bean =
             ManagementFactory.getThreadMXBean() as com.sun.management.ThreadMXBean

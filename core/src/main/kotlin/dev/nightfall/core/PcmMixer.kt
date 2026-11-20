@@ -62,6 +62,13 @@ class PcmMixer(
 
     /** Frames rendered since the night began: the schedule's only clock, and not the wall clock. */
     private var nightFrames = 0L
+
+    /** The config the night clock belongs to, so a different night can be told from an edited one. */
+    private var nightConfig: EndlessConfig? = null
+
+    /** Elapsed seconds of the night being played: for measurement, never read by the render path. */
+    val nightSeconds: Double
+        get() = nightFrames.toDouble() / sampleRate
     private var masterTarget = .5f
     private var master = .0f
     private var duck = 1f
@@ -80,6 +87,7 @@ class PcmMixer(
         active.clear()
         plan = null
         nightFrames = 0L
+        nightConfig = null
         master = 0f
         duck = 1f
         smoothedExternal = 1f
@@ -90,7 +98,13 @@ class PcmMixer(
         // The mix's layer set is the person's layers plus, with endless night on, the companions its
         // own families earned. Companions keep fixed ids, so a night's roster is stable across syncs
         // and a changed seed retires the old companion through the ordinary crossfade.
-        plan = NightPlan.of(mix)
+        val next = NightPlan.of(mix)
+        // A night's identity is the config that describes it, not the layer set: editing a gain must
+        // not restart the arc, but selecting another night is another night, and it starts at zero
+        // rather than hours in from the one that was playing.
+        if (next?.config != nightConfig) nightFrames = 0L
+        nightConfig = next?.config
+        plan = next
         for (n in 0 until active.size) active[n].removed = true
         for (layer in mix.layers) attach(layer, false)
         val roster = plan?.companions
@@ -205,7 +219,10 @@ class PcmMixer(
                 // own layers, so a companion may only bring the total back down to it. In a themed
                 // night every layer is the person's, so a phase that leaves some out may only restore
                 // the power it took away.
-                if (!ch.companion) reference += c.gain * c.gain * tone
+                // A layer the person muted or disabled is out of the reference as well as out of what
+                // is rendered, so muting one layer cannot make another louder: the compensation only
+                // ever answers for what the night did, never for a control the person moved.
+                if (!ch.companion && audible) reference += c.gain * c.gain * tone
                 rendered += c.gain * c.gain * tone * e * e
             }
             // Levels holds every source at one reference loudness, so the night's changes add or

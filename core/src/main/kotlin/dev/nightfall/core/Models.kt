@@ -64,6 +64,34 @@ data class Mix(
     val endless: EndlessConfig = EndlessConfig(),
 )
 
+/**
+ * This mix with new layer ids, and every phase target following them.
+ *
+ * A themed night's plan is written in layer ids, so renaming the layers without renaming the plan
+ * leaves a night whose every phase target misses: the layers stay unnamed, and an unnamed layer plays
+ * its own gain all night, so the plan quietly stops existing. Applying a preset renames the layers on
+ * purpose — a whole mix crossfades in rather than mutating the channels in place — so this is the one
+ * way to rename them, and `NightfallRuntime.usePreset` is its caller.
+ */
+fun Mix.reidentify(fresh: (Layer) -> String): Mix {
+    val ids = layers.associate { it.id to fresh(it) }
+    return copy(
+        layers = layers.map { it.copy(id = ids.getValue(it.id)) },
+        endless =
+            endless.copy(
+                phases =
+                    endless.phases.map { phase ->
+                        phase.copy(
+                            layers =
+                                phase.layers.map { entry ->
+                                    entry.copy(layerId = ids[entry.layerId] ?: entry.layerId)
+                                }
+                        )
+                    }
+            ),
+    )
+}
+
 @Serializable
 data class Settings(
     val light: Boolean = false,
@@ -192,7 +220,16 @@ object PresetJson {
                     )
                 }
                 .sortedBy { it.startMinutes }
-        return config.copy(phases = phases)
+        // Two phases at the same minute are one phase, and the later entry wins. Keeping both would
+        // give the first a zero-length transition, which is a step, and dropping the earlier one is
+        // the only reading of "at minute 30, play this" that a person could have meant.
+        val distinct = ArrayList<NightPhase>(phases.size)
+        for (phase in phases) {
+            if (distinct.isNotEmpty() && distinct.last().startMinutes == phase.startMinutes)
+                distinct[distinct.size - 1] = phase
+            else distinct.add(phase)
+        }
+        return config.copy(phases = distinct)
     }
 }
 

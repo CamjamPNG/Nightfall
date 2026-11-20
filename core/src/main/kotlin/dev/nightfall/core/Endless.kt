@@ -270,7 +270,9 @@ object Endless {
 class PhaseSchedule private constructor(
     private val starts: DoubleArray,
     private val ids: Array<String>,
-    private val levels: FloatArray,
+    /** The value each phase's transition starts from, per layer: what was actually playing. */
+    private val from: FloatArray,
+    private val target: FloatArray,
 ) {
     private val index = HashMap<String, Int>(ids.size * 2)
 
@@ -287,13 +289,13 @@ class PhaseSchedule private constructor(
         val minutes = seconds / 60.0
         var phase = 0
         while (phase + 1 < starts.size && starts[phase + 1] <= minutes) phase++
-        val target = levels[phase * ids.size + i]
-        if (phase == 0) return target
+        val arriving = target[phase * ids.size + i]
+        if (phase == 0) return arriving
         val since = minutes - starts[phase]
-        if (since >= FADE_MINUTES) return target
-        val from = levels[(phase - 1) * ids.size + i]
+        if (since >= FADE_MINUTES) return arriving
+        val leaving = from[phase * ids.size + i]
         val t = (since / FADE_MINUTES).toFloat()
-        return from + (target - from) * (t * t * (3 - 2 * t))
+        return leaving + (arriving - leaving) * (t * t * (3 - 2 * t))
     }
 
     companion object {
@@ -314,14 +316,14 @@ class PhaseSchedule private constructor(
             ids.forEachIndexed { i, id -> index[id] = i }
             val ordered = phases.sortedBy { it.startMinutes }
             val starts = DoubleArray(ordered.size)
-            val levels = FloatArray(ordered.size * ids.size)
+            val target = FloatArray(ordered.size * ids.size)
             val named = BooleanArray(ids.size)
             ordered.forEachIndexed { h, phase ->
                 starts[h] = phase.startMinutes.toDouble()
-                for (target in phase.layers) {
-                    val i = index[target.layerId] ?: continue
+                for (entry in phase.layers) {
+                    val i = index[entry.layerId] ?: continue
                     named[i] = true
-                    levels[h * ids.size + i] = target.level.coerceIn(0f, 1f)
+                    target[h * ids.size + i] = entry.level.coerceIn(0f, 1f)
                 }
             }
             // A layer no phase names is not part of the plan, so it is not the plan's to silence:
@@ -329,9 +331,32 @@ class PhaseSchedule private constructor(
             // behave the way a sound added to any other mix does.
             for (i in ids.indices) {
                 if (named[i]) continue
-                for (h in ordered.indices) levels[h * ids.size + i] = 1f
+                for (h in ordered.indices) target[h * ids.size + i] = 1f
             }
-            return PhaseSchedule(starts, ids, levels)
+            // Each transition starts from what was actually playing when its phase began, not from
+            // the previous phase's target. With three minutes between phases the two are the same
+            // number; with phases closer together than that the previous target was never reached, so
+            // starting from it would step. This is why a plan with closely spaced phases needs no
+            // validation: it is continuous by construction.
+            val from = FloatArray(target.size)
+            for (h in ordered.indices) {
+                for (i in ids.indices) {
+                    val at = h * ids.size + i
+                    from[at] =
+                        if (h == 0) target[at]
+                        else {
+                            val previous = (h - 1) * ids.size + i
+                            val elapsed = starts[h] - starts[h - 1]
+                            if (elapsed >= FADE_MINUTES) target[previous]
+                            else {
+                                val t = (elapsed / FADE_MINUTES).toFloat()
+                                val eased = t * t * (3 - 2 * t)
+                                from[previous] + (target[previous] - from[previous]) * eased
+                            }
+                        }
+                }
+            }
+            return PhaseSchedule(starts, ids, from, target)
         }
     }
 }

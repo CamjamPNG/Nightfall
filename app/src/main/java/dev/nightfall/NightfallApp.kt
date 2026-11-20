@@ -186,12 +186,9 @@ class NightfallRuntime(
     }
 
     fun usePreset(p: Mix) {
-        mix {
-            p.copy(
-                id = "current",
-                layers = p.layers.map { it.copy(id = UUID.randomUUID().toString()) },
-            )
-        }
+        // The ids are fresh so a whole mix crossfades in rather than mutating channels in place, and
+        // `reidentify` carries the themed night's phase targets through the rename with them.
+        mix { p.copy(id = "current").reidentify { UUID.randomUUID().toString() } }
         if (!status.value.playing) play()
     }
 

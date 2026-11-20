@@ -82,12 +82,26 @@ structural rather than a convention: `NightPlan.of` returns a plan with `compani
 `phases` non-null, and `ThemedNightTest` asserts both.
 
 A phase takes over across three minutes with a smoothstep, so a boundary has no step and no corner in
-it; the level then travels through the same 25 ms smoother every other gain change uses. The schedule
-is a function of frames rendered, so a theme is not spent by a pause and two plays of one preset are
-the same night.
+it; the level then travels through the same 25 ms smoother every other gain change uses. Each
+transition starts from what is *actually* playing when its phase begins, not from the previous phase's
+target: with three minutes between phases the two are the same number, and with phases closer together
+than that the previous target was never reached, so starting from it would step. A plan with closely
+spaced phases is therefore continuous by construction and is not rejected at sanitisation; two phases
+at the same minute are one phase, and the later entry wins. The schedule is a function of frames
+rendered, so a theme is not spent by a pause and two plays of one preset are the same night, and a
+night's clock is reset only when the night itself changes — another preset, another seed, another
+plan — never when a layer's gain is edited.
+
+A plan is written in layer ids, and applying a preset renames the layers so the whole mix crossfades
+in rather than mutating channels in place. Those two facts together are a trap: a plan left in the old
+ids names nothing, every layer then plays its own gain all night, and a themed night quietly becomes a
+plain mix. `Mix.reidentify` is the only way to rename layers, and it moves the phase targets with them,
+so the trap cannot be re-entered by a later caller.
 
 Level is held the way endless night holds it, by the same expression: the mixer scales the whole mix by
-the square root of the reference power over the power the night is rendering. In endless mode the
+the square root of the reference power over the power the night is rendering. A layer the person muted
+or disabled is out of the reference as well as out of the output, so muting one layer cannot make
+another louder: the compensation answers for what the night did, never for a control the person moved. In endless mode the
 reference is the person's own layers, so a companion may only bring the total back down to it; in a
 themed night every layer is the person's, so a phase that leaves layers out may only restore the power
 it took away. The factor is capped at 2 so a phase table that removed nearly everything cannot ask for
