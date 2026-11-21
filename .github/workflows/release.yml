@@ -15,10 +15,27 @@ permissions:
 concurrency:
   group: nightfall-publish-main
   cancel-in-progress: false
+# The work is split by cost, and every cap below is derived from the durations these jobs measured
+# on this repository rather than from one number covering everything. `:core:test` is the long pole
+# on its own — 23m39s inside the old single job and 29m33s as the standalone `core` job of
+# `android.yml` — and the release build that used to queue behind it (both flavours' R8, release
+# lint, the app unit tests) measures another 5 to 9 minutes. One job holding all of it with a
+# 40-minute cap therefore left about six minutes for a slow runner, and the run for 6e82937 spent
+# them: it was killed at 40m00s with `lintFdroidRelease` still running and nothing published.
+# `publish` stays the only job that holds the signing key, tags, or touches a release, so a failure
+# in either build job still leaves the repository and every published release exactly as they were.
 jobs:
-  publish:
+  # Seconds of work: decide whether there is a release to make and prove the credentials exist
+  # before 40 minutes of building is spent behind a secret nobody installed.
+  prepare:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 10
+    outputs:
+      needed: ${{ steps.publish.outputs.needed }}
+      version: ${{ steps.version.outputs.version }}
+      code: ${{ steps.version.outputs.code }}
+      tag: ${{ steps.version.outputs.tag }}
+      prepared: ${{ steps.version.outputs.prepared }}
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -40,6 +57,10 @@ jobs:
           keytool -exportcert -keystore "$RUNNER_TEMP/nightfall-release.p12" -alias nightfall -storepass:env KEYSTORE_PASSWORD -file "$RUNNER_TEMP/nightfall-release-certificate.der"
           EXPECTED=$(cat docs/release-signing-certificate.sha256)
           printf '%s  %s\n' "$EXPECTED" "$RUNNER_TEMP/nightfall-release-certificate.der" | sha256sum --check
+      # The tooling that signs, packages and publishes is stdlib-only Python and its 68 tests run in
+      # seconds, so they gate the run here rather than costing a job of their own.
+      - name: Release tooling tests
+        run: python3 -m unittest discover -s tools/tests -v
       - name: Prepare version, store metadata and release notes
         id: version
         env:
@@ -58,40 +79,148 @@ jobs:
           else
             echo 'needed=true' >> "$GITHUB_OUTPUT"
           fi
+      - name: Remove temporary signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/nightfall-release.p12" "$RUNNER_TEMP/nightfall-release-certificate.der"
+  # Measured: `:core:test` took 23m39s here on a cached runner and 26m00s on the run that timed out,
+  # against 29m33s for the same task as `android.yml`'s standalone `core` job from a cold cache. This
+  # cap is that slowest measurement plus two thirds, which is the headroom a slower hosted runner
+  # needs. It needs neither the Android SDK nor a signing key.
+  core:
+    needs: prepare
+    if: needs.prepare.outputs.needed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
-        if: steps.publish.outputs.needed == 'true'
         with:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
-        if: steps.publish.outputs.needed == 'true'
         with:
           gradle-version: '8.11.1'
-      - name: Test and build
-        if: steps.publish.outputs.needed == 'true'
+      - name: Core audio tests
+        run: ./gradlew --no-daemon :core:test
+  # Measured: the rest of the old build step after `:core:test` finished, from its own logs: app unit
+  # tests 3m26s (5m44s on the slow run), GitHub release compile and R8 1m36s, F-Droid's 2m00s,
+  # release lint 1m13s, and `check_release.py` about a second, plus setup and upload on top. This cap
+  # is three times that sum.
+  apk:
+    needs: prepare
+    if: needs.prepare.outputs.needed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          gradle-version: '8.11.1'
+      # The APKs must carry the version being published, and the version comes from the commit
+      # history, so this job computes it from its own checkout and refuses to build if the answer
+      # differs from the one `prepare` decided on.
+      - name: Prepare the version this build carries
+        env:
+          BUMP: ${{ inputs.bump || 'auto' }}
+          EXPECTED_TAG: ${{ needs.prepare.outputs.tag }}
         run: |
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;35.0.0"
-          python3 -m unittest discover -s tools/tests -v
-          ./gradlew --no-daemon :core:test :app:testGithubDebugUnitTest :app:assembleGithubRelease :app:assembleFdroidRelease :app:lintRelease
-          python3 tools/check_release.py --apk app/build/outputs/apk/github/release/app-github-release-unsigned.apk --fdroid-apk app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk
+          python3 tools/release_version.py --kind "$BUMP" --write --github-output "$RUNNER_TEMP/version.env"
+          BUILT=$(sed -n 's/^tag=//p' "$RUNNER_TEMP/version.env")
+          if [ "$BUILT" != "$EXPECTED_TAG" ]; then
+            echo "::error::This checkout computes $BUILT, but this run is publishing $EXPECTED_TAG. Nothing was built or published; dispatch the workflow again."
+            exit 1
+          fi
+      - name: Install Android SDK packages
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;35.0.0"'
+      - name: Test and build both channels
+        run: ./gradlew --no-daemon :app:testGithubDebugUnitTest :app:assembleGithubRelease :app:assembleFdroidRelease :app:lintRelease
+      - name: Validate store metadata, bundled audio and both channels
+        run: python3 tools/check_release.py --apk app/build/outputs/apk/github/release/app-github-release-unsigned.apk --fdroid-apk app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk
+      # Fixed names in one directory, so the publish job passes paths it states rather than paths it
+      # infers from how the artifact action lays globs out.
+      - name: Collect the files the publish job signs
+        run: |
+          mkdir -p artifacts/build
+          cp app/build/outputs/apk/github/release/app-github-release-unsigned.apk artifacts/build/github-unsigned.apk
+          cp app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk artifacts/build/fdroid-unsigned.apk
+          cp app/build/outputs/mapping/githubRelease/mapping.txt artifacts/build/github-mapping.txt
+          cp app/build/outputs/mapping/fdroidRelease/mapping.txt artifacts/build/fdroid-mapping.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nightfall-release-inputs
+          path: artifacts/build/
+          retention-days: 7
+  # Measured at 14 seconds of steps in the run that succeeded on cd4dc29 (package, sign and verify
+  # 6s, F-Droid asset 1s, tag push 1s, release upload and publish 6s), with a minute of checkout and
+  # artifact download around it. The cap covers that plus a slow upload of six APKs and the manifest.
+  publish:
+    needs: [prepare, core, apk]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: nightfall-release-inputs
+          path: artifacts/build
+      - name: Prepare version, store metadata and release notes
+        id: version
+        env:
+          BUMP: ${{ inputs.bump || 'auto' }}
+          EXPECTED_TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          python3 tools/release_version.py --kind "$BUMP" --write --github-output "$GITHUB_OUTPUT"
+          TAG=$(sed -n 's/^tag=//p' "$GITHUB_OUTPUT")
+          if [ "$TAG" != "$EXPECTED_TAG" ]; then
+            echo "::error::This checkout computes $TAG, but the built APKs are $EXPECTED_TAG. Nothing was signed or published; dispatch the workflow again."
+            exit 1
+          fi
+      - name: Check persistent signing credentials
+        env:
+          KEYSTORE_BASE64: ${{ secrets.NIGHTFALL_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.NIGHTFALL_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo '::error::Add NIGHTFALL_KEYSTORE_BASE64 and NIGHTFALL_KEYSTORE_PASSWORD in repository Actions secrets. See docs/RELEASING.md. A temporary signing key will never be generated.'
+            exit 1
+          fi
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/nightfall-release.p12"
+          keytool -exportcert -keystore "$RUNNER_TEMP/nightfall-release.p12" -alias nightfall -storepass:env KEYSTORE_PASSWORD -file "$RUNNER_TEMP/nightfall-release-certificate.der"
+          EXPECTED=$(cat docs/release-signing-certificate.sha256)
+          printf '%s  %s\n' "$EXPECTED" "$RUNNER_TEMP/nightfall-release-certificate.der" | sha256sum --check
+      # `package_release.py` refuses an APK whose versionName or versionCode is not the one it was
+      # asked to publish, so the artifact handed over by the build job is checked as it is signed.
       - name: Package, sign and verify APK options
-        if: steps.publish.outputs.needed == 'true'
         env:
           NIGHTFALL_KEYSTORE_PASSWORD: ${{ secrets.NIGHTFALL_KEYSTORE_PASSWORD }}
           VERSION: ${{ steps.version.outputs.version }}
           CODE: ${{ steps.version.outputs.code }}
         run: |
           export NIGHTFALL_KEYSTORE_PATH="$RUNNER_TEMP/nightfall-release.p12"
-          python3 tools/package_release.py --apk app/build/outputs/apk/github/release/app-github-release-unsigned.apk --fdroid-apk app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk --out artifacts/publish --version "$VERSION" --code "$CODE" \
-            --mapping "github=app/build/outputs/mapping/githubRelease/mapping.txt" \
-            --mapping "fdroid=app/build/outputs/mapping/fdroidRelease/mapping.txt"
+          python3 tools/package_release.py --apk artifacts/build/github-unsigned.apk --fdroid-apk artifacts/build/fdroid-unsigned.apk --out artifacts/publish --version "$VERSION" --code "$CODE" \
+            --mapping "github=artifacts/build/github-mapping.txt" \
+            --mapping "fdroid=artifacts/build/fdroid-mapping.txt"
       - name: Verify the published F-Droid asset
-        if: steps.publish.outputs.needed == 'true'
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: python3 tools/check_release.py --fdroid-asset "artifacts/publish/Nightfall-$VERSION-fdroid-universal.apk"
       - name: Push verified source version and tag atomically
-        if: steps.publish.outputs.needed == 'true' && steps.version.outputs.prepared == 'true'
+        if: steps.version.outputs.prepared == 'true'
         env:
           TAG: ${{ steps.version.outputs.tag }}
         run: |
@@ -102,7 +231,6 @@ jobs:
           git tag -a "$TAG" -m "Nightfall $TAG"
           git push --atomic origin HEAD:refs/heads/main "refs/tags/$TAG"
       - name: Publish installable APKs
-        if: steps.publish.outputs.needed == 'true'
         env:
           TAG: ${{ steps.version.outputs.tag }}
         run: |
