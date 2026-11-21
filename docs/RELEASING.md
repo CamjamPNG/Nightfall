@@ -150,6 +150,17 @@ Once the two signing secrets below are installed, it:
 5. Atomically pushes the version commit and annotated tag, then publishes the
    APKs, both mapping files, hashes and public certificate to GitHub Releases.
 
+The workflow is four jobs rather than one. `prepare` decides the version, checks
+the signing credential and runs the release-tool tests; `core` runs `:core:test`;
+`apk` builds and validates both release APKs; `publish` downloads those APKs,
+signs them, pushes the tag and publishes. Only `publish` holds the key or can
+create a tag, so a failure in either build job leaves the repository and its
+releases untouched, and the two build jobs run at the same time instead of one
+queueing behind the other. Each job's `timeout-minutes` is its own slowest
+measured run plus headroom — the cap is written beside the measurement it came
+from — rather than one number covering everything, because a single cap covering
+an audio test suite and two R8 builds together is a cap on their sum.
+
 Release commits do not recursively trigger more releases. Concurrent source
 changes cannot be overwritten: an atomic push fails if `main` changed during
 the build; the next queued run includes the accumulated changes. Re-running
