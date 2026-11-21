@@ -22,10 +22,22 @@ jobs:
       - name: Release tooling tests
         run: python3 -m unittest discover -s tools/tests -v
   # The core module has no Android dependency: `:core:test` configures and runs with no
-  # ANDROID_HOME and no local.properties, so this job installs no SDK packages.
-  core:
+  # ANDROID_HOME and no local.properties, so these jobs install no SDK packages.
+  #
+  # `:core:test` is one sequential fork, and where its time goes is measurable from the per-class
+  # results it already uploads: 28m57s across 17 classes in run 44916173608. Three of those classes
+  # render a whole night of audio and take 23m32s between them — EndlessNightRunTest 11m14s,
+  # ThemedNightRunTest 9m47s, NightRunTest 2m30s — while the other 14 classes together are 5m25s.
+  # That is why 35 minutes was a coin flip and not a cap: the same commit's `:core:test` took 29m35s
+  # in that run and 33m24s in `release.yml`'s run 44916129804, and run 44760169310 was still running
+  # at 34m38s when the cap killed it, which turned `release` red and read like a failing test.
+  #
+  # So the same 119 tests now run in four jobs — the 14 classes that are not Night-category proofs
+  # here, and one shard per render proof in `core-night` below — instead of being trimmed to fit a
+  # cap. Every class still runs on every pull request.
+  core-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
@@ -35,16 +47,138 @@ jobs:
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           gradle-version: '8.11.1'
-      - name: Core JVM tests
-        run: ./gradlew --no-daemon :core:test
+      # Measured: 5m25s of tests, and 6m24s of job once the 38s of configuration and compile and the
+      # 25s of checkout, toolchain and upload from the same run are added. The cap is that plus two
+      # thirds, the rule `release.yml` uses, rounded up: 10m40s, taken as 12.
+      - name: Core JVM tests, everything that is not an eight-hour render
+        run: ./gradlew --no-daemon :core:test -PwithoutNight
+      # The count is the part that keeps the split honest rather than nominal. `core-night` deals out
+      # whatever carries `@Category(Night::class)` a slice at a time, so it covers every tagged class
+      # by construction; this step proves the two halves still add up to the whole module, and fails
+      # if a class has appeared that nothing runs.
+      - name: Every core test class ran, here or in a Night shard
+        run: |
+          mapfile -t all < <(
+            awk 'FNR == 1 { tagged = 0 }
+                 /^(internal |abstract |open )*class [A-Za-z0-9_]+Test[ {(:<]/ {
+                   name = $2; sub(/[^A-Za-z0-9_].*/, "", name); print name }' \
+              core/src/test/kotlin/dev/nightfall/core/*.kt | sort -u)
+          mapfile -t night < <(
+            awk 'FNR == 1 { tagged = 0 }
+                 /@Category\(Night::class\)/ { tagged = 1; next }
+                 /^(internal |abstract |open )*class [A-Za-z0-9_]+Test[ {(:<]/ {
+                   if (tagged) { name = $2; sub(/[^A-Za-z0-9_].*/, "", name); print name }
+                   tagged = 0 }' core/src/test/kotlin/dev/nightfall/core/*.kt | sort -u)
+          expected=$(( ${#all[@]} - ${#night[@]} ))
+          ran=$(ls core/build/test-results/test/TEST-*.xml | wc -l)
+          echo "$ran of ${#all[@]} core test classes reported results here; ${#night[@]} Night-category classes run in core-night."
+          if [ "$ran" -ne "$expected" ]; then
+            echo "::error::$expected classes should have run here (${#all[@]} test classes minus ${#night[@]} Night-category) and $ran did. A class that no job runs is a skipped test."
+            exit 1
+          fi
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
-          name: core-test-reports
+          name: core-test-reports-fast
           path: |
             core/build/reports/tests/test/
             core/build/test-results/test/
           retention-days: 14
+  # The three Night-category render proofs, one per shard. They are independent of each other and each
+  # takes minutes of real rendering, so running them one after another in a single fork is what made
+  # `core` long: three jobs run them concurrently and the slowest shard sets the job time instead of
+  # the sum of all three.
+  #
+  # A shard discovers the tagged classes from the sources rather than naming them, then takes every
+  # (index mod shard count) of the sorted list. Naming them here would mean a new Night-category test
+  # that no job mentions, and it would run nowhere while every job stayed green; dealing out the
+  # discovered list cannot miss one. At three tagged classes each shard currently holds exactly one.
+  core-night:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          gradle-version: '8.11.1'
+      - name: Deal this shard its share of the Night-category classes
+        id: share
+        run: |
+          mapfile -t night < <(
+            awk 'FNR == 1 { tagged = 0 }
+                 /@Category\(Night::class\)/ { tagged = 1; next }
+                 /^(internal |abstract |open )*class [A-Za-z0-9_]+Test[ {(:<]/ {
+                   if (tagged) { name = $2; sub(/[^A-Za-z0-9_].*/, "", name); print "dev.nightfall.core." name }
+                   tagged = 0 }' core/src/test/kotlin/dev/nightfall/core/*.kt | sort)
+          if [ "${#night[@]}" -eq 0 ]; then
+            echo '::error::No test class carries @Category(Night::class), so these shards have nothing to run and the split is broken.'
+            exit 1
+          fi
+          flags=""
+          names=""
+          for i in "${!night[@]}"; do
+            if [ $(( i % ${{ strategy.job-total }} )) -eq $(( ${{ matrix.shard }} - 1 )) ]; then
+              names="$names ${night[$i]}"
+              flags="$flags --tests ${night[$i]}"
+            fi
+          done
+          if [ -z "$flags" ]; then
+            echo 'empty=true' >> "$GITHUB_OUTPUT"
+            echo "Shard ${{ matrix.shard }} of ${{ strategy.job-total }} has no class with ${#night[@]} Night-category classes; it has nothing to run."
+            exit 0
+          fi
+          echo 'empty=false' >> "$GITHUB_OUTPUT"
+          echo "tests=$flags" >> "$GITHUB_OUTPUT"
+          echo "Shard ${{ matrix.shard }} of ${{ strategy.job-total }} runs:$names"
+      # Measured: the slowest shard is EndlessNightRunTest at 11m14s of tests, and 12m14s of job once
+      # the 38s of configuration and compile and the 25s of checkout, toolchain and upload from run
+      # 44916173608 are added. The cap is that plus two thirds, as in `release.yml`: 20m24s, taken
+      # as 22. The runner variance measured on this same work was 12.9% (29m35s against 33m24s), so
+      # the cap sits 1.8x above the measurement.
+      #
+      # `$TESTS` is deliberately unquoted: it is a string of `--tests <class>` pairs built above, and
+      # word splitting is what turns it back into Gradle arguments.
+      - name: Core night render tests
+        if: steps.share.outputs.empty != 'true'
+        env:
+          TESTS: ${{ steps.share.outputs.tests }}
+        run: ./gradlew --no-daemon :core:test $TESTS
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: core-test-reports-night-${{ matrix.shard }}
+          path: |
+            core/build/reports/tests/test/
+            core/build/test-results/test/
+          retention-days: 14
+  # `release` needs this name to mean "every core test passed", and it meant that before the split, so
+  # it is the four jobs above aggregated rather than a test runner of its own. Same shape as `release`
+  # below: it fails, rather than being skipped, when a job it needs did not succeed.
+  core:
+    needs: [core-tests, core-night]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every core test job passed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS"
+          FAILED=$(printf '%s' "$RESULTS" | python3 -c 'import json,sys; print(" ".join(sorted(k for k,v in json.load(sys.stdin).items() if v["result"] != "success")))')
+          if [ -n "$FAILED" ]; then
+            echo "::error::These core test jobs did not succeed: $FAILED"
+            exit 1
+          fi
+          echo "core-tests and every core-night shard succeeded"
   # Both channels' scenarios, on the API 35 sandbox that ships. This is also where the store
   # screenshots are rendered, so they upload from here.
   unit:
