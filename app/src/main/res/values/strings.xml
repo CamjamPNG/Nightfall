@@ -75,6 +75,18 @@
     <string name="home_action_all_presets">All presets →</string>
     <string name="home_a11y_all_presets">See all presets</string>
 
+    <!-- Home: the first-run card. It points at three ways in and names what each one holds, once. -->
+    <string name="first_run_title">Three ways in</string>
+    <string name="first_run_body">Nightfall can plan a whole night for you, or you can build one layer at a time. Three ways to start, and this card stays out of the way after.</string>
+    <string name="first_run_presets_title">Pick a ready-made night</string>
+    <string name="first_run_presets_body">Presets and themed nights, each one a tap away.</string>
+    <string name="first_run_describe_title">Type what you want</string>
+    <string name="first_run_describe_body">Describe a night in words and the mix is built on your device.</string>
+    <string name="first_run_library_title">Browse everything</string>
+    <string name="first_run_library_body">Every sound in the catalogue, sorted by category.</string>
+    <string name="first_run_dismiss">Not now</string>
+    <string name="first_run_a11y_dismiss">Dismiss this card</string>
+
     <!-- Home: the describe-a-mix phrase box. The vocabulary is English for now; every response is
          here so a translation can follow without touching the interpreter. -->
     <string name="describe_title">Describe a mix</string>

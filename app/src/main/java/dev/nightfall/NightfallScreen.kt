@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.*
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -96,6 +97,8 @@ fun NightfallScreen(vm: NightfallViewModel) {
     var exportJson by rememberSaveable { mutableStateOf<String?>(null) }
     var editingPreset by remember { mutableStateOf<Mix?>(null) }
     var studioLayer by rememberSaveable { mutableStateOf<String?>(null) }
+    // Where the first-run card's middle row sends a person: the phrase box on Home.
+    val phraseFocus = remember { FocusRequester() }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -151,6 +154,13 @@ fun NightfallScreen(vm: NightfallViewModel) {
             }
     }
     NightfallTheme(light) {
+        val firstRunDone by runtime.firstRunDone.collectAsStateWithLifecycle()
+        val noSavedMixes by
+            selectSaved(runtime, runtime.savedNow().presets.isEmpty()) { it.presets.isEmpty() }
+        val playingNow by selectStatus(runtime, runtime.statusNow().playing) { it.playing }
+        // Three things have to be true at once, and each of them alone retires the card: nothing was
+        // ever dismissed, nothing was ever saved, nothing is playing.
+        val showFirstRun = !firstRunDone && noSavedMixes && !playingNow
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
             snackbarHost = { SnackbarHost(snackbar) },
@@ -208,6 +218,9 @@ fun NightfallScreen(vm: NightfallViewModel) {
                                 0 ->
                                     Home(
                                         runtime,
+                                        showFirstRun = showFirstRun,
+                                        phraseFocus = phraseFocus,
+                                        onRetireFirstRun = { runtime.retireFirstRun() },
                                         onSettings = { tab = 4 },
                                         onAdd = { tab = 1 },
                                         onPresets = { tab = 2 },
@@ -402,6 +415,9 @@ fun NightfallScreen(vm: NightfallViewModel) {
 @Composable
 private fun Home(
     r: NightfallRuntime,
+    showFirstRun: Boolean,
+    phraseFocus: FocusRequester,
+    onRetireFirstRun: () -> Unit,
     onSettings: () -> Unit,
     onAdd: () -> Unit,
     onPresets: () -> Unit,
@@ -421,7 +437,20 @@ private fun Home(
         selectSaved(r, r.savedNow().settings.reducedMotion) { it.settings.reducedMotion }
     val overloaded by
         selectStatus(r, false) { it.load > .65f || it.underruns > 3 }
+    // The card's middle row retires the card and then hands the person the phrase box. The landing
+    // runs after this composition has dropped the card, because that is what moves the box from the
+    // list's fourth item to its third.
+    val list = rememberLazyListState()
+    var landing by remember { mutableStateOf(false) }
+    LaunchedEffect(landing, showFirstRun) {
+        if (landing && !showFirstRun) {
+            list.animateScrollToItem(2)
+            phraseFocus.requestFocus()
+            landing = false
+        }
+    }
     LazyColumn(
+        state = list,
         contentPadding = PaddingValues(start = 22.dp, end = 22.dp, top = 16.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -472,7 +501,27 @@ private fun Home(
             }
         }
         item { NowPlayingCard(r, mixName, reducedMotion, onTimer) }
-        item { DescribeMix(r, onAdd) }
+        // Under the transport, over the phrase box it points at: the first-run card never covers a
+        // control that starts a night.
+        if (showFirstRun)
+            item {
+                FirstRunCard(
+                    onPresets = {
+                        onRetireFirstRun()
+                        onPresets()
+                    },
+                    onDescribe = {
+                        onRetireFirstRun()
+                        landing = true
+                    },
+                    onLibrary = {
+                        onRetireFirstRun()
+                        onAdd()
+                    },
+                    onDismiss = onRetireFirstRun,
+                )
+            }
+        item { DescribeMix(r, onAdd, phraseFocus) }
         item {
             Column(Modifier.padding(top = 6.dp)) {
                 val master by

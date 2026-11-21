@@ -15,6 +15,8 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -45,6 +47,9 @@ import kotlin.math.roundToInt
 internal fun DescribeMix(
     r: NightfallRuntime,
     onBrowse: () -> Unit,
+    // The field's handle for whoever wants to put a cursor in it: Home hands this to the first-run
+    // card's "type what you want" row.
+    fieldFocus: FocusRequester = remember { FocusRequester() },
     // The seam: the phrase box talks to the interface, and the offline interpreter is the only
     // implementation. A test or a future implementation passes its own; nothing here reaches a
     // network or holds a key.
@@ -76,7 +81,10 @@ internal fun DescribeMix(
                 OutlinedTextField(
                     value = typed,
                     onValueChange = { typed = it.take(200) },
-                    modifier = Modifier.weight(1f).semantics { contentDescription = fieldLabel },
+                    modifier =
+                        Modifier.weight(1f)
+                            .focusRequester(fieldFocus)
+                            .semantics { contentDescription = fieldLabel },
                     label = { Text(stringResource(R.string.describe_title), fontSize = 12.sp) },
                     placeholder = { Text(stringResource(R.string.describe_hint), fontSize = 12.sp) },
                     textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),

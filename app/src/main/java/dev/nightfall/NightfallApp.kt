@@ -5,6 +5,7 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -18,6 +19,13 @@ import kotlinx.coroutines.flow.*
 private val Context.dataStore by preferencesDataStore("nightfall")
 
 private val stateKey = stringPreferencesKey("state_v1")
+
+/**
+ * Whether the first-run card's turn is over. It lives beside the state document in the same store
+ * rather than inside `SavedState`, so a copied or restored mix cannot reset it and an older build's
+ * document still reads as it always did.
+ */
+private val firstRunKey = booleanPreferencesKey("first_run_done_v1")
 
 class NightfallApp : Application() {
     lateinit var runtime: NightfallRuntime
@@ -87,6 +95,11 @@ class NightfallRuntime(
     val saved = _saved.asStateFlow()
     val status = MutableStateFlow(PlaybackStatus())
     val ready = MutableStateFlow(false)
+    /**
+     * True once the first-run card has had its one chance. Settled before [ready] is, so Home never
+     * draws a card it is about to take away; the restore below says which launch starts it true.
+     */
+    val firstRunDone = MutableStateFlow(false)
     val timer = SleepTimer()
     var host: AudioHost? = null
     var promotePlayback: (() -> Unit)? = null
@@ -95,7 +108,8 @@ class NightfallRuntime(
     init {
         scope.launch(Dispatchers.IO) {
             try {
-                val text = context.dataStore.data.first()[stateKey]
+                val prefs = context.dataStore.data.first()
+                val text = prefs[stateKey]
                 if (text != null) {
                     val loaded = PresetJson.json.decodeFromString<SavedState>(text)
                     _saved.value =
@@ -106,12 +120,48 @@ class NightfallRuntime(
                 } else {
                     _saved.value = SavedState()
                 }
+                // Three answers, in order: the flag this feature writes; a state document, which is
+                // someone who used the app before the card existed (an upgrade, or a reinstall that
+                // restored its data), reported rather than greeted as new; and neither, which is a
+                // fresh install. The second case records its answer, so the decision is made once
+                // whatever happens to the document afterwards.
+                val flag = prefs[firstRunKey]
+                firstRunDone.value = flag ?: (text != null)
+                if (flag == null && text != null)
+                    runCatching { context.dataStore.edit { it[firstRunKey] = true } }
             } catch (e: Exception) {
+                // Storage that cannot be read is not evidence of a new person.
+                firstRunDone.value = true
                 _saved.value = SavedState()
                 status.value =
                     status.value.copy(error = context.getString(R.string.error_restore_failed, e.message))
             }
             ready.value = true
+        }
+        // Any night at all retires the card, however it started: the transport, a phrase, a preset,
+        // or the widget reaching the service without touching this screen.
+        scope.launch {
+            status.map { it.playing }.distinctUntilChanged().collect { playing ->
+                if (playing) retireFirstRun()
+            }
+        }
+    }
+
+    /**
+     * Ends the first-run card for good, whether it was dismissed, used, or overtaken by a night that
+     * began before the person got to it.
+     */
+    fun retireFirstRun() {
+        if (firstRunDone.value) return
+        firstRunDone.value = true
+        scope.launch(Dispatchers.IO) {
+            try {
+                context.dataStore.edit { it[firstRunKey] = true }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // The card stays retired for this session; a failed write only costs one more showing.
+            }
         }
     }
 
