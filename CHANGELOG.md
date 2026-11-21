@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.5 — 2026-11-21
+
+- ui: show a first-run card with three ways in, once (#49)
+
 ## 2.4 — 2026-11-20
 
 - feat: themed nights, presets that are a plan over the night (#48)

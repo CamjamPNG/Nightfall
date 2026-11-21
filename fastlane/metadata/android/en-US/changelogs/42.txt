@@ -1,0 +1,1 @@
+- ui: show a first-run card with three ways in, once (#49)
