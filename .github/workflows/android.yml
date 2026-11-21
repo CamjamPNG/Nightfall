@@ -96,7 +96,7 @@ jobs:
   # discovered list cannot miss one. At three tagged classes each shard currently holds exactly one.
   core-night:
     runs-on: ubuntu-latest
-    timeout-minutes: 16
+    timeout-minutes: 18
     strategy:
       fail-fast: false
       matrix:
@@ -139,10 +139,10 @@ jobs:
           echo 'empty=false' >> "$GITHUB_OUTPUT"
           echo "tests=$flags" >> "$GITHUB_OUTPUT"
           echo "Shard ${{ matrix.shard }} of ${{ strategy.job-total }} runs:$names"
-      # Measured in both runs of the split: the slowest shard is ThemedNightRunTest at 8m57s and
-      # 9m17s of tests, 9m25s and 9m17s of job. The cap is the worse of the two plus two thirds, as in
-      # `release.yml`: 15m42s, taken as 16. The shard times moved by 2s and 8s between the two runs,
-      # against the 12.9% spread the whole fork showed, because each shard is now one class on one fork.
+      # Measured in three runs of the split: the slowest shard is ThemedNightRunTest at 9m25s, 9m17s
+      # and 10m19s of job. The cap is the worst of those plus two thirds, as in `release.yml`:
+      # 17m12s, taken as 18. The 10m19s run was a slow one all round — `unit` took 9m27s and `api36`
+      # 11m17s in it — which is the case a cap has to cover rather than the median.
       #
       # `$TESTS` is deliberately unquoted: it is a string of `--tests <class>` pairs built above, and
       # word splitting is what turns it back into Gradle arguments.
