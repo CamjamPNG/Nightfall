@@ -128,6 +128,7 @@ fun SoundLibrary(r: NightfallRuntime) {
                         selected = category == c,
                         onClick = { category = c },
                         label = { Text(c ?: stringResource(R.string.library_category_all)) },
+                        modifier = Modifier.heightIn(min = 48.dp).widthIn(min = 48.dp),
                     )
                 }
             }
@@ -206,6 +207,7 @@ private fun LibrarySectionHeader(name: String, available: Int, open: Boolean, on
             // Opaque on purpose: rows scroll underneath a sticky header.
             .background(MaterialTheme.colorScheme.background)
             .clickable(role = Role.Button, onClick = onToggle)
+            .heightIn(min = 48.dp)
             .semantics {
                 heading()
                 stateDescription = state
@@ -299,7 +301,7 @@ fun PresetScreen(
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onImport) {
+                OutlinedButton(onClick = onImport, modifier = Modifier.heightIn(min = 48.dp)) {
                     Icon(Icons.Outlined.FileOpen, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.presets_action_import))
@@ -311,6 +313,7 @@ fun PresetScreen(
                     leadingIcon = {
                         Icon(Icons.Outlined.FavoriteBorder, null, Modifier.size(18.dp))
                     },
+                    modifier = Modifier.heightIn(min = 48.dp),
                 )
             }
         }
@@ -366,6 +369,13 @@ private fun PresetCard(
 ) {
     val context = LocalContext.current
     var menu by remember { mutableStateOf(false) }
+    // Resolved in composition: a semantics block is not composable.
+    val favoriteState =
+        stringResource(
+            if (p.favorite) R.string.presets_state_favorite_on
+            else R.string.presets_state_favorite_off
+        )
+    val playName = stringResource(R.string.presets_a11y_play, p.name)
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -390,6 +400,12 @@ private fun PresetCard(
                     }
                 }
                 IconButton(
+                    modifier =
+                        Modifier.semantics {
+                            // The glyph changes shape, which is nothing to a screen reader: the
+                            // description alone cannot tell a saved favourite from an empty heart.
+                            stateDescription = favoriteState
+                        },
                     onClick = {
                         if (builtin)
                             r.change {
@@ -410,7 +426,9 @@ private fun PresetCard(
                     )
                 }
                 Box {
-                    IconButton(onClick = { menu = true }) {
+                    IconButton(
+                        onClick = { menu = true },
+                    ) {
                         Icon(
                             Icons.Outlined.MoreHoriz,
                             stringResource(R.string.presets_a11y_options, p.name),
@@ -461,6 +479,8 @@ private fun PresetCard(
             TextButton(
                 onClick = { r.usePreset(p) },
                 contentPadding = PaddingValues(horizontal = 0.dp),
+                // Twenty cards each saying "Play" is twenty identical buttons to a screen reader.
+                modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = playName },
             ) {
                 Icon(Icons.Outlined.PlayArrow, null, Modifier.size(19.dp))
                 Spacer(Modifier.width(6.dp))
@@ -749,7 +769,7 @@ fun Studio(
                     )
                     onClearEdit()
                 },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                 shape = RoundedCornerShape(16.dp),
             ) {
                 Icon(Icons.Outlined.Add, null)
@@ -799,6 +819,7 @@ private fun Choice(
     onChange: (String) -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
+    val spoken = stringResource(R.string.studio_a11y_choice, label, value)
     Column {
         Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(6.dp))
@@ -806,7 +827,7 @@ private fun Choice(
             OutlinedButton(
                 onClick = { open = true },
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().semantics { contentDescription = spoken },
             ) {
                 Text(value, Modifier.weight(1f), fontSize = 13.sp)
                 Icon(Icons.Outlined.ExpandMore, null)
@@ -842,7 +863,14 @@ fun SettingToggle(
             Spacer(Modifier.height(3.dp))
             Text(description, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Switch(checked, onChange, modifier = Modifier.semantics { contentDescription = title })
+        Switch(
+            checked,
+            onChange,
+            // A Material switch draws 52x32. Centred in a finger-tall box it looks identical and is
+            // no longer a 32dp target.
+            modifier =
+                Modifier.heightIn(min = 48.dp).semantics { contentDescription = title },
+        )
     }
 }
 

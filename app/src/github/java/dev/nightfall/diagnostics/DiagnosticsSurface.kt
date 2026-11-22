@@ -27,6 +27,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,17 +60,35 @@ object DiagnosticsSurface {
         DiagnosticsSupport.of(context).observeDecoders()
     }
 
-    /** Adds the reveal gesture to the version row. */
+    /**
+     * Adds the reveal gesture to the version row — and, beside it, the same reveal as an action.
+     *
+     * Five taps inside three seconds is a gesture with no spoken equivalent: a screen reader user
+     * cannot perform it, and nothing hints that the version row is anything but a version row. The
+     * custom action is that gesture said out loud, offered to whoever has accessibility actions open
+     * and invisible to everyone else, which keeps the surface just as undiscoverable as it was.
+     */
     @Composable
     fun VersionTap(base: Modifier): Modifier {
         val context = LocalContext.current
         val diagnostics = remember(context) { DiagnosticsSupport.of(context) }
         val gate = remember(diagnostics) { TapGate() }
-        return base.pointerInput(gate) {
-            detectTapGestures {
-                if (gate.tap(SystemClock.elapsedRealtime())) diagnostics.reveal()
+        val show = stringResource(R.string.settings_a11y_show_diagnostics)
+        return base
+            .pointerInput(gate) {
+                detectTapGestures {
+                    if (gate.tap(SystemClock.elapsedRealtime())) diagnostics.reveal()
+                }
             }
-        }
+            .semantics {
+                customActions =
+                    listOf(
+                        CustomAccessibilityAction(show) {
+                            diagnostics.reveal()
+                            true
+                        }
+                    )
+            }
     }
 
     /** The revealed section. Draws nothing before the gesture, which is the whole point of it. */

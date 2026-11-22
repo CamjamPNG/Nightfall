@@ -582,7 +582,7 @@ private fun Home(
         item {
             FilledTonalButton(
                 onClick = onAdd,
-                modifier = Modifier.fillMaxWidth().height(54.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
                 shape = RoundedCornerShape(16.dp),
             ) {
                 Icon(Icons.Outlined.Add, null, Modifier.size(20.dp))
@@ -613,6 +613,9 @@ private fun NowPlayingCard(
     val context = LocalContext.current
     val playing by selectStatus(r, false) { it.playing }
     val output by selectStatus(r, OutputRoute()) { it.output }
+    // Resolved in composition: a semantics block is not composable.
+    val playingState = stringResource(R.string.transport_state_playing)
+    val pausedState = stringResource(R.string.transport_state_paused)
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(20.dp),
@@ -632,7 +635,11 @@ private fun NowPlayingCard(
                 }
                 FilledIconButton(
                     onClick = { if (playing) r.pause() else r.play() },
-                    modifier = Modifier.size(66.dp),
+                    modifier =
+                        Modifier.size(66.dp).semantics {
+                            // "Play soundscape, Paused" is a button that only says the half of it.
+                            stateDescription = if (playing) playingState else pausedState
+                        },
                     shape = CircleShape,
                 ) {
                     Icon(
@@ -645,6 +652,7 @@ private fun NowPlayingCard(
             }
             Spacer(Modifier.height(14.dp))
             Waveform(playing, reducedMotion)
+            TimerAnnouncement(r)
             Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Box(
@@ -686,6 +694,28 @@ private fun ActiveLayerLabel(r: NightfallRuntime) {
     )
 }
 
+/**
+ * Speaks the timer once, when it is set, and says nothing while it runs.
+ *
+ * The countdown itself is a value that changes every second; a live region on it would read the
+ * clock aloud all night. So the announcement is the *setting*, which changes once, and it is polite:
+ * it queues behind whatever the reader was already saying instead of cutting in.
+ */
+@Composable
+private fun TimerAnnouncement(r: NightfallRuntime) {
+    val active by selectStatus(r, false) { it.timerActive }
+    val minutes by selectStatus(r, 0) { s ->
+        if (s.timerActive) ((s.remainingMs + 59_999) / 60_000).toInt() else 0
+    }
+    // The countdown crossing a minute is not news. The announcement is captured when the timer
+    // *starts* and then held: keying this on the remaining minutes would say the clock aloud, once a
+    // minute, all night. Nothing is said for "All night", which is where the card already starts.
+    val set = if (minutes > 0) pluralStringResource(R.plurals.a11y_timer_set, minutes, minutes) else ""
+    var announced by remember { mutableStateOf("") }
+    LaunchedEffect(active) { announced = if (active) set else "" }
+    LiveAnnouncement(announced)
+}
+
 @Composable
 private fun TimerButton(r: NightfallRuntime, onTimer: () -> Unit) {
     val allNight = stringResource(R.string.common_all_night)
@@ -719,16 +749,33 @@ private fun QuickActions(r: NightfallRuntime, onFade: () -> Unit, onSave: () -> 
             if (allMuted) stringResource(R.string.home_action_unmute)
             else stringResource(R.string.home_action_mute_all),
             Icons.AutoMirrored.Outlined.VolumeOff,
+            Modifier.weight(1f),
         ) {
             val muted = !r.savedNow().current.layers.all { it.mute }
             r.mix { it.copy(layers = it.layers.map { l -> l.copy(mute = muted) }) }
         }
-        TinyAction(stringResource(R.string.home_action_stop_all), Icons.Outlined.Stop) { r.stop() }
-        TinyAction(stringResource(R.string.home_action_fade), Icons.Outlined.BlurOn, onFade)
-        TinyAction(stringResource(R.string.home_action_save_mix), Icons.Outlined.BookmarkAdd, onSave)
-        TinyAction(stringResource(R.string.home_action_reset), Icons.Outlined.RestartAlt) {
-            r.mix { Presets.all.last() }
-        }
+        TinyAction(
+            stringResource(R.string.home_action_stop_all),
+            Icons.Outlined.Stop,
+            Modifier.weight(1f),
+        ) { r.stop() }
+        TinyAction(
+            stringResource(R.string.home_action_fade),
+            Icons.Outlined.BlurOn,
+            Modifier.weight(1f),
+            onFade,
+        )
+        TinyAction(
+            stringResource(R.string.home_action_save_mix),
+            Icons.Outlined.BookmarkAdd,
+            Modifier.weight(1f),
+            onSave,
+        )
+        TinyAction(
+            stringResource(R.string.home_action_reset),
+            Icons.Outlined.RestartAlt,
+            Modifier.weight(1f),
+        ) { r.mix { Presets.all.last() } }
     }
 }
 
@@ -744,6 +791,7 @@ private fun PresetStrip(r: NightfallRuntime, onPresets: () -> Unit) {
             SuggestionChip(
                 onClick = { r.usePreset(p) },
                 label = { Text(p.name, fontSize = 12.sp, maxLines = 1) },
+                modifier = Modifier.heightIn(min = 48.dp),
             )
         }
         item {
@@ -751,7 +799,8 @@ private fun PresetStrip(r: NightfallRuntime, onPresets: () -> Unit) {
             SuggestionChip(
                 onClick = onPresets,
                 label = { Text(stringResource(R.string.home_action_all_presets), fontSize = 12.sp) },
-                modifier = Modifier.semantics { contentDescription = seeAll },
+                modifier =
+                    Modifier.heightIn(min = 48.dp).semantics { contentDescription = seeAll },
             )
         }
     }
@@ -773,9 +822,15 @@ private fun CapacityWarning(r: NightfallRuntime) {
 }
 
 @Composable
-private fun TinyAction(label: String, icon: ImageVector, onClick: () -> Unit) {
+private fun TinyAction(
+    label: String,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
     Column(
-        Modifier.widthIn(min = 48.dp)
+        modifier
+            .widthIn(min = 48.dp)
             .heightIn(min = 56.dp)
             .clickable(onClick = onClick)
             .padding(vertical = 8.dp)
@@ -784,7 +839,12 @@ private fun TinyAction(label: String, icon: ImageVector, onClick: () -> Unit) {
     ) {
         Icon(icon, null, Modifier.size(19.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(6.dp))
-        Text(label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            label,
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
     }
 }
 
@@ -814,6 +874,10 @@ private fun LayerRow(r: NightfallRuntime, id: String, onStudio: (String) -> Unit
     val muteA11y = stringResource(R.string.layer_a11y_mute, current.name)
     val soloA11y = stringResource(R.string.layer_a11y_solo, current.name)
     val optionsA11y = stringResource(R.string.layer_a11y_options, current.name)
+    val mutableStateOn = stringResource(R.string.layer_state_muted)
+    val mutableStateOff = stringResource(R.string.layer_state_not_muted)
+    val soloStateOn = stringResource(R.string.layer_state_solo_on)
+    val soloStateOff = stringResource(R.string.layer_state_solo_off)
     val stateOpen = stringResource(R.string.layer_state_expanded)
     val stateDefaults = stringResource(R.string.layer_state_collapsed_defaults)
     val stateAdjusted = stringResource(R.string.layer_state_collapsed_adjusted, adjusted.size)
@@ -907,6 +971,8 @@ private fun LayerRow(r: NightfallRuntime, id: String, onStudio: (String) -> Unit
                     modifier =
                         Modifier.heightIn(min = 48.dp).semantics {
                             contentDescription = muteA11y
+                            stateDescription =
+                                if (current.mute) mutableStateOn else mutableStateOff
                         },
                 )
                 Spacer(Modifier.width(8.dp))
@@ -917,13 +983,14 @@ private fun LayerRow(r: NightfallRuntime, id: String, onStudio: (String) -> Unit
                     modifier =
                         Modifier.heightIn(min = 48.dp).semantics {
                             contentDescription = soloA11y
+                            stateDescription = if (current.solo) soloStateOn else soloStateOff
                         },
                 )
                 Spacer(Modifier.weight(1f))
                 IconButton(
                     onClick = {
                         r.mix { it.copy(layers = it.layers.filterNot { l -> l.id == current.id }) }
-                    }
+                    },
                 ) {
                     Icon(
                         Icons.Outlined.DeleteOutline,

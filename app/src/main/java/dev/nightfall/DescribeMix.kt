@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -97,7 +98,7 @@ internal fun DescribeMix(
                 FilledTonalButton(
                     onClick = { submit() },
                     enabled = typed.isNotBlank(),
-                    modifier = Modifier.height(56.dp),
+                    modifier = Modifier.heightIn(min = 56.dp),
                     shape = RoundedCornerShape(14.dp),
                     contentPadding = PaddingValues(horizontal = 14.dp),
                 ) {
@@ -139,7 +140,7 @@ internal fun DescribeMix(
 @Composable
 private fun Problem(text: String, onBrowse: () -> Unit) {
     Text(text, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    TextButton(onClick = onBrowse, modifier = Modifier.heightIn(min = 44.dp)) {
+    TextButton(onClick = onBrowse, modifier = Modifier.heightIn(min = 48.dp)) {
         Text(stringResource(R.string.describe_action_browse), fontSize = 12.sp)
     }
 }
@@ -154,17 +155,22 @@ private fun Result(
     onRemoveTimer: () -> Unit,
     onPlay: () -> Unit,
 ) {
+    val removeTimer = stringResource(R.string.describe_a11y_remove_timer)
     Text(
         stringResource(R.string.describe_understood),
         fontSize = 10.sp,
         letterSpacing = 1.2.sp,
         color = MaterialTheme.colorScheme.primary,
     )
+    LiveAnnouncement(pluralStringResource(R.plurals.describe_a11y_understood, kept.size, kept.size))
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         for (layer in kept) {
             val name = Library.byId[layer.soundId]?.name ?: layer.soundId
+            val level = (layer.gain * 100).roundToInt()
+            // Resolved in composition: a semantics block is not composable.
+            val removes = stringResource(R.string.describe_chip_a11y, name, level)
             InputChip(
                 selected = false,
                 onClick = { onRemove(layer.soundId) },
@@ -178,13 +184,8 @@ private fun Result(
                         fontSize = 12.sp,
                     )
                 },
-                trailingIcon = {
-                    Icon(
-                        Icons.Outlined.Close,
-                        stringResource(R.string.describe_a11y_remove, name),
-                        Modifier.size(14.dp),
-                    )
-                },
+                trailingIcon = { Icon(Icons.Outlined.Close, null, Modifier.size(14.dp)) },
+                modifier = Modifier.semantics { contentDescription = removes },
             )
         }
         val timer = plan.timerMinutes
@@ -194,13 +195,8 @@ private fun Result(
                 onClick = onRemoveTimer,
                 label = { Text(stringResource(R.string.describe_timer, timer), fontSize = 12.sp) },
                 leadingIcon = { Icon(Icons.Outlined.Bedtime, null, Modifier.size(14.dp)) },
-                trailingIcon = {
-                    Icon(
-                        Icons.Outlined.Close,
-                        stringResource(R.string.describe_a11y_remove_timer),
-                        Modifier.size(14.dp),
-                    )
-                },
+                trailingIcon = { Icon(Icons.Outlined.Close, null, Modifier.size(14.dp)) },
+                modifier = Modifier.semantics { contentDescription = removeTimer },
             )
         }
     }
@@ -220,7 +216,7 @@ private fun Result(
     }
     FilledTonalButton(
         onClick = onPlay,
-        modifier = Modifier.fillMaxWidth().height(46.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
         shape = RoundedCornerShape(14.dp),
     ) {
         Icon(Icons.Outlined.PlayArrow, null, Modifier.size(18.dp))

@@ -145,19 +145,24 @@ render timings. Both are gitignored. That file is useful for A/B-ing a DSP chang
 by ear, and the numbers in it are host-JVM numbers, **not** phone measurements —
 do not quote them as device performance.
 
-### Instrumentation tests need hardware
+### Playback lifecycle is tested on the JVM
+
+Playback surviving navigation and activity recreation, audio-focus pause and
+resume, teardown, background playback, saving and restore are twelve Robolectric
+scenarios in `app/src/test` — `AudioFocusTest`, `BackgroundPlaybackTest`,
+`NineLayerPlaybackTest`, `SavingTest`, `StateRestorationTest`, `TeardownTest`,
+`ThemedPresetPlayTest` and `BackGestureTest`. They run with no device attached and
+need no `/dev/kvm`:
 
 ```sh
-./gradlew :app:connectedDebugAndroidTest
+./gradlew :app:testGithubDebugUnitTest :app:testFdroidDebugUnitTest
 ```
 
-`app/src/androidTest/java/dev/nightfall/PlaybackIntegrationTest.kt` covers
-playback surviving navigation and activity recreation, audio-focus pause/resume,
-and local-state restore. These need an attached device with audio output. CI has
-no `/dev/kvm`, so it cannot run them, and the recorded emulator attempt in
-[docs/TESTING.md](docs/TESTING.md) failed with a startup ANR and is not claimed as
-a pass. If your change touches `AudioHost`, `PlaybackService`, focus handling or
-persistence, say plainly in the PR what you ran on a device and what you did not.
+CI runs both flavours that way, and the `api36` job runs the same suite again on
+Temurin 21 against the Android 16 platform classes. There is no instrumented suite
+left, so `:app:connectedDebugAndroidTest` has nothing to run. If your change
+touches `AudioHost`, `PlaybackService`, focus handling or persistence, say plainly
+in the PR what you ran on a device and what you did not.
 
 ## Repository map
 
