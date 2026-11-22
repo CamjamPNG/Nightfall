@@ -51,23 +51,29 @@ corresponding values in `docs/verification/release-checks.json` stop saying
 
 Size: one evening with the phone, plus the discipline to write down what failed.
 
-## 2. Get the instrumentation suite actually green
+## 2. Take the playback lifecycle from Robolectric onto a phone
 
-**Why it is open:** `app/src/androidTest/java/dev/nightfall/PlaybackIntegrationTest.kt`
-holds three tests — playback survives navigation and activity recreation,
-audio-focus interruption pauses and resumes, and local state restores. The
-recorded attempt failed with `Process crashed` and a startup ANR on a constrained
-software emulator. Startup restoration was subsequently moved off the main
-thread, which is a plausible fix and is not evidence that the suite passes.
+**Why it is open:** playback surviving navigation and activity recreation, audio-focus pause
+and resume, teardown, background playback, saving and restore are twelve Robolectric
+scenarios in `app/src/test` — `AudioFocusTest`, `BackgroundPlaybackTest`,
+`NineLayerPlaybackTest`, `SavingTest`, `StateRestorationTest`, `TeardownTest`,
+`ThemedPresetPlayTest` and `BackGestureTest`. They run with no device attached and need no
+`/dev/kvm`; CI runs them in both channels, and the `api36` job runs the same suite again on
+Temurin 21 against the Android 16 platform classes. That is real coverage of the app's own
+code, and none of it is a real process: there is no instrumented suite left, so
+`:app/connectedDebugAndroidTest` has nothing to run, and every one of these paths executes
+against Robolectric's stand-ins for the platform's audio, focus and lifecycle scheduling. The
+one recorded attempt to instrument them failed with `Process crashed` and a startup ANR on a
+constrained software emulator, and was never explained or retracted.
 
-**Why it matters:** these are the behaviors most likely to break silently —
-service lifecycle, focus, persistence — and they are the ones a contributor
-cannot check with a JVM test.
+**Why it matters:** these are the behaviors most likely to break silently — service
+lifecycle, focus, persistence — and the substitutions a JVM makes for the platform are
+exactly where a scenario and a phone diverge.
 
-**Done when:** `./gradlew :app:connectedDebugAndroidTest` passes on one physical
-device, the output is recorded in `docs/TESTING.md`, and the emulator failure is
-either explained or retracted. If it turns out the ANR is emulator-only, say that
-with the evidence.
+**Done when:** the twelve scenarios pass on one physical device, either through a
+`connectedDebugAndroidTest` companion or by driving the same paths by hand with the result
+recorded in `docs/TESTING.md`, and the emulator failure is either explained or retracted. If
+the ANR turns out to be emulator-only, say that with the evidence.
 
 Size: small on a real phone, potentially large if the ANR is genuine.
 

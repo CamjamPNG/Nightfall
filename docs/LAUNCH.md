@@ -279,5 +279,6 @@ channel produces none of those, it was the wrong channel and one attempt is enou
 - `docs/launch/copy/` — one file per channel: the rule that was checked, then the
   post. `dropped.md` holds the channels that are closed and why.
 - `docs/site/` — the one-page site every post can link to. No JavaScript, no external
-  requests, and the six screenshots in `docs/site/shots/` (540 px wide copies of the
-  1078×2399 renders in `fastlane/metadata/android/en-US/images/phoneScreenshots/`).
+  requests, and the six screenshots it shows in `docs/site/shots/` (540 px wide copies of
+  the 1078×2399 renders in `fastlane/metadata/android/en-US/images/phoneScreenshots/`),
+  beside a seventh of the first-run card that the page itself does not show.
