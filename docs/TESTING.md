@@ -335,6 +335,13 @@ run, and fails on the two ways a render goes quiet instead of wrong: a frame wit
 too few distinct colours (it did not draw) and a frame identical to an earlier
 one (a screen stopped rendering).
 
+The six frames the store and the landing page show are copied from that directory
+without further drawing: the 1078×2399 PNG goes to
+`fastlane/metadata/android/en-US/images/phoneScreenshots/`, and the copy in
+`docs/site/shots/` is the same frame resized to 540 px wide. `docs/site/shots/` also
+carries one frame the store does not — `07-first-run-card.png`, the first-run card on
+Home, taken from `18-first-run-dark.png`.
+
 What these frames are not: a device. They have no status bar, no gesture bar and
 zero window insets, so their content sits 24–32 dp higher than on a phone that
 shows its status bar; the waveform is a single phase of an animation that is

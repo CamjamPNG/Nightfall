@@ -10,6 +10,19 @@ its own updates and nothing else.
 
 Android 8.0+ (API 26) · Kotlin and Compose · MIT
 
+| Home, playing | One layer's options | The sound library | First run |
+| --- | --- | --- | --- |
+| [<img src="docs/site/shots/01-home-playing.png" width="200" alt="Home playing a nine-layer mix, with the transport, the waveform and the layer count">](fastlane/metadata/android/en-US/images/phoneScreenshots/01-home-playing.png) | [<img src="docs/site/shots/03-layer-options.png" width="200" alt="One layer with its placement and tone options open">](fastlane/metadata/android/en-US/images/phoneScreenshots/03-layer-options.png) | [<img src="docs/site/shots/04-library.png" width="200" alt="The sound library, grouped by section with a filter rail above it">](fastlane/metadata/android/en-US/images/phoneScreenshots/04-library.png) | [<img src="docs/site/shots/07-first-run-card.png" width="200" alt="The first-run card on Home, offering three ways into a mix">](docs/site/shots/07-first-run-card.png) |
+
+Those are screens rendered from the app's own Compose tree on a JVM: `MainActivity`'s window,
+drawn by Robolectric's native graphics, with each screen reached through the app's own
+navigation. No phone and no emulator are in that path, and there is no device frame in the
+pictures — no status bar, no gesture bar, no animation. The full-size 1078×2399 PNGs of the
+first three are in
+[`fastlane/metadata/android/en-US/images/phoneScreenshots`](fastlane/metadata/android/en-US/images/phoneScreenshots);
+the first-run card is kept at the size shown. [`docs/TESTING.md`](docs/TESTING.md) records how
+they are generated and what they cannot show.
+
 ## Nightfall 2.0
 
 2.0 is not a rewrite. It is the release where the app became small, configurable and
