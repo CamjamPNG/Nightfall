@@ -4,6 +4,7 @@
 import argparse, hashlib, json, pathlib, re, struct, subprocess, sys, zipfile
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'tools'))
+import count_tests  # noqa: E402  the test counts are generated from this tree, so they cannot drift
 import nfop  # noqa: E402  the container is shared with the encoder, so the checks cannot drift apart
 from release_artifact import NETWORK_PERMISSIONS, apk_manifest, build_tools, declares, diagnostics_entry_points, diagnostics_symbols, fdroid_asset_name, fdroid_violation, universal_abis, updater_entry_points, updater_symbols
 p=argparse.ArgumentParser()
@@ -23,6 +24,9 @@ config=(ROOT/'app/build.gradle.kts').read_text()
 appid=re.search(r'applicationId\s*=\s*"([^"]+)"',config)[1]
 version=re.search(r'versionName\s*=\s*"([^"]+)"',config)[1]
 code=int(re.search(r'versionCode\s*=\s*(\d+)',config)[1])
+# README's test-count table is generated from this tree rather than typed, so this compares the two
+# instead of holding an expected number that would itself be a second place to drift.
+count_tests.require_matches(ROOT/'README.md')
 meta=ROOT/'fastlane/metadata/android/en-US'
 require(0<len((meta/'title.txt').read_text().strip())<=50,'Invalid store title')
 summary=(meta/'short_description.txt').read_text().strip()

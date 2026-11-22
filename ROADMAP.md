@@ -15,18 +15,18 @@ Shipping today: a working offline mixer with no `INTERNET` permission, no layer
 cap, 25 built-in presets (four of them themed nights that change what plays over the night),
 local preset storage and JSON exchange, sleep timers
 with per-layer stop schedules, a Media3 foreground media session with lock-screen
-and Bluetooth controls, 119 deterministic core tests (118 run by default; one
-calibration generator is opt-in), 68 release-tooling tests and 12 playback-lifecycle
-scenarios. Signed GitHub releases with a pinned certificate. `docs/TESTING.md` records
-exactly what was executed and what was not.
+and Bluetooth controls, a deterministic core suite, a release-tooling suite and
+Robolectric playback scenarios, all sized in the generated table in [README](README.md)
+so no copy of a count lives here. Signed GitHub releases with a pinned certificate.
+`docs/TESTING.md` records exactly what was executed and what was not.
 
 What each suite needs, none of which includes a phone or an emulator:
 
 | Suite | Needs | Check it |
 | --- | --- | --- |
-| `./gradlew :core:test` | a JDK, and no Android SDK | with `ANDROID_HOME` unset and no `local.properties`: `BUILD SUCCESSFUL`, 68 passed and 1 skipped |
+| `./gradlew :core:test` | a JDK, and no Android SDK | with `ANDROID_HOME` unset and no `local.properties`: `BUILD SUCCESSFUL`, with only the opt-in calibration generator skipped |
 | the Robolectric playback scenarios in `app/src/test` | the Android SDK, no device | `./gradlew :app:testGithubDebugUnitTest` |
-| `python3 -m unittest discover -s tools/tests` | Python 3 | 53 tests, `OK` |
+| `python3 -m unittest discover -s tools/tests` | Python 3 | `OK` |
 
 The gap between "shipping" and "proven" is the whole roadmap.
 

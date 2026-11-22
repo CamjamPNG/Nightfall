@@ -42,7 +42,7 @@ by pasting the paragraph into a character counter, not by trusting this line.
 > recordings and music. No account, no ads, no usage log unless you opt in. Two
 > builds: the F-Droid one can't open a socket; the GitHub one's only network use is its
 > update check. 2.0 adds endless night and a home-screen widget, and it's 11.7 MB.
-> 97 tests, and a README listing what's unverified — no overnight pass yet, and the
+> 119 tests, and a README listing what's unverified — no overnight pass yet, and the
 > widget has never met a launcher. MIT. https://github.com/CamjamPNG/Nightfall
 >
 > #FOSS #Android

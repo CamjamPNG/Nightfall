@@ -2,7 +2,7 @@
 
 ## Executed checks
 
-- 51 JVM tests in `app/src/testGithub/java/dev/nightfall/update` cover the update channel: release-manifest
+- The JVM tests in `app/src/testGithub/java/dev/nightfall/update` cover the update channel: release-manifest
   parsing (untrusted documents, wrong types, unknown and duplicate architectures,
   addresses that are not this repository's release assets, oversized input),
   every trust refusal (`UpdatePolicy`), version-name ordering, and the downloader
@@ -11,7 +11,7 @@
   The release-tool suite covers the manifest generator's schema, URLs and
   rejection cases, and asserts that each F-Droid recipe block selects the flavour
   its own tag defines.
-- 26 JVM tests in `app/src/testGithub/java/dev/nightfall/diagnostics` cover the hidden diagnostics
+- The JVM tests in `app/src/testGithub/java/dev/nightfall/diagnostics` cover the hidden diagnostics
   surface, and they measure the file and the screen rather than a mock. `JournalTest` runs against a
   temporary directory: an entry is neither written nor held while the switch is off; five entries
   under a three-entry cap leave the three newest, in order; sixty entries under a 400-byte cap keep
@@ -108,8 +108,9 @@
   Signed APK variants are additionally checked with Android's apksigner, aapt,
   zipalign and source-tag audio hashes before publication.
 - 119 deterministic JVM/core tests pass (118 executed, 1 skipped by design: the
-  opt-in `NIGHTFALL_CALIBRATE=1` level-calibration generator). Two of them render
-  a whole eight-hour night through the real render path. They cover nine
+  opt-in `NIGHTFALL_CALIBRATE=1` level-calibration generator). Three of them
+  (`NightRunTest`, `ThemedNightRunTest`, `EndlessNightRunTest`) render a whole eight-hour
+  night through the real render path. They cover nine
   simultaneous non-silent sources, 512 allocated layers, unrelated-source phase
   continuity, independent gain/master/mute/solo, limiting, colored-noise
   behavior, musical tuning/seeds, local-state serialization, timers and fades,
@@ -195,12 +196,13 @@
   inventory has no GMS, Firebase, billing, ad or tracking SDK from the checked
   denylist. F-Droid's independent review remains necessary.
 
-- 40 Robolectric scenarios pass in both channels (see below), plus the three GitHub-only
-  diagnostics gesture scenarios described above: twelve
-  playback-lifecycle ones, which replace the instrumented attempt that never went
-  green, two Android 16 assertions that need the API 36 sandbox CI now runs
-  (`Android16RuntimeTest`), twenty for the home-screen widget, and six for the Quick Settings
-  tile.
+- The Robolectric scenarios in `app/src/test` pass in both channels (see below), plus the
+  GitHub-only diagnostics gesture scenarios described above. They replace the instrumented
+  attempt that never went green: playback through navigation, activity recreation,
+  backgrounding, audio-focus loss, a back gesture and service teardown; the home-screen widget
+  and the Quick Settings tile; and `Android16RuntimeTest`, whose assertions need the API 36
+  sandbox CI now runs. How many there are is the generated table in [README](../README.md), not
+  a number repeated here.
 
 Machine-readable results: `docs/verification/update-channel.json`,
 `release-checks.json`, `dependency-audit.json`, `reproducibility.json`, and
@@ -588,7 +590,7 @@ The automatic download of a published release, the waiting state that follows it
 while audio plays, the install that a play-to-pause transition triggers, the
 resumption of a verified download after the process was killed, and the once-only
 changelog on the next launch are all covered as rules and state transitions in JVM
-tests (51 in `app/src/testGithub/java/dev/nightfall/update`) and not as observed device
+tests in `app/src/testGithub/java/dev/nightfall/update` and not as observed device
 behaviour. The Compose
 surfaces — the Settings toggle, the waiting row and the changelog dialog — were
 compiled and linted, never rendered on a screen. The commit-time re-check is

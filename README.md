@@ -275,31 +275,38 @@ what no one has ever confirmed. All three columns are kept honest in
 | No bundled recording loops before three minutes, and every one loops without a seam | `AudioAcceptanceTest.noBundledRecordingLoopsBeforeThreeMinutes`, `RenderPathTest.everyFieldRecordingLoopsWithoutASeam` |
 | Every playable catalogue row renders finite, nonzero output | `AudioAcceptanceTest.entireAvailableCatalogHasRealAudibleOutput` |
 | Every catalogue source is trimmed to −18 LUFS at full layer gain, so a percentage means the same loudness for every sound | `Levels.REFERENCE_LUFS`, `LoudnessTargetTest.everyContinuousSourceReachesTheReferenceLevel` |
-| The updater refuses a foreign package id, a foreign signing certificate, a downgrade, a mismatched checksum, an address outside this repository's assets, and a truncated or oversized response | `UpdatePolicyTest`, `ReleaseManifestParserTest`, `ReleaseFetchTest` (part of the 51 updater tests counted below) |
+| The updater refuses a foreign package id, a foreign signing certificate, a downgrade, a mismatched checksum, an address outside this repository's assets, and a truncated or oversized response | `UpdatePolicyTest`, `ReleaseManifestParserTest`, `ReleaseFetchTest` (the `update` package counted below) |
 | An install the app starts itself never lands in playing audio — refused while playing, refused on an unknown playback fact, allowed only when stopped, and a night that starts in playback ends with exactly one install, at the stop | `UpdateAutomationTest` |
 | Playback that resumes while the APK is being copied never reaches the installer commit; the session is abandoned and the update goes back to waiting | `InstallWindowTest` |
 | Release notes survive a hostile or missing `log` in the manifest without changing a single trust field | `ReleaseManifestParserTest.hostileNotesNeverChangeTheTrustDecision`, `…aManifestWithNoNotesStillUpdates` |
-| Playback survives navigation, activity recreation, backgrounding, audio-focus loss, a back gesture and service teardown | twelve Robolectric scenarios in `app/src/test`, run under both channels in CI |
+| Playback survives navigation, activity recreation, backgrounding, audio-focus loss, a back gesture and service teardown | `BackGestureTest`, `BackgroundPlaybackTest`, `AudioFocusTest`, `StateRestorationTest`, `TeardownTest`, run under both channels in CI |
 | The home-screen widget starts, pauses and resumes the loaded mix through the app's own media session, and its state follows the session rather than the last tap | `WidgetStoppedToPlayTest`, `WidgetPlayingToPauseTest`, `WidgetPausedToPlayTest`, `WidgetFollowsSessionTest` |
 | The widget's button is inside its own surface and its label is not cut, at one cell and at two, in both themes | `WidgetLayoutTest`, `WidgetRenderTest` (PNGs in `build/screenshots/github`) |
 | The Quick Settings tile starts, pauses and resumes the loaded mix through the app's own media session, reads stopped until something has played, and its state follows the session rather than the last tap | `TileStoppedToPlayTest`, `TilePlayingToPauseTest`, `TilePausedToPlayTest`, `TileFollowsSessionTest`, `QuickTileStateTest` |
 | The F-Droid APK carries no network permission and no class from the updater package, and the GitHub APK carries code from every updater source file | `tools/check_release.py --fdroid-apk` and `--apk`, on every push |
 
-How many tests: **97 in `core`** (96 run, plus the opt-in `NIGHTFALL_CALIBRATE=1`
-calibration generator, which is skipped by design), **40 Robolectric scenarios** in
-`app/src/test` (12 playback-lifecycle, 20 widget, 6 tile, 2 Android 16) that run twice, once
-per channel, plus 3 decoder-fallback tests, **51 updater tests** in
-`app/src/testGithub/java/dev/nightfall/update`, and **68 release-tooling tests**. The
-six render classes in `app/src/testGithub/java/dev/nightfall/render` are not
-updater tests and are not counted there. They all run on a JVM with no device, no
-emulator and no network. Recount them with:
+How many tests: this table is the only place these numbers live. `tools/count_tests.py` generates
+it from the tree and `tools/check_release.py` fails the push that disagrees with the code, so no
+document has to be trusted for a count. A `@Test` method is one test; **Runs by default** leaves
+out `@Ignore`d tests and the tests whose first statement skips them — `LevelCalibrationTest`'s
+generator waits for `NIGHTFALL_CALIBRATE=1` and is the only one, which is why `core` reads as 119
+declared and 118 run rather than one number that means both. `Robolectric` and `Plain JVM` are what
+the file's runner annotation says, not a guess. Everything in `app/src/test` executes twice in
+CI's `unit` job, once per channel; `app/src/testGithub` exists only in the `github` channel and
+executes once. All of it runs on a JVM with no device, no emulator and no network.
 
-```sh
-grep -rhA2 '@Test' core/src/test --include=*.kt | grep -c 'fun '
-grep -rhA2 '@Test' app/src/test --include=*.kt | grep -c 'fun '
-grep -rhA2 '@Test' app/src/testGithub/java/dev/nightfall/update --include=*.kt | grep -c 'fun '
-python3 -m unittest discover -s tools/tests
-```
+<!-- test-counts:begin (generated by `python3 tools/count_tests.py --update README.md`; do not edit by hand) -->
+| Suite | Tests | Runs by default | Opt-in | Ignored | Robolectric | Plain JVM | `unittest` |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `app/src/test` | 71 | 71 | 0 | 0 | 68 | 3 | 0 |
+| `app/src/testGithub` | 92 | 92 | 0 | 0 | 23 | 69 | 0 |
+| `core/src/test` | 119 | 118 | 1 | 0 | 0 | 119 | 0 |
+| `tools/tests` | 85 | 85 | 0 | 0 | 0 | 0 | 85 |
+| **Total** | 367 | 366 | 1 | 0 | 91 | 191 | 85 |
+<!-- test-counts:end -->
+
+`python3 tools/count_tests.py` prints that table, `--files` adds a row per file so a count can be
+traced to the file that declares it, and `--update README.md` rewrites the block above.
 
 ### Measured by a script or recorded in the repository
 
@@ -338,9 +345,9 @@ Needs JDK 17 and Android SDK 35 with build-tools 35.0.0. These three commands ar
 documented gate, and CI runs these three plus the rest of the list below.
 
 ```sh
-./gradlew :core:test :app:assembleDebug :app:lintDebug   # 119 core tests, both channels, lint aborts on error
-python3 -m unittest discover -s tools/tests              # 68 release-tooling tests
-python3 tools/check_release.py                           # store metadata, bundled audio, both channels
+./gradlew :core:test :app:assembleDebug :app:lintDebug   # the core suite and the debug APK; lint aborts on error
+python3 -m unittest discover -s tools/tests              # the release tooling's own tests
+python3 tools/check_release.py                           # store metadata, bundled audio, both channels, the counts above
 ```
 
 The full CI job also runs the Robolectric suites per channel

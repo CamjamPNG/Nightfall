@@ -51,7 +51,7 @@ Body:
 >
 > **The engine is a plain Kotlin module.** One 48 kHz stereo float mix, 1024-frame
 > blocks, one audio-priority thread, a soft limiter at the end. It has no Android
-> dependency, so it runs as plain JUnit: 97 tests, including zero per-block allocation
+> dependency, so it runs as plain JUnit: 119 tests, including zero per-block allocation
 > inside the render path, click size at layer add/remove, loop seams on every bundled
 > recording, and a measured loudness table that calibrates every sound in the library
 > to the same reference level. The DSP being boring and testable was the point.
