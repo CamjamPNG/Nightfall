@@ -47,4 +47,15 @@
         <item quantity="other">%1$d layers%2$s</item>
     </plurals>
 
+    <!-- Spoken, not drawn: the timer was just set to this many minutes. -->
+    <plurals name="a11y_timer_set">
+        <item quantity="one">Sleep timer set, %1$d minute</item>
+        <item quantity="other">Sleep timer set, %1$d minutes</item>
+    </plurals>
+
+    <!-- Spoken, not drawn: this is how much of a typed phrase became a mix. -->
+    <plurals name="describe_a11y_understood">
+        <item quantity="one">Understood: %1$d sound ready to play</item>
+        <item quantity="other">Understood: %1$d sounds ready to play</item>
+    </plurals>
 </resources>

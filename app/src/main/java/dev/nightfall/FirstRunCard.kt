@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -59,7 +60,9 @@ internal fun FirstRunCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                // 32dp is where M3's own 40dp ripple box starts missing: the glyph stays 18dp, the
+                // target is the minimum a finger needs.
+                IconButton(onClick = onDismiss, modifier = Modifier.size(48.dp)) {
                     Icon(
                         Icons.Outlined.Close,
                         stringResource(R.string.first_run_a11y_dismiss),
@@ -87,7 +90,7 @@ internal fun FirstRunCard(
                 stringResource(R.string.first_run_library_body),
                 onLibrary,
             )
-            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 44.dp)) {
+            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
                 Text(
                     stringResource(R.string.first_run_dismiss),
                     fontSize = 12.sp,
@@ -103,7 +106,8 @@ private fun FirstRunRow(icon: ImageVector, title: String, body: String, onClick:
     Row(
         Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
+            .heightIn(min = 48.dp)
             .padding(horizontal = 6.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

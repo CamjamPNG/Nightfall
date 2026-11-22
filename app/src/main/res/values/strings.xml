@@ -63,6 +63,10 @@
     <string name="home_status_ready">READY WHEN YOU ARE</string>
     <string name="home_action_pause">Pause soundscape</string>
     <string name="home_action_play">Play soundscape</string>
+    <!-- The transport's own state: the button's name is what a press will do, this is what it is
+         doing right now. -->
+    <string name="transport_state_playing">Playing</string>
+    <string name="transport_state_paused">Paused</string>
     <string name="home_a11y_sleep_timer">Sleep timer</string>
     <string name="home_action_unmute">Unmute</string>
     <string name="home_action_mute_all">Mute all</string>
@@ -96,6 +100,7 @@
     <string name="describe_understood">THIS IS WHAT I HEARD</string>
     <string name="describe_chip">%1$s · %2$d%%</string>
     <string name="describe_a11y_remove">Remove %1$s</string>
+    <string name="describe_chip_a11y">Remove %1$s from the mix, %2$d percent</string>
     <string name="describe_timer">Sleep timer · %1$d min</string>
     <string name="describe_a11y_remove_timer">Remove the sleep timer</string>
     <string name="describe_action_play">Play this mix</string>
@@ -118,6 +123,11 @@
     <string name="layer_a11y_move_up">Move up</string>
     <string name="layer_a11y_move_down">Move down</string>
     <string name="layer_a11y_options">Options for %1$s</string>
+    <!-- A mute or solo chip is a toggle; the glyph's filled state is invisible to a screen reader. -->
+    <string name="layer_state_muted">Muted</string>
+    <string name="layer_state_not_muted">Not muted</string>
+    <string name="layer_state_solo_on">Solo on</string>
+    <string name="layer_state_solo_off">Solo off</string>
     <string name="layer_state_expanded">Expanded</string>
     <string name="layer_state_collapsed_defaults">Collapsed, all defaults</string>
     <string name="layer_state_collapsed_adjusted">Collapsed, %1$d adjusted</string>
@@ -221,6 +231,9 @@
     <string name="presets_soundscapes">%1$d soundscapes</string>
     <string name="presets_a11y_favorite">Favorite %1$s</string>
     <string name="presets_a11y_options">Options for %1$s</string>
+    <string name="presets_a11y_play">Play %1$s</string>
+    <string name="presets_state_favorite_on">Favorited</string>
+    <string name="presets_state_favorite_off">Not favorited</string>
     <string name="presets_action_duplicate">Duplicate</string>
     <string name="presets_copy_suffix">%1$s copy</string>
     <string name="presets_action_export">Export JSON</string>
@@ -245,6 +258,8 @@
     <string name="studio_music_body">Seeded chords and gentle melodies develop together. Save to your mixer to hear your composition.</string>
     <string name="studio_music_type">Music type</string>
     <string name="studio_section_foundation">Musical foundation</string>
+    <!-- A picker's button announces the field it belongs to and the value it holds. -->
+    <string name="studio_a11y_choice">%1$s: %2$s</string>
     <string name="studio_tuning">A4 = %1$d Hz</string>
     <string name="studio_tuning_note">Tuning changes musical pitch. Neither tuning is established to improve sleep or produce clinical benefits.</string>
     <string name="studio_key">Key</string>
@@ -317,6 +332,8 @@
     <string name="settings_privacy_note">Everything that makes sound runs on your device. No account, advertising, analytics service, tracking or purchases, and the app uploads nothing: the only way your data leaves the phone is if you export or share it yourself. Mixes and settings are stored locally. Keep listening levels comfortable; percentages describe layer gain, not acoustic loudness.</string>
     <string name="settings_action_export">Export current mix as JSON</string>
     <string name="settings_action_credits">Audio credits &amp; open-source licenses</string>
+    <!-- The spoken half of the five-tap reveal; the gesture itself stays unadvertised. -->
+    <string name="settings_a11y_show_diagnostics">Show diagnostics</string>
     <string name="settings_about">%1$s\nFree forever. A small space for a quieter night.</string>
     <string name="settings_app_title">Nightfall</string>
     <string name="settings_app_title_version">Nightfall %1$s</string>
@@ -338,8 +355,6 @@
     <string name="kind_other">%1$s texture</string>
 
     <!-- Waveform accessibility. -->
-    <string name="a11y_soundscape_playing">Soundscape playing</string>
-    <string name="a11y_soundscape_paused">Soundscape paused</string>
 
     <!--
         The media notification and its channel. The four timer suffixes and the tagline are quoted so

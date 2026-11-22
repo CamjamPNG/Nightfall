@@ -13,10 +13,10 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
@@ -32,8 +32,23 @@ val Lavender = Color(0xFFB8A9F4)
 val White = Color(0xFFF7F5FF)
 val Muted = Color(0xFFA7B0C4)
 val Divider = Color(0xFF354058)
-val Track = Color(0xFF30384C)
+
+/**
+ * The inactive half of a slider's groove. It was `#30384C`, which is 1.62:1 against [Navy] and 1.40:1
+ * against [CardNavy] — a control boundary nobody with low vision can find. This is 4.17:1 and 3.60:1
+ * against the same two surfaces, so the groove is a groove; the thumb and the filled half stay
+ * [Lavender], at 9.07:1, and remain the brightest thing in the row.
+ */
+val Track = Color(0xFF6A7690)
 val Active = Color(0xFFAFA0EE)
+
+/** The light theme's own palette, named so a test can measure the colours the theme really uses. */
+val DayBackground = Color(0xFFF4F2F9)
+val DaySurface = Color(0xFFEAE6F2)
+val DayOnSurface = Color(0xFF202437)
+val DayOnSurfaceVariant = Color(0xFF555D73)
+val DayOutline = Color(0xFF747A8C)
+val DayPrimary = Color(0xFF67519E)
 
 @Composable
 fun NightfallTheme(light: Boolean, content: @Composable () -> Unit) {
@@ -52,15 +67,15 @@ fun NightfallTheme(light: Boolean, content: @Composable () -> Unit) {
     val colors =
         if (light)
             lightColorScheme(
-                primary = Color(0xFF67519E),
+                primary = DayPrimary,
                 onPrimary = Color.White,
-                background = Color(0xFFF4F2F9),
-                surface = Color(0xFFEAE6F2),
-                onBackground = Color(0xFF202437),
-                onSurface = Color(0xFF202437),
-                onSurfaceVariant = Color(0xFF555D73),
-                outline = Color(0xFF747A8C),
-                secondary = Color(0xFF67519E),
+                background = DayBackground,
+                surface = DaySurface,
+                onBackground = DayOnSurface,
+                onSurface = DayOnSurface,
+                onSurfaceVariant = DayOnSurfaceVariant,
+                outline = DayOutline,
+                secondary = DayPrimary,
             )
         else
             darkColorScheme(
@@ -148,9 +163,11 @@ fun LevelSlider(
         ) {
             Text(
                 label,
+                Modifier.weight(1f, fill = false),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Spacer(Modifier.width(8.dp))
             Text(
                 display,
                 style = MaterialTheme.typography.labelMedium,
@@ -168,6 +185,25 @@ fun LevelSlider(
                 },
         )
     }
+}
+
+/**
+ * Speaks [text] when it changes, and draws nothing.
+ *
+ * Two rules make this worth having. It is polite, so it queues behind whatever is already being read
+ * instead of interrupting. And it is only ever given a *setting* — that the timer was just set to
+ * thirty minutes — never a value on a meter tick, because a live region that updates twice a second
+ * would read the clock aloud all night.
+ */
+@Composable
+fun LiveAnnouncement(text: String) {
+    if (text.isEmpty()) return
+    Text(
+        text,
+        Modifier.fillMaxWidth().alpha(0f).semantics { liveRegion = LiveRegionMode.Polite },
+        fontSize = 1.sp,
+        maxLines = 1,
+    )
 }
 
 @Composable
@@ -190,13 +226,10 @@ fun Waveform(playing: Boolean, reducedMotion: Boolean) {
             )
         } else null
     val color = MaterialTheme.colorScheme.primary
-    val spoken =
-        stringResource(
-            if (playing) R.string.a11y_soundscape_playing else R.string.a11y_soundscape_paused
-        )
-    Canvas(
-        Modifier.fillMaxWidth().height(52.dp).semantics { contentDescription = spoken }
-    ) {
+    // Decorative: every fact in this picture — that the mix is running — is already the play
+    // control's own state, three inches away. Left in the tree it was a focus stop that announced
+    // "Soundscape playing" between the play button and the timer.
+    Canvas(Modifier.fillMaxWidth().height(52.dp).clearAndSetSemantics {}) {
         // Read in the draw phase: a phase change invalidates this drawing only.
         val phase = phase?.value ?: 0f
         val bars = 53
@@ -232,7 +265,7 @@ fun SlimSlider(
                 else MaterialTheme.colorScheme.primary,
             inactiveTrackColor =
                 if (MaterialTheme.colorScheme.background == Navy) Track
-                else MaterialTheme.colorScheme.outline.copy(alpha = .3f),
+                else MaterialTheme.colorScheme.outline,
         )
     Slider(
         value = value,
