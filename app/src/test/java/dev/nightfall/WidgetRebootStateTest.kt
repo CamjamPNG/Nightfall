@@ -25,11 +25,11 @@ class WidgetRebootStateTest {
 
     @Test
     fun aStateWrittenInThisBootIsTrusted() {
-        PlaybackWidget.publish(app, WidgetState.PAUSED)
-        assertEquals(WidgetState.PAUSED, PlaybackWidget.state(app))
+        MixSurface.publish(app, MixState.PAUSED)
+        assertEquals(MixState.PAUSED, MixSurface.state(app))
         advance(HOUR_MS * 3)
-        assertEquals("a paused widget stays paused", WidgetState.PAUSED, PlaybackWidget.state(app))
-        assertNotEquals(WidgetState.STOPPED, PlaybackWidget.state(app))
+        assertEquals("a paused widget stays paused", MixState.PAUSED, MixSurface.state(app))
+        assertNotEquals(MixState.STOPPED, MixSurface.state(app))
     }
 
     @Test
@@ -39,15 +39,15 @@ class WidgetRebootStateTest {
         val shortPreviousBoot = SystemClock.elapsedRealtime() + 60_000
         prefs()
             .edit()
-            .putString("state", WidgetState.PLAYING.name)
+            .putString("state", MixState.PLAYING.name)
             .putLong("state_at", shortPreviousBoot)
             .putString("boot", "not-this-boot")
             .commit()
 
-        assertEquals(WidgetState.STOPPED, PlaybackWidget.state(app))
+        assertEquals(MixState.STOPPED, MixSurface.state(app))
         assertEquals(
             "the read left the invalid state on disk",
-            WidgetState.STOPPED.name,
+            MixState.STOPPED.name,
             prefs().getString("state", null),
         )
         // Had the guard only compared uptime, this is where "playing" would return: two hours in,
@@ -55,8 +55,8 @@ class WidgetRebootStateTest {
         advance(HOUR_MS * 2)
         assertEquals(
             "a stored state from another boot came back",
-            WidgetState.STOPPED,
-            PlaybackWidget.state(app),
+            MixState.STOPPED,
+            MixSurface.state(app),
         )
     }
 
@@ -65,12 +65,12 @@ class WidgetRebootStateTest {
         // A state written before this build recorded boot identifiers.
         prefs()
             .edit()
-            .putString("state", WidgetState.PLAYING.name)
+            .putString("state", MixState.PLAYING.name)
             .putLong("state_at", SystemClock.elapsedRealtime() + HOUR_MS)
             .commit()
 
-        assertEquals(WidgetState.STOPPED, PlaybackWidget.state(app))
-        assertEquals(WidgetState.STOPPED.name, prefs().getString("state", null))
+        assertEquals(MixState.STOPPED, MixSurface.state(app))
+        assertEquals(MixState.STOPPED.name, prefs().getString("state", null))
     }
 
     private fun prefs() = app.getSharedPreferences("nightfall_widget", Context.MODE_PRIVATE)

@@ -164,11 +164,13 @@ added for it — a single button and a label are RemoteViews territory, and Glan
 brought a Compose runtime and a second AndroidX tree for one view.
 
 The widget keeps no state of its own and has no second command channel. `PlaybackService`
-collects `NightfallRuntime.status` and calls `PlaybackWidget.publish` whenever the *state*
-changes, so the transport control, the notification, the lock screen, a Bluetooth button, a
-timer running out or an audio-focus loss all reach the widget through the one path that already
-existed. A tap opens the app's media session with a `MediaController` and sends the same
-`play`/`pause` the notification sends; the decision is read from the session's own
+collects `NightfallRuntime.status` and calls `MixSurface.publish` whenever the *state* changes, so
+the transport control, the notification, the lock screen, the Quick Settings tile, a Bluetooth
+button, a timer running out or an audio-focus loss all reach the widget through the one path that
+already existed. `MixSurface` holds the record — the state the runtime last reported, in private
+preferences with the reboot guard described below — and repaints every surface that is on screen.
+A tap opens the app's media session with a `MediaController` and sends the same `play`/`pause` the
+notification sends; the decision is read from the session's own
 `playWhenReady`, never from what the widget last drew. With no Nightfall process, the controller
 bind creates the service and playback starts through the same `AudioHost` a cold start reaches;
 a widget tap is one of the platform's documented exemptions for starting a foreground service
@@ -187,6 +189,27 @@ decides which `PendingIntent` the surface carries, not a setting in the app.
 
 Colours come from `Design.kt`'s palette as plain `values`/`values-night` resources, because the
 launcher inflates the layout in its own process where `NightfallTheme` does not exist.
+
+## Quick Settings tile
+
+`NightfallTileService` is a `TileService` declared with `BIND_QUICK_SETTINGS_TILE` and the
+`QS_TILE` filter, so Nightfall can be added to the shade. It is the second surface on the same
+control path, not a second path: `MixState.of(PlaybackStatus)` — shared with the widget — is the
+only mapping from runtime status to what a control shows, `MixSurface` is the only record of what
+was last published, and a tap goes through `SessionToggle`, the same `MediaController` bind the
+widget's tap uses, to send one `play` or `pause` on the app's media session. Nothing on the tile's
+path starts an activity, so the Android 13+ `PendingIntent`-only form of `startActivityAndCollapse`
+is never reached and there is no pre-33 overload to fall back to.
+
+Nothing polls. The tile repaints in `onStartListening` — the system's listening state whenever it
+can be seen — from `MixSurface`, and `MixSurface.publish` repaints a listening tile through a
+`@Volatile` reference to the instance the shade holds, so a change from the app, the widget, the
+notification or a Bluetooth button lands on the tile as it lands on the widget. An absent tile has
+nothing to repaint and repaints when the shade next opens it. The tile reads on (`STATE_ACTIVE`,
+pause glyph, "Playing") only for a playing runtime; paused and stopped both read off, with the
+state in the subtitle on Android 10 and later and in the spoken description beside it. A tile
+added while nothing has played reads stopped from the same record a fresh widget reads, and a tap
+there is a plain `play` on the session, which starts the saved mix the way the widget's tap does.
 
 ## Update channel
 

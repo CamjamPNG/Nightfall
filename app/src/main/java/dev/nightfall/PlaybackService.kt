@@ -17,7 +17,7 @@ class PlaybackService : MediaSessionService() {
     private lateinit var player: MixerPlayer
     private var session: MediaSession? = null
     private var observer: Job? = null
-    private var widgets: Job? = null
+    private var surfaces: Job? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -48,13 +48,14 @@ class PlaybackService : MediaSessionService() {
                 combine(runtime.status, runtime.saved) { a, b -> a to b }
                     .collect { player.refresh() }
             }
-        // The widget is told what the runtime did, not what the tap asked for: every path that
-        // changes playback — the transport control, the notification, a Bluetooth button, a timer
-        // running out, audio focus — ends here, in the status the service publishes.
-        widgets =
+        // Every surface is told what the runtime did, not what the tap asked for: every path that
+        // changes playback — the transport control, the notification, the widget, the Quick Settings
+        // tile, a Bluetooth button, a timer running out, audio focus — ends here, in the status the
+        // service publishes.
+        surfaces =
             runtime.scope.launch {
                 runtime.status.collect {
-                    PlaybackWidget.publish(this@PlaybackService, WidgetState.of(it))
+                    MixSurface.publish(this@PlaybackService, MixState.of(it))
                 }
             }
     }
@@ -113,10 +114,10 @@ class PlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         observer?.cancel()
-        widgets?.cancel()
-        // The host is released below, so no audio is running after this: whatever the widget was
+        surfaces?.cancel()
+        // The host is released below, so no audio is running after this: whatever a surface was
         // showing, the truthful picture is a stopped mix.
-        PlaybackWidget.publish(this, WidgetState.STOPPED)
+        MixSurface.publish(this, MixState.STOPPED)
         runtime.host?.release()
         runtime.host = null
         runtime.promotePlayback = null

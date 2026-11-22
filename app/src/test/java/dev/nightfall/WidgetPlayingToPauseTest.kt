@@ -22,14 +22,14 @@ class WidgetPlayingToPauseTest : PlaybackHarness() {
         deliverStartCommand()
         await { runtime.status.value.playing }
         awaitSamples()
-        await { PlaybackWidget.state(app) == WidgetState.PLAYING }
+        await { MixSurface.state(app) == MixState.PLAYING }
 
         tapWidget()
 
         await { !runtime.status.value.playing }
         assertFalse("a pause is not a stop", runtime.status.value.stopped)
-        assertEquals(WidgetState.PAUSED, PlaybackWidget.state(app))
-        val paused = PlaybackWidget.wideViews(app, WidgetState.PAUSED, WIDGET_ID)
+        assertEquals(MixState.PAUSED, MixSurface.state(app))
+        val paused = PlaybackWidget.wideViews(app, MixState.PAUSED, WIDGET_ID)
         assertEquals("Paused", paused.stateLabel(app))
         assertEquals(R.drawable.widget_play, paused.imageResourceId(R.id.widget_button))
 
@@ -41,8 +41,8 @@ class WidgetPlayingToPauseTest : PlaybackHarness() {
             samplesDuring(250),
         )
         // And the widget is still telling the truth a quarter of a second later.
-        assertEquals(WidgetState.PAUSED, PlaybackWidget.state(app))
-        assertTrue(PlaybackWidget.state(app) != WidgetState.PLAYING)
+        assertEquals(MixState.PAUSED, MixSurface.state(app))
+        assertTrue(MixSurface.state(app) != MixState.PLAYING)
     }
 
     private companion object {

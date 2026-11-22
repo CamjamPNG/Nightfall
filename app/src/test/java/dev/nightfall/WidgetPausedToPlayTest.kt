@@ -20,7 +20,7 @@ class WidgetPausedToPlayTest : PlaybackHarness() {
         awaitSamples()
         compose.runOnIdle { runtime.pause() }
         await { !runtime.status.value.playing }
-        await { PlaybackWidget.state(app) == WidgetState.PAUSED }
+        await { MixSurface.state(app) == MixState.PAUSED }
         val layers = runtime.saved.value.current.layers.size
 
         FloatSinkAudioTrack.reset()
@@ -28,16 +28,16 @@ class WidgetPausedToPlayTest : PlaybackHarness() {
 
         await { runtime.status.value.playing }
         awaitSamples()
-        assertEquals(WidgetState.PLAYING, PlaybackWidget.state(app))
+        assertEquals(MixState.PLAYING, MixSurface.state(app))
         assertFalse("a resume is not a stop", runtime.status.value.stopped)
         assertEquals(
             "the resume must play the mix that was loaded, not a new one",
             layers,
             runtime.saved.value.current.layers.size,
         )
-        val playing = PlaybackWidget.wideViews(app, WidgetState.PLAYING, WIDGET_ID)
+        val playing = PlaybackWidget.wideViews(app, MixState.PLAYING, WIDGET_ID)
         assertEquals("Playing", playing.stateLabel(app))
-        assertTrue(PlaybackWidget.state(app) == WidgetState.PLAYING)
+        assertTrue(MixSurface.state(app) == MixState.PLAYING)
     }
 
     private companion object {
