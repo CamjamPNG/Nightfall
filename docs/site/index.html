@@ -74,8 +74,8 @@
       <li><strong>Timers that fade.</strong> Sleep timers fade out rather than cut, and single
       layers can stop on their own schedules.</li>
       <li><strong>A testable engine.</strong> The mixer is a Kotlin module with no Android
-      dependency and 97 JVM tests (96 run by default), including zero per-block allocation inside
-      the render path and one that renders a whole eight-hour night through the real path.</li>
+      dependency and 119 JVM tests (118 run by default), including zero per-block allocation inside
+      the render path and three that render whole eight-hour nights through the real path.</li>
       <li><strong>Two builds.</strong> The F-Droid build has no updater, no network code and no
       network permission — it cannot open a socket. The GitHub build adds an updater that reads
       this repository's release manifest and, by default, installs a newer APK on its own when
@@ -240,8 +240,8 @@
       </thead>
       <tbody>
         <tr>
-          <td>97 deterministic JVM tests on the audio engine</td>
-          <td><code>core/src/test</code>, with <code>./gradlew :core:test</code>; 96 run every
+          <td>119 deterministic JVM tests on the audio engine</td>
+          <td><code>core/src/test</code>, with <code>./gradlew :core:test</code>; 118 run every
           time and the opt-in level-calibration generator is skipped unless
           <code>NIGHTFALL_CALIBRATE=1</code></td>
         </tr>

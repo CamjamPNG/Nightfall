@@ -36,7 +36,9 @@ closed.
 ## Before you paste anything: two checks
 
 1. **Re-read the numbers against the release you are actually linking.** These drafts
-   name `v2.0`, 11.7 MB, 97 core tests and six APKs, all measured on 19 November 2026.
+   name `v2.0`, 11.7 MB and six APKs, measured on 19 November 2026; the test counts below
+   are current, not that day's, so take them from `python3 tools/count_tests.py` or the
+   generated table in `README.md`.
    No draft quotes a catalogue or preset count; if you add one, take it from the command
    below rather than from `docs/LAUNCH.md`, which carries figures the posts do not need. `gh release list --limit 1` and
    `gh release view <tag> --json assets` are enough to confirm or correct the version

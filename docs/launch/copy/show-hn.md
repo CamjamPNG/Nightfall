@@ -45,7 +45,7 @@ evaluate is the engine and the testing record, with the APK as an optional extra
 - **A DSP core with no Android dependency.** `core/` is plain Kotlin/JVM: one 48 kHz
   stereo float mix, 1024-frame blocks, soft limiter, deterministic sources, timers.
   It runs as ordinary JUnit — `./gradlew :core:test` — so a reader can clone it and
-  watch the suite pass without an emulator or a device: 97 tests are defined, 96 run,
+  watch the suite pass without an emulator or a device: 119 tests are defined, 118 run,
   and the one skipped by default is an opt-in level-calibration generator. One of the
   96 renders an eight-hour night through the real render path.
 - **The render path is treated as a hard real-time constraint.** Zero allocations per

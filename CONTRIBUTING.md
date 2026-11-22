@@ -164,7 +164,7 @@ persistence, say plainly in the PR what you ran on a device and what you did not
 | Path | What lives there |
 | --- | --- |
 | `core/src/main/kotlin/dev/nightfall/core/` | Android-free DSP: `Library.kt` catalogue, `Sources.kt` renderers, `MusicSource.kt`, `PcmMixer.kt`, `Models.kt` state and JSON |
-| `core/src/test/kotlin/` | The 97 JVM tests (96 run; one calibration generator is opt-in) |
+| `core/src/test/kotlin/` | The JVM core suite, sized in [README](README.md)'s generated table; one calibration generator there is opt-in |
 | `app/src/main/java/dev/nightfall/` | Compose UI, `AudioHost` (the single output stream), `PlaybackService` (Media3), DataStore persistence |
 | `app/src/opus/assets/audio/` | Bundled 24 kHz mono Opus containers, one per field recording |
 | `app/src/pcm/assets/audio/` | The raw PCM capture those containers were encoded from plus its `.pcm.license` sidecars: read by the host measurement tests, no longer an asset source, so no build packs it |
@@ -342,7 +342,7 @@ four questions:
 1. **What ships.** Behavior, not a restatement of the diff.
 2. **Why.** The problem, or the reason the old behavior was wrong.
 3. **How you verified it.** The commands you ran and what you observed. Paste the
-   relevant lines. "Build passed" is not evidence; `:core:test` showing 68 passed and 1 skipped, and
+   relevant lines. "Build passed" is not evidence; `:core:test` showing only the opt-in generator skipped, and
    `:app:lintDebug` clean is.
 4. **What you did not verify.** Listening quality, a Bluetooth mask, overnight
    battery — say so. That honesty is the project's differentiator, and reviewers
