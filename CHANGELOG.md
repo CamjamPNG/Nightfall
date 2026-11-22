@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.6 — 2026-11-22
+
+- feat: a Quick Settings tile for play/pause (#52)
+
 ## 2.5 — 2026-11-21
 
 - ui: show a first-run card with three ways in, once (#49)

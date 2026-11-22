@@ -1,0 +1,1 @@
+- feat: a Quick Settings tile for play/pause (#52)
