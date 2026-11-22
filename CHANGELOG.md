@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.6.1 — 2026-11-22
+
+- fix: give every control a spoken name and state, a 48dp target and a readable groove (#54)
+
 ## 2.6 — 2026-11-22
 
 - feat: a Quick Settings tile for play/pause (#52)

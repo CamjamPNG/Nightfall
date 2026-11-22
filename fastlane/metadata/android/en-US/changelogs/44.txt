@@ -1,0 +1,1 @@
+- fix: give every control a spoken name and state, a 48dp target and a readable groove (#54)
