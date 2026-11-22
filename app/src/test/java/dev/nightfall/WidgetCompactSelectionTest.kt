@@ -37,7 +37,7 @@ class WidgetCompactSelectionTest {
         options(width = 68, height = 68)
         assertEquals(
             R.layout.widget_nightfall_tiny,
-            PlaybackWidget.views(app, WidgetState.PLAYING, WIDGET_ID).layoutId,
+            PlaybackWidget.views(app, MixState.PLAYING, WIDGET_ID).layoutId,
         )
     }
 
@@ -46,7 +46,7 @@ class WidgetCompactSelectionTest {
         options(width = 150, height = 70)
         assertEquals(
             R.layout.widget_nightfall,
-            PlaybackWidget.views(app, WidgetState.PLAYING, WIDGET_ID).layoutId,
+            PlaybackWidget.views(app, MixState.PLAYING, WIDGET_ID).layoutId,
         )
     }
 
@@ -55,12 +55,12 @@ class WidgetCompactSelectionTest {
         options(width = 68, height = 68)
         assertEquals(
             R.layout.widget_nightfall_tiny,
-            PlaybackWidget.views(app, WidgetState.PLAYING, WIDGET_ID).layoutId,
+            PlaybackWidget.views(app, MixState.PLAYING, WIDGET_ID).layoutId,
         )
         options(width = 150, height = 70)
         assertEquals(
             R.layout.widget_nightfall,
-            PlaybackWidget.views(app, WidgetState.PLAYING, WIDGET_ID).layoutId,
+            PlaybackWidget.views(app, MixState.PLAYING, WIDGET_ID).layoutId,
         )
     }
 

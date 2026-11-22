@@ -72,14 +72,14 @@ class WidgetLayoutTest {
 
     @Test
     fun theTinyLayoutFitsOneCell() {
-        val root = measure(PlaybackWidget.tinyViews(context, WidgetState.PLAYING, 1), 68, 68)
+        val root = measure(PlaybackWidget.tinyViews(context, MixState.PLAYING, 1), 68, 68)
         val button = root.findViewById<View>(R.id.widget_button)
         assertTrue("the 1x1 button must be a real tap target", button.width >= dp(32))
         assertTrue(
             "the 1x1 button is inside the surface's rounded rect",
             insideRoundedRect(button, root.width, root.height, dp(20)),
         )
-        for (state in WidgetState.entries) {
+        for (state in MixState.entries) {
             val views = measure(PlaybackWidget.tinyViews(context, state, 1), 68, 68)
             val label = views.findViewById<TextView>(R.id.widget_state)
             assertEquals(label.text.toString(), context.getString(labelFor(state)))
@@ -93,7 +93,7 @@ class WidgetLayoutTest {
 
     @Test
     fun theWideLayoutKeepsTheButtonOffTheCorners() {
-        val views = PlaybackWidget.wideViews(context, WidgetState.PAUSED, 1)
+        val views = PlaybackWidget.wideViews(context, MixState.PAUSED, 1)
         val root = measure(views, 150, 70)
         val button = root.findViewById<View>(R.id.widget_button)
         assertTrue("the 2x1 button must be a real tap target", button.width >= dp(44))
@@ -153,10 +153,10 @@ class WidgetLayoutTest {
             .removeSuffix("px")
             .toFloat()
 
-    private fun labelFor(state: WidgetState): Int =
+    private fun labelFor(state: MixState): Int =
         when (state) {
-            WidgetState.PLAYING -> R.string.widget_state_playing
-            WidgetState.PAUSED -> R.string.widget_state_paused
-            WidgetState.STOPPED -> R.string.widget_state_stopped
+            MixState.PLAYING -> R.string.widget_state_playing
+            MixState.PAUSED -> R.string.widget_state_paused
+            MixState.STOPPED -> R.string.widget_state_stopped
         }
 }

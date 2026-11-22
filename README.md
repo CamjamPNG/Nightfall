@@ -32,7 +32,8 @@ current:
   texture — the closest pair inside a theme is 0.6 dB apart by band profile. Nobody has listened to
   one yet, so that is a measurement and not a verdict.
 - **A home-screen play/pause widget** that drives the app's own media session, so its state
-  follows what is playing rather than the last tap.
+  follows what is playing rather than the last tap, and **a Quick Settings tile** offering the
+  same control one swipe away, without unlocking the phone.
 - **Hidden, opt-in diagnostics** — five taps on the Settings version row. Off until you turn
   it on: a bounded local journal (200 entries, 64 KB or 30 days, closed-set tokens and no
   free text), a Share action you start yourself, and no transport in either channel.
@@ -182,7 +183,7 @@ copy yourself. It also builds from source:
 ```
 
 CI builds this channel, lints it, and runs the same twelve playback-lifecycle scenarios
-and the widget's twenty against it on every push; `tools/check_release.py --fdroid-apk`
+the widget's twenty and the tile's six against it on every push; `tools/check_release.py --fdroid-apk`
 asserts from the built dex and manifest that no updater class and no network permission
 survived.
 
@@ -281,11 +282,12 @@ what no one has ever confirmed. All three columns are kept honest in
 | Playback survives navigation, activity recreation, backgrounding, audio-focus loss, a back gesture and service teardown | twelve Robolectric scenarios in `app/src/test`, run under both channels in CI |
 | The home-screen widget starts, pauses and resumes the loaded mix through the app's own media session, and its state follows the session rather than the last tap | `WidgetStoppedToPlayTest`, `WidgetPlayingToPauseTest`, `WidgetPausedToPlayTest`, `WidgetFollowsSessionTest` |
 | The widget's button is inside its own surface and its label is not cut, at one cell and at two, in both themes | `WidgetLayoutTest`, `WidgetRenderTest` (PNGs in `build/screenshots/github`) |
+| The Quick Settings tile starts, pauses and resumes the loaded mix through the app's own media session, reads stopped until something has played, and its state follows the session rather than the last tap | `TileStoppedToPlayTest`, `TilePlayingToPauseTest`, `TilePausedToPlayTest`, `TileFollowsSessionTest`, `QuickTileStateTest` |
 | The F-Droid APK carries no network permission and no class from the updater package, and the GitHub APK carries code from every updater source file | `tools/check_release.py --fdroid-apk` and `--apk`, on every push |
 
 How many tests: **97 in `core`** (96 run, plus the opt-in `NIGHTFALL_CALIBRATE=1`
-calibration generator, which is skipped by design), **34 Robolectric scenarios** in
-`app/src/test` (12 playback-lifecycle, 20 widget, 2 Android 16) that run twice, once
+calibration generator, which is skipped by design), **40 Robolectric scenarios** in
+`app/src/test` (12 playback-lifecycle, 20 widget, 6 tile, 2 Android 16) that run twice, once
 per channel, plus 3 decoder-fallback tests, **51 updater tests** in
 `app/src/testGithub/java/dev/nightfall/update`, and **68 release-tooling tests**. The
 six render classes in `app/src/testGithub/java/dev/nightfall/render` are not
@@ -319,6 +321,7 @@ python3 -m unittest discover -s tools/tests
 | Whether a platform decoder wants initialization data beyond the identification header | The identification header is supplied as `csd-0` when the decoder accepts it and omitted when it does not, so both platform behaviours are handled by construction; no device has exercised either path. The containers carry no OpusTags or codec-delay bytes, because the encoder never produced them, and whether any decoder needs those to emit audio rather than only for gapless metadata is not established. A decoder that accepts a packet and yields nothing ends that read head with a visible "cannot be decoded" message instead of waiting forever |
 | Bluetooth sleep masks and headphones, disconnect and reconnect, media buttons | Never exercised on a real device |
 | The home-screen widget on a real launcher | Its twenty Robolectric scenarios drive the real media session and the widget's own views on a JVM, and two render tests draw it in both themes. No launcher has hosted it: placing it, resizing it, how a themed or third-party launcher draws its label and what it looks like at another density are unverified |
+| The Quick Settings tile in a real shade | Its six Robolectric scenarios drive the real media session and the tile's own label, subtitle and glyph on a JVM. No shade has hosted it: adding it from the editor, where the system sorts it, how a themed or third-party shade draws the tile and its subtitle, the pre-Android-10 tile that has no subtitle at all, and how it looks expanded are all unverified |
 | Diagnostics recording a real crash | Every entry kind is driven by tests, against exit history those tests supply. No phone has crashed under it, so a real crash, a real ANR and a real OEM kill have never been journaled, and nothing here can kill the app on a device to produce one |
 | An all-night run with the screen off — underruns, battery, OEM task killers | No overnight result exists for any phone |
 | The in-app update actually installing from a published release, unattended or not | `PackageInstaller` sessions and the Android 12+ prompt-free path are described from Android's documentation; the tests drive a local server speaking the same protocol. No install, no automatic restart and no post-install "What's new" has been observed on a phone. Also unverified: the waiting row and the release-log dialog rendered on a screen, the install a play-to-pause transition triggers, the commit-time deferral against Android's real installer, captive portals, proxies, and how each OEM prompts |

@@ -49,6 +49,9 @@ abstract class PlaybackHarness {
 
     protected var service: ServiceController<PlaybackService>? = null
 
+    /** The tile the shade would be listening through, when a test has opened one. */
+    protected var tile: ServiceController<NightfallTileService>? = null
+
     @Before
     fun awaitRestoredAndLoadNineLayerMix() {
         FloatSinkAudioTrack.reset()
@@ -62,6 +65,11 @@ abstract class PlaybackHarness {
         compose.runOnIdle { runtime.stop() }
         service?.destroy()
         service = null
+        // The tile leaves listening state rather than being destroyed: Robolectric's TileService
+        // shadow does not extend ShadowService, so `Service.onDestroy` cannot be dispatched through
+        // it, and nothing this suite asserts depends on that lifecycle call.
+        tile?.get()?.onStopListening()
+        tile = null
     }
 
     /**
@@ -124,7 +132,7 @@ abstract class PlaybackHarness {
      * the service; Robolectric never starts a service by binding, so the test creates it and
      * [tapWidget] hands its binder to the bind.
      */
-    protected fun bindWidgetSession(): PlaybackService {
+    protected fun bindSessionService(): PlaybackService {
         val controller =
             Robolectric.buildService(
                     PlaybackService::class.java,
@@ -136,20 +144,45 @@ abstract class PlaybackHarness {
     }
 
     /**
-     * Taps the widget: the provider's handler, from opening the app's session to the command. The
-     * bind reaches the service this test already created, which is where the OS would reach a running
-     * one; the app's own [WidgetSession] then connects a real controller through that binder.
+     * Points the app's bind at the service this test already created, which is where the OS would
+     * reach a running one, so [SessionToggle] connects a real controller through that binder.
      */
-    protected fun tapWidget() {
+    protected fun bindAppSession() {
         val name = ComponentName(app, PlaybackService::class.java)
         val binder =
             checkNotNull(
                 service?.get()?.onBind(Intent(MediaSessionService.SERVICE_INTERFACE).setComponent(name))
-            ) { "tapWidget needs a running PlaybackService" }
+            ) { "the bind needs a running PlaybackService" }
         shadowOf(app).setComponentNameAndServiceForBindService(name, binder)
+    }
+
+    /**
+     * Taps the widget: the provider's handler, from opening the app's session to the command. The
+     * app's own [SessionToggle] connects a real controller through the binder [bindAppSession] set.
+     */
+    protected fun tapWidget() {
+        bindAppSession()
         val done = AtomicBoolean(false)
-        WidgetSession.toggle(app) { done.set(true) }
+        SessionToggle.toggle(app) { done.set(true) }
         await { done.get() }
+    }
+
+    /**
+     * Opens the shade on the tile: the listening state the system puts it in whenever the tile can
+     * be seen, which is when it repaints from the record the service last published.
+     */
+    protected fun bindTile(): NightfallTileService {
+        val controller = Robolectric.buildService(NightfallTileService::class.java).create()
+        controller.get().onStartListening()
+        tile = controller
+        return controller.get()
+    }
+
+    /** Taps the tile, through the same session opener the widget's tap uses. */
+    protected fun tapTile() {
+        val listening = checkNotNull(tile) { "tapTile needs a tile the shade is listening to" }
+        bindAppSession()
+        listening.get().onClick()
     }
 
     /** The media session a controller would connect to, as the service publishes it. */

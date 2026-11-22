@@ -20,36 +20,36 @@ class WidgetFollowsSessionTest : PlaybackHarness() {
         compose.runOnIdle { runtime.play() }
         val service = deliverStartCommand()
         await { runtime.status.value.playing }
-        await { PlaybackWidget.state(app) == WidgetState.PLAYING }
+        await { MixSurface.state(app) == MixState.PLAYING }
 
         // Home's own pause control.
         compose.runOnIdle { runtime.pause() }
         await { !runtime.status.value.playing }
-        await { PlaybackWidget.state(app) == WidgetState.PAUSED }
+        await { MixSurface.state(app) == MixState.PAUSED }
 
         // A media controller — the notification or the lock screen — resumes it.
         val session = sessionOf(service)
         compose.runOnIdle { session.player.play() }
         await { runtime.status.value.playing }
-        await { PlaybackWidget.state(app) == WidgetState.PLAYING }
+        await { MixSurface.state(app) == MixState.PLAYING }
 
         // "Stop all" resets the mix. That is stopped, not paused.
         compose.runOnIdle { runtime.stop() }
-        await { PlaybackWidget.state(app) == WidgetState.STOPPED }
+        await { MixSurface.state(app) == MixState.STOPPED }
         assertTrue("stop resets the mix", runtime.status.value.stopped)
 
         compose.runOnIdle { session.player.play() }
         await { runtime.status.value.playing }
-        await { PlaybackWidget.state(app) == WidgetState.PLAYING }
+        await { MixSurface.state(app) == MixState.PLAYING }
 
         // The service dies while playing: nothing is running afterwards, so neither is the widget.
         this.service?.destroy()
         this.service = null
-        await { PlaybackWidget.state(app) == WidgetState.STOPPED }
+        await { MixSurface.state(app) == MixState.STOPPED }
         assertEquals(
             "a released service leaves the widget stopped, whatever it last showed",
-            WidgetState.STOPPED,
-            PlaybackWidget.state(app),
+            MixState.STOPPED,
+            MixSurface.state(app),
         )
     }
 }

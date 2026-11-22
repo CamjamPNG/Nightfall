@@ -195,11 +195,12 @@
   inventory has no GMS, Firebase, billing, ad or tracking SDK from the checked
   denylist. F-Droid's independent review remains necessary.
 
-- 34 Robolectric scenarios pass in both channels (see below), plus the three GitHub-only
+- 40 Robolectric scenarios pass in both channels (see below), plus the three GitHub-only
   diagnostics gesture scenarios described above: twelve
   playback-lifecycle ones, which replace the instrumented attempt that never went
   green, two Android 16 assertions that need the API 36 sandbox CI now runs
-  (`Android16RuntimeTest`), and twenty for the home-screen widget.
+  (`Android16RuntimeTest`), twenty for the home-screen widget, and six for the Quick Settings
+  tile.
 
 Machine-readable results: `docs/verification/update-channel.json`,
 `release-checks.json`, `dependency-audit.json`, `reproducibility.json`, and
@@ -427,7 +428,7 @@ animation.
 `app/src/test/java/dev/nightfall`, run under both channels in CI and in the API 36 job:
 
 - `WidgetStoppedToPlayTest`: from a fresh install, the widget reads `Stopped` while the runtime
-  reports a stopped mix; a tap on the widget — through `WidgetSession`, a real `MediaController`
+  reports a stopped mix; a tap on the widget — through `SessionToggle`, a real `MediaController`
   and the real `PlaybackService` — starts playback, the float sink receives non-silent samples,
   and the widget then reads `Playing` with the pause glyph and the description "Pause soundscape.
   Playing.".

@@ -9,7 +9,7 @@ import android.widget.FrameLayout
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.nightfall.PlaybackWidget
-import dev.nightfall.WidgetState
+import dev.nightfall.MixState
 import java.io.File
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -59,9 +59,9 @@ class WidgetRenderTest {
     private fun variants(): List<Pair<String, android.widget.RemoteViews>> {
         val context = context
         return listOf(
-            "1x1" to PlaybackWidget.tinyViews(context, WidgetState.PLAYING, WIDGET_ID),
-            "2x1" to PlaybackWidget.wideViews(context, WidgetState.PLAYING, WIDGET_ID),
-            "2x1-stopped" to PlaybackWidget.wideViews(context, WidgetState.STOPPED, WIDGET_ID),
+            "1x1" to PlaybackWidget.tinyViews(context, MixState.PLAYING, WIDGET_ID),
+            "2x1" to PlaybackWidget.wideViews(context, MixState.PLAYING, WIDGET_ID),
+            "2x1-stopped" to PlaybackWidget.wideViews(context, MixState.STOPPED, WIDGET_ID),
         )
     }
 
