@@ -24,8 +24,9 @@ component draws and the touch bounds Android reports for it.
 
 `app/src/test/java/dev/nightfall/AccessibilitySemanticsTest.kt` asserts the names, states, actions and
 touch bounds on the Home, Library, Presets and Settings surfaces; `ContrastTest` computes every
-contrast ratio the theme ships; `FontScaleTest` hosts the real composables at a doubled font scale.
-Each test class is one scenario, because this repository runs one JVM per class.
+contrast ratio the theme ships; `FontScaleTest` hosts the real composables at a doubled font scale,
+and `TextTruncationTest` reads the text layout each one drew to catch a label cut short behind an
+ellipsis. Each test class is one scenario, because this repository runs one JVM per class.
 
 ## Findings, surface by surface
 
@@ -161,6 +162,23 @@ height; the three first-run rows are taller than their single line, because at 2
 "Not now" is taller than its 48dp minimum. What a JVM cannot see is a glyph actually cut in half —
 these are sizes and placements on the semantics tree, and the rest is the device gap below.
 
+A size assertion cannot see a word that is missing, though. `TextTruncationTest` measures the words
+instead: it runs Home, the Library, Presets and Settings with the system font scale set the way
+Android sets it (`RuntimeEnvironment.setFontScale`) under Robolectric's native graphics, then asks
+every `Text` for the layout it drew — the same `TextLayoutResult` an accessibility service reads —
+and fails on any line Compose ended in an ellipsis, or on a layout shorter than the paragraph it
+laid out. Each screen is swept from its first screenful to its last, because a lazy list composes
+only what is on screen. Native graphics matter here: with the sandbox's simulated text metrics a
+doubled scale produces no glyph advances at all, so the older harness can only measure boxes.
+
+That check found one defect: at 200% the now-playing row gave "System audio output" 86.5dp and drew
+it as "System audio outp…". The row's transport line now flows, so on a narrow row the route moves
+to a second line instead of being cut — measured at 200% it reads 201.1dp wide on one line, with the
+layer count above it and the sleep timer beside both. At 100% every text node in Home keeps the
+origin and height it had: measured on the semantics tree before and after, the one difference is the
+label's own box, 100.2dp instead of the row's remaining 169.9dp, and the words draw from the same
+pixel either way.
+
 ## Transient changes, announced once
 
 Two things change while nobody is looking at them: the sleep timer is set from a dialog that then
@@ -183,6 +201,9 @@ is not something a JVM can answer. Specifically unverified:
   sighted user who has not been told about it.
 - Whether a doubled font clips a *glyph* anywhere. The tests measure box sizes and placement; a real
   device at 200% is the check.
+- Whether a different font wraps or cuts differently. The truncation sweep asserts on Robolectric's
+  bundled fonts at 200%; an OEM's typeface, a downloaded font or a 2.5× scale is still unmeasured, and
+  a phone in the hand is what would measure it.
 - The widget and the tile in a real launcher and a real shade. Their semantics were confirmed by
   reading the code, not hosted: a `RemoteViews` content description and a tile's `contentDescription`
   and `subtitle` are strings the system reads, and no launcher has read them.

@@ -603,6 +603,7 @@ private fun Home(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun NowPlayingCard(
     r: NightfallRuntime,
@@ -655,29 +656,36 @@ private fun NowPlayingCard(
             TimerAnnouncement(r)
             Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier.size(5.dp)
-                        .background(MaterialTheme.colorScheme.primary, CircleShape)
-                )
-                Spacer(Modifier.width(6.dp))
-                ActiveLayerLabel(r)
-                Spacer(Modifier.width(12.dp))
-                Icon(
-                    if (output.kind == OutputRoute.Kind.BLUETOOTH) Icons.Outlined.BluetoothAudio
-                    else Icons.Outlined.Headphones,
-                    null,
-                    Modifier.size(13.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    outputShortLabel(context, output),
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                // The transport line flows instead of ending in an ellipsis. At 200% text the route
+                // is wider than what the row's other items leave it, and "System audio outp…" is a
+                // line nobody can finish reading; here it moves to a second line and takes the width
+                // it needs. The spacers are the row's own gaps, so at 100% this lays out on one line
+                // where it always did.
+                FlowRow(
                     modifier = Modifier.weight(1f),
-                )
+                    itemVerticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        Modifier.size(5.dp)
+                            .background(MaterialTheme.colorScheme.primary, CircleShape)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    ActiveLayerLabel(r)
+                    Spacer(Modifier.width(12.dp))
+                    Icon(
+                        if (output.kind == OutputRoute.Kind.BLUETOOTH) Icons.Outlined.BluetoothAudio
+                        else Icons.Outlined.Headphones,
+                        null,
+                        Modifier.size(13.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        outputShortLabel(context, output),
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 TimerButton(r, onTimer)
             }
         }
