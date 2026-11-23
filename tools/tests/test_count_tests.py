@@ -230,5 +230,92 @@ class ThisTreeTest(unittest.TestCase):
         counting.require_matches(ROOT / "README.md", ROOT)
 
 
+APPENDIX = """# Localization
+
+## Appendix A — the sound names
+
+| Key | Name | Line |
+| --- | --- | --- |
+| white | White | 1 |
+| pink | Pink | 2 |
+
+## Appendix B — the preset names
+
+| Key | Name |
+| --- | --- |
+| one | One |
+| two | Two |
+"""
+
+
+class LaunchClaimsTest(unittest.TestCase):
+    """The launch kit's prose counts: found, corrected from the tree, or refused."""
+
+    def tree(self, draft, manual=None, clips=("a.ogg", "b.ogg"), appendix=APPENDIX):
+        files = {
+            "core/src/test/demo/A.kt": PLAIN,
+            "docs/LOCALIZATION.md": appendix,
+            "docs/launch/copy/draft.md": draft,
+        }
+        files.update({f"docs/samples/{clip}": "audio" for clip in clips})
+        if manual is not None:
+            files["docs/LAUNCH.md"] = manual
+        return Tree(files)
+
+    def test_a_stale_count_is_refused_and_one_command_corrects_it(self):
+        with self.tree("Nightfall has 7 tests, and nothing else.\n") as tree:
+            path = tree.root / "docs/launch/copy/draft.md"
+            with self.assertRaises(ValueError) as raised:
+                counting.require_document(path, tree.root)
+            self.assertIn("draft.md:1", str(raised.exception))
+            self.assertIn("--update", str(raised.exception))
+            counting.update_document(path, tree.root)
+            self.assertIn("has 1 tests", path.read_text())
+            counting.require_document(path, tree.root)
+
+    def test_a_count_the_scanner_cannot_place_is_refused_rather_than_skipped(self):
+        with self.tree("The core holds 7\ndeterministic tests.\n") as tree:
+            with self.assertRaises(ValueError) as raised:
+                counting.require_document(tree.root / "docs/launch/copy/draft.md", tree.root)
+            self.assertIn("cannot place", str(raised.exception))
+
+    def test_the_catalogue_count_comes_from_the_appendix_rows_and_stops_at_the_next_section(self):
+        with self.tree("It ships 9 sounds.\n") as tree:
+            self.assertEqual(counting.facts(tree.root)["catalogue"], 2)
+            path = tree.root / "docs/launch/copy/draft.md"
+            counting.update_document(path, tree.root)
+            self.assertIn("ships 2 sounds", path.read_text())
+
+    def test_the_clip_count_comes_from_the_sample_directory(self):
+        with self.tree("Eight of them, actually 9 clips.\n") as tree:
+            path = tree.root / "docs/launch/copy/draft.md"
+            counting.update_document(path, tree.root)
+            self.assertIn("2 clips", path.read_text())
+
+    def test_the_core_run_count_is_a_claim_of_its_own(self):
+        with self.tree("1 tests are defined, 4 run, which is the point.\n") as tree:
+            path = tree.root / "docs/launch/copy/draft.md"
+            counting.update_document(path, tree.root)
+            self.assertIn("1 tests are defined, 1 run", path.read_text())
+
+    def test_update_all_rewrites_the_manual_block_and_every_draft_in_one_command(self):
+        manual = "| Tests |\n\n<!-- test-counts:begin -->\nstale\n<!-- test-counts:end -->\n"
+        with self.tree("The manual says 9 tests.\n", manual=manual) as tree:
+            counting.update_all(tree.root)
+            self.assertIn("| `core/src/test` | 1 | 1 | 0 | 0 | 0 | 1 | 0 |",
+                          (tree.root / "docs/LAUNCH.md").read_text())
+            self.assertIn("says 1 tests", (tree.root / "docs/launch/copy/draft.md").read_text())
+            counting.require_all(tree.root)
+
+    def test_a_document_with_no_appendix_is_refused_rather_than_guessed(self):
+        with self.tree("1 tests.\n", appendix="# Localization\n\nno appendix here\n") as tree:
+            with self.assertRaises(ValueError) as raised:
+                counting.facts(tree.root)
+            self.assertIn("catalogue census", str(raised.exception))
+
+    def test_this_tree_agrees_with_every_guarded_document(self):
+        counting.require_all(ROOT)
+
+
 if __name__ == '__main__':
     unittest.main()

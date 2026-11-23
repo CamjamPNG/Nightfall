@@ -29,21 +29,26 @@ anyone who asks, and no boost requests to anyone.
 
 ## Draft
 
-Measured at 501 characters raw, **486 as Mastodon counts it** (a link costs 23
-characters, not its real length), so it fits a default 500-character instance with a
-little room. The budget is why the privacy line is one clause rather than a paragraph:
-the full statement, including the diagnostics journal, is on the site this post links
-to. The draft this replaced was 521 and claimed to be ~480, which no default
-instance would have accepted. Add the demo clip if you have recorded it; leave the post
-as text if you haven't, because a clip is only worth showing once it exists. Recount it
-by pasting the paragraph into a character counter, not by trusting this line.
+Measured at 527 characters raw, **489 as Mastodon counts it** (a link costs 23
+characters, not its real length), so it fits a default 500-character instance with eleven
+to spare. The budget is why the privacy line is one clause rather than a paragraph: the
+full statement, including the diagnostics journal, is on the repository page the second
+line points at. Recount it by pasting the paragraph into a character counter, not by
+trusting this line — the previous draft in this file was 521 and claimed to be ~480, which
+no default instance would have accepted.
 
-> Nightfall: a sleep-sound mixer for Android. Independent layers of noise, weather,
-> recordings and music. No account, no ads, no usage log unless you opt in. Two
-> builds: the F-Droid one can't open a socket; the GitHub one's only network use is its
-> update check. 2.0 adds endless night and a home-screen widget, and it's 11.7 MB.
-> 120 tests, and a README listing what's unverified — no overnight pass yet, and the
-> widget has never met a launcher. MIT. https://github.com/CamjamPNG/Nightfall
+The post is complete without a clip, which is what makes it postable today. Add the
+demo clip when it exists; leave the post as text until then, because a clip is only worth
+showing once it is real, and this is the only channel in the kit that wants one.
+
+> Nightfall: a sleep-sound mixer for Android. 106 sounds, independent layers, no account,
+> no ads. Type "rain on a tent" and it builds the mix on the phone; play/pause is on the
+> lock screen and a Quick Settings tile, and the build with no network permission is on
+> the releases page. Eight clips you can hear first, no install:
+> https://github.com/CamjamPNG/Nightfall/tree/main/docs/samples
+>
+> 11.8 MB, 120 tests, and a README listing what's unverified — no overnight run on a
+> device yet, and no ear has heard it on one.
 >
 > #FOSS #Android
 
@@ -52,6 +57,9 @@ Notes:
 - Put the edited-honest limit in the post itself. On the fediverse the limitation
   line is the part people reply to, and it is also the part that makes the rest of
   the post credible.
+- The one link is a folder of audio files inside the repository — not a download page,
+  not a store listing. If a mod reads rule 8's "exclusively links" clause strictly, the
+  post still has two paragraphs of prose before and after it.
 - Do not post the same text on four instances, and do not ask anyone to boost.
 - If the account is new, post something else first and let it age; a one-post account
   linking an app trips the same spam heuristics the rule describes.
