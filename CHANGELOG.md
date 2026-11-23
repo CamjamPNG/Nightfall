@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.6.2 — 2026-11-23
+
+- fix: wrap Home's transport line instead of ellipsizing it at 200% text (#56)
+
 ## 2.6.1 — 2026-11-22
 
 - fix: give every control a spoken name and state, a 48dp target and a readable groove (#54)

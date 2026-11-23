@@ -1,0 +1,1 @@
+- fix: wrap Home's transport line instead of ellipsizing it at 200% text (#56)
