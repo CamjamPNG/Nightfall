@@ -120,6 +120,35 @@ bar and no animation, and the render-load figures in Settings are the harness's 
 than a phone's; `docs/TESTING.md` records how they are generated, how to regenerate
 them, and what they cannot show.
 
+## Hear it
+
+Sound is the whole product, and installing an 11.7 MB APK to find out what it sounds like is a lot to
+ask. These are short clips of the engine output, one per sound or mix, 20 to 30 seconds each:
+
+- [**Nine-Layer Dream**](docs/samples/nine-layer-dream.ogg) — the app's opening preset: lo-fi music,
+  brown noise, rain, a blizzard, hail, rolling thunder, wind, fire and a 440 Hz tone, layered at once.
+- [**Storm That Passes**](docs/samples/storm-that-passes.ogg) — a themed night from second zero, where
+  the storm is at its loudest and three more phases are still ahead.
+- [**Heavy rain on a metal roof, with a fire**](docs/samples/heavy-rain-metal-roof-fire.ogg) — the
+  phrase box building a three-layer mix out of a sentence.
+- [**Rain on tent**](docs/samples/rain-on-tent.ogg) — one synthesized rain, alone.
+- [**Ocean waves**](docs/samples/ocean-waves.ogg) — the surf generator: a slow swell, a long low wash
+  and a little spray.
+- [**Campfires**](docs/samples/campfires.ogg) — a fire whose crackles are generated at a settable rate
+  rather than looped.
+- [**Brown noise**](docs/samples/brown-noise.ogg) — 1/f² noise, the plainest thing the app makes.
+- [**Lo-fi sleep music**](docs/samples/lo-fi-sleep-music.ogg) — the lo-fi music profile, generated at
+  42 BPM.
+
+These were rendered offline by the same synthesis code the app runs, at its own 48 kHz stereo rate
+and block size, with the bundled recordings it ships, and then encoded to Opus. They are not
+recordings of a phone: no device went near them, Android's own audio path and decoder are not in the
+chain, and no speaker or headphone was involved. So they prove what the engine computes and say
+nothing about how it will sound on your pillow speaker or through your particular earbuds — and
+nobody here has listened to them with an ear. [What each clip is set
+to](docs/samples/README.md), the byte sizes, and the one command that regenerates the set are in
+`docs/samples/`.
+
 ## Install
 
 ### GitHub Releases — the channel that works today
@@ -302,8 +331,8 @@ How many tests: this table is the only place these numbers live. `tools/count_te
 it from the tree and `tools/check_release.py` fails the push that disagrees with the code, so no
 document has to be trusted for a count. A `@Test` method is one test; **Runs by default** leaves
 out `@Ignore`d tests and the tests whose first statement skips them — `LevelCalibrationTest`'s
-generator waits for `NIGHTFALL_CALIBRATE=1` and is the only one, which is why `core` reads as 119
-declared and 118 run rather than one number that means both. `Robolectric` and `Plain JVM` are what
+generator waits for `NIGHTFALL_CALIBRATE=1` and is the only one, which is why `core` reads as 120
+declared and 119 run rather than one number that means both. `Robolectric` and `Plain JVM` are what
 the file's runner annotation says, not a guess. Everything in `app/src/test` executes twice in
 CI's `unit` job, once per channel; `app/src/testGithub` exists only in the `github` channel and
 executes once. All of it runs on a JVM with no device, no emulator and no network.
@@ -313,9 +342,9 @@ executes once. All of it runs on a JVM with no device, no emulator and no networ
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `app/src/test` | 95 | 95 | 0 | 0 | 89 | 6 | 0 |
 | `app/src/testGithub` | 93 | 93 | 0 | 0 | 24 | 69 | 0 |
-| `core/src/test` | 119 | 118 | 1 | 0 | 0 | 119 | 0 |
+| `core/src/test` | 120 | 119 | 1 | 0 | 0 | 120 | 0 |
 | `tools/tests` | 85 | 85 | 0 | 0 | 0 | 0 | 85 |
-| **Total** | 392 | 391 | 1 | 0 | 113 | 194 | 85 |
+| **Total** | 393 | 392 | 1 | 0 | 113 | 195 | 85 |
 <!-- test-counts:end -->
 
 `python3 tools/count_tests.py` prints that table, `--files` adds a row per file so a count can be

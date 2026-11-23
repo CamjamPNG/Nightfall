@@ -107,7 +107,7 @@
   rejection of duplicate versions and preservation of code/audio in ABI options.
   Signed APK variants are additionally checked with Android's apksigner, aapt,
   zipalign and source-tag audio hashes before publication.
-- 119 deterministic JVM/core tests pass (118 executed, 1 skipped by design: the
+- 120 deterministic JVM/core tests pass (119 executed, 1 skipped by design: the
   opt-in `NIGHTFALL_CALIBRATE=1` level-calibration generator). Three of them
   (`NightRunTest`, `ThemedNightRunTest`, `EndlessNightRunTest`) render a whole eight-hour
   night through the real render path. They cover nine
