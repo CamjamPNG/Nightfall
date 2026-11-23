@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.6.3 — 2026-11-23
+
+- docs: let people hear the app before installing it (#57)
+
 ## 2.6.2 — 2026-11-23
 
 - fix: wrap Home's transport line instead of ellipsizing it at 200% text (#56)

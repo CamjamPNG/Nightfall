@@ -1,0 +1,1 @@
+- docs: let people hear the app before installing it (#57)
