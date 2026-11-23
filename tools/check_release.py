@@ -24,9 +24,10 @@ config=(ROOT/'app/build.gradle.kts').read_text()
 appid=re.search(r'applicationId\s*=\s*"([^"]+)"',config)[1]
 version=re.search(r'versionName\s*=\s*"([^"]+)"',config)[1]
 code=int(re.search(r'versionCode\s*=\s*(\d+)',config)[1])
-# README's test-count table is generated from this tree rather than typed, so this compares the two
-# instead of holding an expected number that would itself be a second place to drift.
-count_tests.require_matches(ROOT/'README.md')
+# README's test-count table and the counts the launch kit states in prose are generated from this
+# tree rather than typed, so this regenerates both and compares, instead of holding an expected
+# number that would itself be a second place to drift.
+count_tests.require_all()
 meta=ROOT/'fastlane/metadata/android/en-US'
 require(0<len((meta/'title.txt').read_text().strip())<=50,'Invalid store title')
 summary=(meta/'short_description.txt').read_text().strip()

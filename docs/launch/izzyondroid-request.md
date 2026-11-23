@@ -73,9 +73,9 @@ policy says gets a project degraded. Nothing in this repository is set up to fil
 that answer, and no request has been filed.
 
 One honest counterweight worth having ready, because it is true and checkable:
-`docs/TESTING.md` records what was and was not executed, `core/src/test` holds 119
-deterministic tests (118 of which run without an opt-in flag), and the README carries an
-explicit unverified list. If the
+`docs/TESTING.md` records what was and was not executed, `core/src/test` holds 120 tests
+(119 of which run without an opt-in flag), and the README carries an explicit unverified
+list. If the
 request is filed, that record is the argument that a human is accountable for the
 output — not a claim that no tool was used.
 
@@ -103,25 +103,25 @@ per-app size limit."
 
 #### What Nightfall publishes today, measured
 
-As of `v2.0`, six APKs ship, and the per-ABI split is already done:
+As of `v2.6.2`, six APKs ship, and the per-ABI split is already done:
 
 | Asset | Bytes | MiB |
 | --- | --- | --- |
-| `Nightfall-2.0-arm64-v8a.apk` | 11,737,776 | 11.2 |
-| `Nightfall-2.0-armeabi-v7a.apk` | 11,737,780 | 11.2 |
-| `Nightfall-2.0-x86.apk` | 11,737,764 | 11.2 |
-| `Nightfall-2.0-x86_64.apk` | 11,737,770 | 11.2 |
-| `Nightfall-2.0-universal.apk` | 11,836,600 | 11.3 |
-| `Nightfall-2.0-fdroid-universal.apk` | 11,754,680 | 11.2 |
+| `Nightfall-2.6.2-arm64-v8a.apk` | 11,832,096 | 11.3 |
+| `Nightfall-2.6.2-armeabi-v7a.apk` | 11,828,004 | 11.3 |
+| `Nightfall-2.6.2-x86.apk` | 11,832,084 | 11.3 |
+| `Nightfall-2.6.2-x86_64.apk` | 11,832,090 | 11.3 |
+| `Nightfall-2.6.2-universal.apk` | 11,930,920 | 11.4 |
+| `Nightfall-2.6.2-fdroid-universal.apk` | 11,840,808 | 11.3 |
 
 Every one is under the 30 MB ceiling, and the smallest is 0.39× it rather than 2.6×.
 Splitting by architecture saves **98,824 bytes** at most, because it is not the native
 libraries that are large: `lib/` in the `arm64-v8a` APK is 17,208 bytes. Unzipping that
-APK on 19 November 2026:
+APK on 23 November 2026:
 
 ```
 10089142  assets/audio/*.nfop (9.6 MB of Opus containers, seven files)
- 3041456  classes.dex         (R8-minified: 2.9 MB, was 47.37 MB across three files before 1.5.2)
+ 3138552  classes.dex         (R8-minified: 3.0 MB, was 47.37 MB across three files before 1.5.2)
    17208  lib/
 ```
 
@@ -164,9 +164,9 @@ the project treats as a hard constraint (`docs/ARCHITECTURE.md`).
 **The encoded set shipped.** The re-encode landed in the shape the estimate predicted:
 `app/src/opus/assets/audio` holds seven `.nfop` containers totalling 10,089,142 bytes,
 close to the ~9.6 MB the 48 kbit/s sample scaled to. 1.12 switched the build to them,
-dropped the PCM, and the published `v2.0` APKs are the result: `arm64-v8a` is
-11,737,776 bytes, against 79,465,722 for the same file in 1.11. The estimate above was
-never a build; the 2.0 release is the measurement that replaced it.
+dropped the PCM, and the published APKs are the result: `arm64-v8a` is 11,832,096 bytes in
+`v2.6.2`, against 79,465,722 for the same file in 1.11. The estimate above was never a
+build; the 1.12 release is the measurement that replaced it.
 
 What that cost, stated in the same breath, because it is the one thing a reviewer
 should weigh: the mixer now parses the containers and hands packets to the platform's
@@ -198,17 +198,17 @@ The project now builds two channels
 | `fdroid` | all four `tools:node="remove"`d | no; `app/src/fdroid/java/dev/nightfall/update/UpdateSurfaces.kt` is a stub | **yes — `Nightfall-<version>-fdroid-universal.apk`, since 1.5** |
 
 Both rows were confirmed twice: in the source manifests, and on the downloaded
-`v2.0` assets — `tools/check_release.py --apk Nightfall-2.0-arm64-v8a.apk
---fdroid-apk Nightfall-2.0-fdroid-universal.apk` passes on 19 November 2026, finding
+`v2.6.2` assets — `tools/check_release.py --apk Nightfall-2.6.2-arm64-v8a.apk
+--fdroid-apk Nightfall-2.6.2-fdroid-universal.apk` passes on 23 November 2026, finding
 all four permissions in the `github` APK and none of them in the `fdroid` one, whose
 dex also carries no class from the updater package.
 
 The request points at a **published `fdroid`-channel APK** —
-`Nightfall-2.0-fdroid-universal.apk`, attached to every release since 1.5, one
+`Nightfall-2.6.2-fdroid-universal.apk`, attached to every release since 1.5, one
 universal APK so `ApkMatch` can select it by name, signed with the same pinned
 certificate as the rest, and deliberately absent from `release-manifest.json` so the
 in-app updater never offers it. Two of the three gates this document once listed are
-closed: that asset is published, and it is 11,754,680 bytes, well under the 30 MB
+closed: that asset is published, and it is 11,840,808 bytes, well under the 30 MB
 ceiling. What is left is the AI disclosure.
 
 
@@ -218,10 +218,10 @@ ceiling. What is left is the AI disclosure.
    what actually happened.
 2. **Create or use a Codeberg account** and open the issue in
    `https://codeberg.org/IzzyOnDroid/repodata/issues`.
-3. **Own the size work or delegate it.** The Opus decode path and its encoded assets
-   are in the repository behind `-PnightfallOpus=true`, off by default; the remaining
-   piece is to build that variant, measure it, hear it on a device and make it the
-   default, which lands the APK near 12 MB by arithmetic on measured assets.
+3. **Know what the size work still owes.** The Opus containers have been the default
+   since 1.12 and are what the published APK ships, so the arithmetic below is now a
+   measurement; the open item is hearing that path on a device, which no machine in this
+   repository can do.
 4. **Confirm the author fields**: name, public email for `AuthorEmail`, and whether
    a website goes in `WebSite` (the landing page in `docs/site/` is a candidate
    once it is published).
@@ -297,7 +297,7 @@ the form's own words; it is true only in the sense argued under Gate 1.
 > came with 2.0 and are named the same way: the Opus decoder the recordings now go
 > through has never run on a phone, nobody has heard the catalogue on a device, the
 > home-screen widget has never been placed on a real launcher, and the opt-in
-> diagnostics journal has never recorded a real crash. The download is 11.7 MB.
+> diagnostics journal has never recorded a real crash. The download is 11.8 MB.
 
 **Build instructions**
 > ```sh
@@ -335,18 +335,18 @@ about given `docs/TESTING.md` still lists the hardware pass as pending. Checking
 first without the second is more honest than checking both.
 
 **Further Notices**
-> The APK is 11.7 MB (`arm64-v8a`, 11,737,776 bytes; `fdroid-universal`
-> 11,754,680), comfortably inside the 30 MB rule of thumb. It used to be 79 MB because
+> The APK is 11.8 MB (`arm64-v8a`, 11,832,096 bytes; `fdroid-universal`
+> 11,840,808), comfortably inside the 30 MB rule of thumb. It used to be 79 MB because
 > the seven field recordings were 77,449,472 bytes of raw PCM the mixer memory-mapped;
 > since 1.12 they are 10,089,142 bytes of Opus containers. The release dex is minified
-> (3,041,456 bytes, from 47,367,428 before R8 was enabled in 1.5.2), and native
+> (3,138,552 bytes, from 47,367,428 before R8 was enabled in 1.5.2), and native
 > libraries are 17,208 bytes. The per-ABI split is in place but is not what fixed the
 > size — it saves 98,824 bytes. The cost of the smaller number is a platform decoder in
 > the audio path, which is unverified on hardware. `docs/LAUNCH.md` records the
 > measurements.
 >
 > The asset to distribute is the `fdroid`-channel APK,
-> `Nightfall-2.0-fdroid-universal.apk`: it declares no `INTERNET`,
+> `Nightfall-2.6.2-fdroid-universal.apk`: it declares no `INTERNET`,
 > `ACCESS_NETWORK_STATE`, `REQUEST_INSTALL_PACKAGES` or
 > `UPDATE_PACKAGES_WITHOUT_USER_ACTION` permission and contains no updater code. The
 > five other APKs attached to that release are the `github` channel, which does carry
