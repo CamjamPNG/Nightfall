@@ -72,6 +72,11 @@ data class PlaybackStatus(
     val timerActive: Boolean = false,
     val timerPaused: Boolean = false,
     val timerFading: Boolean = false,
+    /**
+     * The clock time a running countdown was set from, as a minute of the day, or -1 when it was set
+     * as a number of minutes. Only the words a surface says read it.
+     */
+    val timerEndsAtMinute: Int = -1,
     val peak: Float = 0f,
     val load: Float = 0f,
     val underruns: Int = 0,
@@ -101,6 +106,14 @@ class NightfallRuntime(
      */
     val firstRunDone = MutableStateFlow(false)
     val timer = SleepTimer()
+
+    /**
+     * The time of day the running countdown was chosen from, in minutes, or -1 when it was chosen as
+     * a number of minutes. Read only to say the timer's own words; the countdown knows nothing of it.
+     */
+    @Volatile
+    var timerEndsAtMinute = -1
+        private set
     var host: AudioHost? = null
     var promotePlayback: (() -> Unit)? = null
     private var persist: Job? = null
@@ -120,6 +133,9 @@ class NightfallRuntime(
                 } else {
                     _saved.value = SavedState()
                 }
+                // The countdown goes back before anything is shown, so Home never draws a
+                // timer-less card and then grows one.
+                restoreTimer(_saved.value.timer)
                 // Three answers, in order: the flag this feature writes; a state document, which is
                 // someone who used the app before the card existed (an upgrade, or a reinstall that
                 // restored its data), reported rather than greeted as new; and neither, which is a
@@ -287,31 +303,126 @@ class NightfallRuntime(
 
     fun stop() {
         timer.cancel()
+        timerEndsAtMinute = -1
         host?.stop()
         status.value =
             status.value.copy(
                 playing = false,
                 stopped = true,
                 timerActive = false,
+                timerPaused = false,
                 remainingMs = 0,
                 timerFading = false,
+                timerEndsAtMinute = -1,
             )
+        persistTimer()
     }
 
-    fun setTimer(minutes: Long) {
-        if (minutes <= 0) timer.cancel()
-        else
-            timer.start(
-                android.os.SystemClock.elapsedRealtime(),
-                minutes * 60000,
-                (_saved.value.settings.fadeSeconds * 1000).toLong(),
-            )
-        if (!status.value.playing) timer.pause(android.os.SystemClock.elapsedRealtime())
+    /** Sets the countdown to [minutes]; zero or less cancels it. */
+    fun setTimer(minutes: Long) = startTimer(minutes * 60_000, -1)
+
+    /**
+     * Sets the countdown to stop at [minuteOfDay] on the phone's clock: today if that time is still
+     * ahead, tomorrow if it has gone by.
+     *
+     * The chosen time is turned into minutes here and nowhere else, and those minutes go to the same
+     * countdown a duration does. It is a duration that happened to be chosen by a clock: a clock
+     * that jumps mid-night moves the time it lands on, never the time it runs.
+     */
+    fun setTimerUntil(minuteOfDay: Int) {
+        val calendar = java.util.Calendar.getInstance()
+        val nowMillisOfDay =
+            ((calendar.get(java.util.Calendar.HOUR_OF_DAY) * 60L + calendar.get(java.util.Calendar.MINUTE)) *
+                60_000) +
+                calendar.get(java.util.Calendar.SECOND) * 1_000L +
+                calendar.get(java.util.Calendar.MILLISECOND)
+        startTimer(EndsAt.minutesUntil(nowMillisOfDay, minuteOfDay) * 60_000L, minuteOfDay)
+    }
+
+    private fun startTimer(durationMs: Long, targetMinute: Int) {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (durationMs <= 0) timer.cancel()
+        else timer.start(now, durationMs, (_saved.value.settings.fadeSeconds * 1000).toLong())
+        timerEndsAtMinute = if (timer.active) targetMinute else -1
+        // A countdown set on a silent screen waits where it is rather than spending itself.
+        if (!status.value.playing) timer.pause(now)
+        publishTimer()
+        persistTimer()
+    }
+
+    /** The sheet's pause control, in one place, so what it saves is what it shows. */
+    fun toggleTimerPause() {
+        if (!timer.active) return
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (timer.paused) timer.resume(now) else timer.pause(now)
+        publishTimer()
+        persistTimer()
+    }
+
+    private fun publishTimer() {
+        val now = android.os.SystemClock.elapsedRealtime()
         status.value =
             status.value.copy(
                 timerActive = timer.active,
-                remainingMs = timer.remainingMs(android.os.SystemClock.elapsedRealtime()),
+                timerPaused = timer.paused,
+                timerFading = timer.active && timer.remainingMs(now) == 0L,
+                remainingMs = timer.remainingMs(now),
+                timerEndsAtMinute = if (timer.active) timerEndsAtMinute else -1,
             )
+    }
+
+    /**
+     * Writes the countdown to storage in the shape it can be put back from: while it runs, the
+     * wall-clock moment it ends at; while it is paused, the time it has left. A timer that has
+     * expired or been cancelled stores as no timer at all.
+     */
+    fun persistTimer() {
+        val remaining = timer.remainingMs(android.os.SystemClock.elapsedRealtime())
+        val saved =
+            when {
+                !timer.active -> SavedTimer()
+                timer.paused ->
+                    SavedTimer(
+                        targetMinute = timerEndsAtMinute,
+                        paused = true,
+                        remainingMs = remaining.coerceAtLeast(0),
+                    )
+                else ->
+                    SavedTimer(
+                        endMs = System.currentTimeMillis() + remaining,
+                        targetMinute = timerEndsAtMinute,
+                    )
+            }
+        if (_saved.value.timer != saved) change { it.copy(timer = saved) }
+    }
+
+    /**
+     * Puts a stored countdown back on the moment it was set for.
+     *
+     * A target already gone is dropped rather than restarted. The night it belonged to is over, and
+     * a fresh process is no place to begin a countdown from a moment in the past. What is restored
+     * waits paused, because nothing is playing in a process this new — exactly as a timer set on a
+     * paused screen waits.
+     */
+    private fun restoreTimer(saved: SavedTimer) {
+        val remaining =
+            when {
+                saved.paused -> saved.remainingMs
+                saved.endMs > 0 -> saved.endMs - System.currentTimeMillis()
+                else -> 0
+            }
+        val span = remaining.coerceIn(0, EndsAt.MINUTES_PER_DAY * 60_000L)
+        if (span <= 0) {
+            timerEndsAtMinute = -1
+            if (saved != SavedTimer()) change { it.copy(timer = SavedTimer()) }
+            return
+        }
+        val now = android.os.SystemClock.elapsedRealtime()
+        timerEndsAtMinute = saved.targetMinute.takeIf { it in 0 until EndsAt.MINUTES_PER_DAY } ?: -1
+        timer.start(now, span, (_saved.value.settings.fadeSeconds * 1000).toLong())
+        timer.pause(now)
+        publishTimer()
+        persistTimer()
     }
 }
 

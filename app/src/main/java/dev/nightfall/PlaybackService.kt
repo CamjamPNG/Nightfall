@@ -142,9 +142,16 @@ private class MixerPlayer(private val runtime: NightfallRuntime) :
         val mix = runtime.saved.value.current
         val anySolo = mix.layers.any { it.solo && it.enabled && !it.mute }
         val count = mix.layers.count { it.enabled && !it.mute && (!anySolo || it.solo) }
+        // The same words Home's timer reads: a chosen clock time stays true for as long as the
+        // timer runs, where a countdown is only true for a second.
         val timer =
             if (s.timerActive)
                 if (s.timerFading) runtime.context.getString(R.string.notification_timer_fading)
+                else if (s.timerEndsAtMinute >= 0)
+                    runtime.context.getString(
+                        R.string.notification_timer_ends_at,
+                        clockLabel(runtime.context, s.timerEndsAtMinute),
+                    )
                 else
                     runtime.context.getString(
                         R.string.notification_timer_remaining,

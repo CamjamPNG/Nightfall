@@ -46,6 +46,18 @@
     <string name="dialog_timer_title">Sleep timer</string>
     <string name="dialog_timer_body">Audio fades gently after the countdown. Pausing playback pauses the timer.</string>
     <string name="dialog_timer_custom">Custom minutes (1–1440)</string>
+    <!-- The sheet's other shape: a clock time instead of a countdown. The section's own label, the
+         three one-tap times beside the picker, the way into the picker, and the picker's parts. -->
+    <string name="dialog_timer_ends_at">Ends at</string>
+    <string name="dialog_timer_ends_at_action">End the timer at %1$s</string>
+    <string name="dialog_timer_other">Other time…</string>
+    <string name="dialog_timer_pick_title">End at</string>
+    <string name="dialog_timer_pick_back">Back</string>
+    <string name="dialog_timer_hour">Hour</string>
+    <string name="dialog_timer_minute">Minute</string>
+    <string name="dialog_timer_am">AM</string>
+    <string name="dialog_timer_pm">PM</string>
+    <string name="dialog_timer_invalid">That is not a time</string>
     <string name="dialog_timer_resume">Resume timer</string>
     <string name="dialog_timer_pause">Pause timer</string>
     <string name="dialog_timer_set">Set timer</string>
@@ -68,6 +80,10 @@
     <string name="transport_state_playing">Playing</string>
     <string name="transport_state_paused">Paused</string>
     <string name="home_a11y_sleep_timer">Sleep timer</string>
+    <!-- The timer once it was chosen by the clock: a time of day, not a countdown. The fixed shape
+         of a time needs no plural, which is why this one is not beside a11y_timer_set. -->
+    <string name="home_timer_ends_at">Ends %1$s</string>
+    <string name="a11y_timer_ends_at">Timer ends at %1$s</string>
     <string name="home_action_unmute">Unmute</string>
     <string name="home_action_mute_all">Mute all</string>
     <string name="home_action_stop_all">Stop all</string>
@@ -366,6 +382,7 @@
     <string name="notification_timer_fading">" · Fading out"</string>
     <string name="notification_timer_remaining">" · %1$s remaining"</string>
     <string name="notification_timer_all_night">" · All night"</string>
+    <string name="notification_timer_ends_at">" · Ends %1$s"</string>
 
     <!-- Runtime and playback errors. Each %1$s is a platform diagnostic. -->
     <string name="error_restore_failed">Could not restore saved mix: %1$s</string>

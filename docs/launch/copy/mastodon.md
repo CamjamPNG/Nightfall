@@ -47,7 +47,7 @@ showing once it is real, and this is the only channel in the kit that wants one.
 > the releases page. Eight clips you can hear first, no install:
 > https://github.com/CamjamPNG/Nightfall/tree/main/docs/samples
 >
-> 11.8 MB, 120 tests, and a README listing what's unverified — no overnight run on a
+> 11.8 MB, 127 tests, and a README listing what's unverified — no overnight run on a
 > device yet, and no ear has heard it on one.
 >
 > #FOSS #Android

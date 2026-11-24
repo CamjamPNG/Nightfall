@@ -104,12 +104,33 @@ data class Settings(
     val fadeSeconds: Float = 20f,
 )
 
+/**
+ * A sleep timer as it has to survive a process restart.
+ *
+ * The running countdown is [SleepTimer], which is gone the moment its process is; these are the
+ * numbers that put the same night back. [endMs] is epoch milliseconds rather than a monotonic
+ * deadline because a restart is exactly what it has to outlast, and only the wall clock keeps
+ * counting through both. A timer that is off is every field at its default, so a document saved
+ * before this existed decodes to no timer — which is what it was saved with.
+ */
+@Serializable
+data class SavedTimer(
+    /** Epoch milliseconds at which the countdown stops, or 0 while it is paused or off. */
+    val endMs: Long = 0,
+    /** The clock time it was chosen from, as a minute of the day; -1 for a plain duration. */
+    val targetMinute: Int = -1,
+    val paused: Boolean = false,
+    /** Frozen remaining time in milliseconds, while paused. */
+    val remainingMs: Long = 0,
+)
+
 @Serializable
 data class SavedState(
     val current: Mix = Presets.all.last(),
     val presets: List<Mix> = emptyList(),
     val settings: Settings = Settings(),
     val favoriteIds: Set<String> = emptySet(),
+    val timer: SavedTimer = SavedTimer(),
 )
 
 object PresetJson {
