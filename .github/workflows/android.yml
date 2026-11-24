@@ -181,9 +181,27 @@ jobs:
           echo "core-tests and every core-night shard succeeded"
   # Both channels' scenarios, on the API 35 sandbox that ships. This is also where the store
   # screenshots are rendered, so they upload from here.
-  unit:
+  #
+  # One job per channel, because the two together no longer fit one cap. Measured on attempt 2 of
+  # run 45416594561: 29s of fixed setup (23:02:05 -> 23:02:34), then a single 19m31s Gradle step for
+  # both channels, whose uploaded results attribute 7.9 min of tests to `github` and 6.4 min to
+  # `fdroid` — the rest is configuration and two variant compilations. That step finished with
+  # `BUILD SUCCESSFUL` and the 20-minute cap killed the job 0.36s later, so the cap had become the
+  # job's runtime rather than its bound. Split, each job pays 29s of setup, its own variant's compile
+  # (at most half of the measured 5m12s of configure-and-compile) and its own channel's tests:
+  # 0.5 + 3.3 + 7.9 = 11.7 min for the slower channel, two thirds of headroom over that is 19.5,
+  # taken as 20. Re-derive from two measured runs of the split, per the rule this file follows.
+  unit-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - flavour: github
+            task: testGithubDebugUnitTest
+          - flavour: fdroid
+            task: testFdroidDebugUnitTest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
@@ -195,17 +213,37 @@ jobs:
           gradle-version: '8.11.1'
       - name: Install Android SDK packages
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;35.0.0"'
-      - name: App unit tests, both channels
-        run: ./gradlew --no-daemon :app:testGithubDebugUnitTest :app:testFdroidDebugUnitTest
+      - name: App unit tests, ${{ matrix.flavour }} channel
+        run: ./gradlew --no-daemon :app:${{ matrix.task }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
-          name: app-test-reports
+          name: app-test-reports-${{ matrix.flavour }}
           path: |
             app/build/screenshots/
             app/build/reports/tests/
             app/build/test-results/
           retention-days: 14
+  # `android.yml`'s `release` aggregator and branch protection both name `unit`, and it has meant
+  # "both channels' unit tests passed" since before the split, so it stays as an aggregator over the
+  # two jobs above, the same shape `core` uses over `core-tests` and `core-night`.
+  unit:
+    needs: unit-tests
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every app unit test job passed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS"
+          FAILED=$(printf '%s' "$RESULTS" | python3 -c 'import json,sys; print(" ".join(sorted(k for k,v in json.load(sys.stdin).items() if v["result"] != "success")))')
+          if [ -n "$FAILED" ]; then
+            echo "::error::These app unit test jobs did not succeed: $FAILED"
+            exit 1
+          fi
+          echo "unit-tests passed for both channels"
   # `lintDebug` compiles the debug variant, and `assembleDebug` packages what that compilation
   # already produced, so the build gate's APK costs one more task here rather than a whole job.
   # lint `abortOnError = true` makes this a gate, not advice.
