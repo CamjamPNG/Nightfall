@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.7 — 2026-11-24
+
+- feat: a sleep timer that ends at a clock time, not only after a duration (#59)
+
 ## 2.6.3 — 2026-11-23
 
 - docs: let people hear the app before installing it (#57)
