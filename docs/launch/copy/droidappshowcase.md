@@ -96,7 +96,7 @@ Body:
 >   that never transmit anything. Android 16 targeting, and every UI string is in resources
 >   so the app can be translated — nothing has been translated yet.
 > - **MIT licensed**, source is readable, and the audio engine is a Kotlin module with no
->   Android dependency and 120 tests, so the DSP is inspectable rather than hidden.
+>   Android dependency and 127 tests, so the DSP is inspectable rather than hidden.
 >
 > What it isn't: there is no iOS version, no cloud sync, no Android Auto.
 > A physical-device pass (Pixel 7, Bluetooth, overnight battery) is still pending — I've

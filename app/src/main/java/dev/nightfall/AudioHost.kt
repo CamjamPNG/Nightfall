@@ -130,6 +130,7 @@ class AudioHost(private val runtime: NightfallRuntime) {
                 timerActive = runtime.timer.active,
                 timerPaused = runtime.timer.paused,
                 timerFading = runtime.timer.active && runtime.timer.remainingMs(now) == 0L,
+                timerEndsAtMinute = runtime.timerEndsAtMinute,
             )
         // Evaluated against the live timer, so a cancel or replacement between the worker's block
         // and this tick can never stop playback on an obsolete deadline.
@@ -159,6 +160,8 @@ class AudioHost(private val runtime: NightfallRuntime) {
         focusGain = 1f
         playing = true
         runtime.timer.resume(SystemClock.elapsedRealtime())
+        // The countdown's stored shape changes with playback: it runs only while audio does.
+        runtime.persistTimer()
         if (!wake.isHeld) wake.acquire()
         runtime.status.value =
             runtime.status.value.copy(playing = true, stopped = false, error = null)
@@ -175,6 +178,7 @@ class AudioHost(private val runtime: NightfallRuntime) {
             }
         }
         runtime.timer.pause(SystemClock.elapsedRealtime())
+        runtime.persistTimer()
         if (wake.isHeld) wake.release()
         runtime.status.value = runtime.status.value.copy(playing = false)
     }

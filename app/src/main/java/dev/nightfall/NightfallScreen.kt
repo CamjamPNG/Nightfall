@@ -711,28 +711,66 @@ private fun ActiveLayerLabel(r: NightfallRuntime) {
  */
 @Composable
 private fun TimerAnnouncement(r: NightfallRuntime) {
+    val context = LocalContext.current
     val active by selectStatus(r, false) { it.timerActive }
     val minutes by selectStatus(r, 0) { s ->
         if (s.timerActive) ((s.remainingMs + 59_999) / 60_000).toInt() else 0
     }
+    val endsAt by selectStatus(r, -1) { s -> if (s.timerActive) s.timerEndsAtMinute else -1 }
     // The countdown crossing a minute is not news. The announcement is captured when the timer
     // *starts* and then held: keying this on the remaining minutes would say the clock aloud, once a
-    // minute, all night. Nothing is said for "All night", which is where the card already starts.
-    val set = if (minutes > 0) pluralStringResource(R.plurals.a11y_timer_set, minutes, minutes) else ""
+    // minute, all night. A timer chosen by the clock is said as the clock time it was chosen at, not
+    // as the countdown it became. Nothing is said for "All night", where the card already starts.
+    val set =
+        when {
+            endsAt >= 0 -> stringResource(R.string.a11y_timer_ends_at, clockLabel(context, endsAt))
+            minutes > 0 -> pluralStringResource(R.plurals.a11y_timer_set, minutes, minutes)
+            else -> ""
+        }
     var announced by remember { mutableStateOf("") }
-    LaunchedEffect(active) { announced = if (active) set else "" }
+    LaunchedEffect(active, endsAt) { announced = if (active) set else "" }
     LiveAnnouncement(announced)
+}
+
+/**
+ * What the timer's one label has to say, decided from the status and worded where copy lives.
+ *
+ * It is a value rather than a string built inside the subscription because a selector captured by
+ * `remember` cannot see the copy that depends on the device's clock setting; and it changes only
+ * when the *kind* of thing the timer is changes, so a clock time is not re-announced every tick.
+ */
+private sealed interface TimerLabel {
+    data object None : TimerLabel
+
+    data object Fading : TimerLabel
+
+    data class EndsAt(val minute: Int) : TimerLabel
+
+    data class Countdown(val remainingMs: Long) : TimerLabel
 }
 
 @Composable
 private fun TimerButton(r: NightfallRuntime, onTimer: () -> Unit) {
+    val context = LocalContext.current
     val allNight = stringResource(R.string.common_all_night)
     val fading = stringResource(R.string.common_fading)
     val sleepTimer = stringResource(R.string.home_a11y_sleep_timer)
-    val label by
-        selectStatus(r, allNight) { s ->
-            if (s.timerActive) if (s.timerFading) fading else elapsedLabel(s.remainingMs)
-            else allNight
+    val timer by
+        selectStatus(r, TimerLabel.None as TimerLabel) { s ->
+            when {
+                !s.timerActive -> TimerLabel.None
+                s.timerFading -> TimerLabel.Fading
+                s.timerEndsAtMinute >= 0 -> TimerLabel.EndsAt(s.timerEndsAtMinute)
+                else -> TimerLabel.Countdown(s.remainingMs)
+            }
+        }
+    val label =
+        when (val t = timer) {
+            TimerLabel.None -> allNight
+            TimerLabel.Fading -> fading
+            is TimerLabel.EndsAt ->
+                stringResource(R.string.home_timer_ends_at, clockLabel(context, t.minute))
+            is TimerLabel.Countdown -> elapsedLabel(t.remainingMs)
         }
     TextButton(
         onClick = onTimer,
@@ -1309,13 +1347,20 @@ private fun layerSubtitle(context: Context, sound: Sound?): String =
 @Composable
 private fun TimerDialog(r: NightfallRuntime, onDismiss: () -> Unit) {
     var custom by rememberSaveable { mutableStateOf("30") }
+    var picking by rememberSaveable { mutableStateOf(false) }
     val timerActive by selectStatus(r, false) { it.timerActive }
     val timerPaused by selectStatus(r, false) { it.timerPaused }
+    if (picking) {
+        EndAtDialog(r, onDismiss = onDismiss, onBack = { picking = false })
+        return
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.dialog_timer_title)) },
         text = {
-            Column {
+            // The sheet now holds two ways to choose: a countdown and a clock time. On a short screen
+            // it scrolls rather than clipping the row a finger needs.
+            Column(Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState())) {
                 Text(
                     stringResource(R.string.dialog_timer_body),
                     fontSize = 13.sp,
@@ -1351,14 +1396,22 @@ private fun TimerDialog(r: NightfallRuntime, onDismiss: () -> Unit) {
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    stringResource(R.string.dialog_timer_ends_at),
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(6.dp))
+                EndsAtSuggestions(r, onDismiss)
+                OutlinedButton(
+                    onClick = { picking = true },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                ) {
+                    Text(stringResource(R.string.dialog_timer_other), fontSize = 11.sp)
+                }
                 if (timerActive)
-                    TextButton(
-                        onClick = {
-                            val now = android.os.SystemClock.elapsedRealtime()
-                            if (r.timer.paused) r.timer.resume(now) else r.timer.pause(now)
-                            r.status.value = r.status.value.copy(timerPaused = r.timer.paused)
-                        }
-                    ) {
+                    TextButton(onClick = { r.toggleTimerPause() }) {
                         Text(
                             if (timerPaused) stringResource(R.string.dialog_timer_resume)
                             else stringResource(R.string.dialog_timer_pause)
@@ -1383,6 +1436,158 @@ private fun TimerDialog(r: NightfallRuntime, onDismiss: () -> Unit) {
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_done)) }
+        },
+    )
+}
+
+/**
+ * The three one-tap times, so nobody at two in the morning has to dial a picker to say "until 6:30".
+ *
+ * Each is named for what pressing it does rather than for the number it shows: the sheet's section
+ * has said "Ends at" above them, and "6:30" on its own is a label a screen reader cannot act on.
+ */
+@Composable
+internal fun EndsAtSuggestions(r: NightfallRuntime, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        EndsAt.SUGGESTIONS.forEach { minute ->
+            val label = clockLabel(context, minute)
+            OutlinedButton(
+                onClick = {
+                    r.setTimerUntil(minute)
+                    onDismiss()
+                },
+                modifier =
+                    Modifier.weight(1f).heightIn(min = 48.dp).semantics {
+                        contentDescription =
+                            context.getString(R.string.dialog_timer_ends_at_action, label)
+                    },
+                contentPadding = PaddingValues(2.dp),
+            ) {
+                Text(label, fontSize = 11.sp)
+            }
+        }
+    }
+}
+
+/**
+ * A time being chosen: the hour, the minute, and on a clock that is not 24-hour, which half of the
+ * day. State rather than parameters, because the same object answers both what the two fields hold
+ * and what the line underneath says they add up to — and the dialog's confirm key is its [minuteOfDay]
+ * being non-null.
+ */
+internal class ClockDraft(is24Hour: Boolean, hourOfDay: Int = 6, minute: Int = 30) {
+    val is24Hour = is24Hour
+    var hour by mutableStateOf(if (is24Hour) hourOfDay.toString() else twelveHour(hourOfDay).toString())
+    var minute by mutableStateOf(minute.toString().padStart(2, '0'))
+    var afternoon by mutableStateOf(hourOfDay >= 12)
+
+    private fun twelveHour(ofDay: Int) = (ofDay % 12).let { if (it == 0) 12 else it }
+
+    val hourValid: Boolean
+        get() = hour.toIntOrNull()?.let { if (is24Hour) it in 0..23 else it in 1..12 } == true
+
+    val minuteValid: Boolean
+        get() = minute.toIntOrNull()?.let { it in 0..59 } == true
+
+    /** What the fields add up to, or null while one of them is not a time. */
+    val minuteOfDay: Int?
+        get() {
+            if (!hourValid || !minuteValid) return null
+            val hour = hour.toInt()
+            val hourOfDay = if (is24Hour) hour else (hour % 12) + if (afternoon) 12 else 0
+            return hourOfDay * 60 + minute.toInt()
+        }
+}
+
+/**
+ * The picker's own content, apart from the dialog around it so it can be measured on its own.
+ *
+ * It follows the device's own convention rather than offering both: someone reading 6:30 PM on
+ * every other screen should not be asked to convert to 18:30 here. Both fields are drawn with the
+ * same filtered text entry the custom-minutes field uses, and the line underneath says the words the
+ * Home button will carry once the timer runs.
+ */
+@Composable
+internal fun EndAtPicker(draft: ClockDraft) {
+    val context = LocalContext.current
+    Column {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = draft.hour,
+                onValueChange = { draft.hour = it.filter(Char::isDigit).take(2) },
+                label = { Text(stringResource(R.string.dialog_timer_hour)) },
+                singleLine = true,
+                isError = !draft.hourValid,
+                modifier = Modifier.weight(1f),
+            )
+            OutlinedTextField(
+                value = draft.minute,
+                onValueChange = { draft.minute = it.filter(Char::isDigit).take(2) },
+                label = { Text(stringResource(R.string.dialog_timer_minute)) },
+                singleLine = true,
+                isError = !draft.minuteValid,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        if (!draft.is24Hour) {
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(false to R.string.dialog_timer_am, true to R.string.dialog_timer_pm)
+                    .forEach { (afternoon, text) ->
+                        FilterChip(
+                            selected = draft.afternoon == afternoon,
+                            onClick = { draft.afternoon = afternoon },
+                            label = { Text(stringResource(text)) },
+                            modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                        )
+                    }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        val minuteOfDay = draft.minuteOfDay
+        Text(
+            if (minuteOfDay == null) stringResource(R.string.dialog_timer_invalid)
+            else stringResource(R.string.home_timer_ends_at, clockLabel(context, minuteOfDay)),
+            fontSize = 13.sp,
+            color =
+                if (minuteOfDay == null) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+/** The picker, with the two answers a dialog owes: set this, or go back to the durations. */
+@Composable
+private fun EndAtDialog(r: NightfallRuntime, onDismiss: () -> Unit, onBack: () -> Unit) {
+    val context = LocalContext.current
+    val draft =
+        remember(context) {
+            ClockDraft(is24Hour = android.text.format.DateFormat.is24HourFormat(context))
+        }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.dialog_timer_pick_title)) },
+        text = { EndAtPicker(draft) },
+        confirmButton = {
+            TextButton(
+                enabled = draft.minuteOfDay != null,
+                onClick = {
+                    draft.minuteOfDay?.let {
+                        r.setTimerUntil(it)
+                        onDismiss()
+                    }
+                },
+            ) {
+                Text(stringResource(R.string.dialog_timer_set))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onBack) { Text(stringResource(R.string.dialog_timer_pick_back)) }
         },
     )
 }
