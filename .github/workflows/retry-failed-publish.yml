@@ -1,0 +1,91 @@
+# SPDX-License-Identifier: MIT
+# A retry that is not a fix: when a publish run fails, this asks GitHub for one more attempt of the
+# jobs that failed and records why it did. A second failure stays red for a person.
+#
+# It is a workflow of its own rather than a last job inside `release.yml`, because GitHub refuses to
+# re-run a run that has not finished. Measured on run 45630289356: a job inside a failing run that
+# POSTs `rerun-failed-jobs` for its own run gets `403 This workflow is already running`, and `gh run
+# rerun --failed` refuses the same request client-side (cli/cli#9221). A `workflow_run` trigger
+# starts this after the publish has completed, which is the first moment the request is accepted.
+#
+# Repeating a publish is safe by construction: `prepare` finds an existing tag or draft and does not
+# bump again, and `publish` refuses to overwrite a published asset. Only the jobs that failed are
+# re-run, so an APK that already built and a release that already uploaded are neither rebuilt nor
+# replaced.
+#
+# What it will not retry. A publish *cancelled* rather than failed — a job killed at its
+# `timeout-minutes` ends its run `cancelled`, and so does a person pressing Cancel, which the API
+# does not let this tell apart — waits for a person, who needs one click. Retrying the first would
+# be right; retrying the second would republish a release somebody stopped. It cannot tell a
+# transient failure from a real one either, and does not try: `run_attempt` is 1 for the first
+# attempt of a publish and 2 for a re-run, so the request is made on attempt 1 only, and a publish
+# that fails twice ends red.
+name: Retry a failed publish
+on:
+  workflow_run:
+    workflows: ["Publish Android release"]
+    types: [completed]
+permissions:
+  contents: read
+jobs:
+  retry:
+    # `failure` only: a cancelled run is a person's stop as often as a cap met on a slow host.
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    # Three steps of REST calls measured in single seconds; the cap is only there so a hung request
+    # cannot hold a runner, and the retry request itself fails loudly if it is not accepted.
+    timeout-minutes: 3
+    # `actions: write` re-runs a run and nothing else; it is declared here rather than workflow-wide
+    # so no other workflow gains the power to re-run or cancel anything.
+    permissions:
+      actions: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Re-run the failed jobs once
+        if: github.event.workflow_run.run_attempt == 1
+        env:
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          set -euo pipefail
+          FAILED=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs?per_page=100" \
+            --jq '[.jobs[] | select(.conclusion != "success" and .conclusion != "skipped") | "\(.name) (\(.conclusion))"] | join(", ")')
+          if [ -z "$FAILED" ]; then
+            echo "::error title=Nothing to retry::Run $RUN_ID failed, but no job reports a failure, so there is nothing to re-run. The release needs a person."
+            exit 1
+          fi
+          {
+            echo '## Re-running this publish once'
+            echo
+            echo "Attempt 1 failed in: $FAILED."
+            echo
+            echo 'GitHub was asked to re-run only those jobs (`rerun-failed-jobs`), so a job that had'
+            echo 'already succeeded — a built APK, a signed release — is not rebuilt or uploaded again.'
+            echo
+            echo '**A retry is not a fix.** If attempt 2 fails, nothing retries it a third time and that'
+            echo 'run stays red for a person to read.'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning title=Retrying a failed publish once::Attempt 1 of $RUN_URL failed in $FAILED. Re-running only those jobs; a retry is not a fix, so a second failure stays red for a person."
+          if ! RESPONSE=$(gh api --method POST "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/rerun-failed-jobs" 2>&1); then
+            echo "::error title=Retry request failed::GitHub did not accept the re-run request, so that run stays red and the release needs a person. $RESPONSE"
+            exit 1
+          fi
+          echo "Re-run requested: $RESPONSE"
+      # A re-run repeats the failed jobs and the jobs that depend on them, so this workflow would
+      # otherwise fire again on attempt 2. It records that it declined instead, and asks for nothing.
+      - name: Decline on a later attempt
+        if: github.event.workflow_run.run_attempt != 1
+        env:
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          {
+            echo '## Not retrying again'
+            echo
+            echo "Attempt $RUN_ATTEMPT of $RUN_URL failed too. This workflow retries a publish once, so"
+            echo 'nothing was re-run: a retry is not a fix, and this one already happened.'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=Not retrying again::Attempt $RUN_ATTEMPT of $RUN_URL failed too, and was not retried: this workflow retries a publish once. A retry is not a fix, so the release needs a person."
