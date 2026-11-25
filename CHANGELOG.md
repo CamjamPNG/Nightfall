@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.7.1 — 2026-11-25
+
+- ci: retry a failed publish once, from a workflow that runs after it (#61)
+
 ## 2.7 — 2026-11-24
 
 - feat: a sleep timer that ends at a clock time, not only after a duration (#59)
