@@ -133,20 +133,70 @@ def git(root, *args):
     return subprocess.check_output(["git", "-C", str(root), *args], text=True).strip()
 
 
+# Files a change to which can alter the APK a user installs. A range releases only when at least one
+# of them moved. On 05bf6c0 a workflow-only change classified as a patch and published v2.7.1, whose
+# notes are one sentence about CI, and every `github`-channel install was offered an update it could
+# not observe. `app/` and `core/` include each module's own build file, and `gradle/` includes the
+# wrapper. `fastlane/` is deliberately absent: `update()` writes those changelogs from the same commit
+# subjects, and they never enter an APK.
+PRODUCT_DIRS = ("app/", "core/", "gradle/")
+PRODUCT_FILES = ("gradle.properties", "gradlew", "gradlew.bat", "settings.gradle.kts",
+                 "build.gradle.kts")
+
+
+def ships(path):
+    """True when changing this file can change what ships in the APK."""
+    return path in PRODUCT_FILES or path.startswith(PRODUCT_DIRS)
+
+
+def product_files(root, base, head="HEAD"):
+    """Files in a commit range that can change the shipped APK, in path order.
+
+    A deleted file counts: removing a shipped asset or a source file changes the APK as surely as
+    adding one, and `git diff --name-only` lists both.
+    """
+    return [path for path in git(root, "diff", "--name-only", f"{base}..{head}").splitlines() if ships(path)]
+
+
+def commit_messages(root, base, head="HEAD"):
+    """Commit messages in a range, minus the release commits and the `[skip release]` override."""
+    messages = [m.strip() for m in git(root, "log", f"{base}..{head}", "--format=%s%n%b%x00").split("\0") if m.strip()]
+    return [m for m in messages if not m.startswith("chore(release):") and "[skip release]" not in m.splitlines()[0]]
+
+
+def decide(root, base, head="HEAD"):
+    """What one range decides: the product files it touched, the commits it counts, and the release.
+
+    Both halves must be non-empty. The file rule is the one a squash cannot lose: `[skip release]`
+    still suppresses, and a subject that says nothing about files cannot publish a change no user can
+    observe.
+    """
+    files, messages = product_files(root, base, head), commit_messages(root, base, head)
+    return dict(files=files, messages=messages, prepared=bool(files) and bool(messages), kind=classify(messages))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--kind", choices=("auto", *KINDS), default="auto")
     parser.add_argument("--write", action="store_true")
     parser.add_argument("--github-output", type=pathlib.Path)
+    parser.add_argument("--base", metavar="REV",
+                        help="decide this range instead of the latest release tag; a dry run, never with --write")
+    parser.add_argument("--head", metavar="REV", default="HEAD")
     args = parser.parse_args()
+    if args.base and args.write: parser.error("--base is a dry run and cannot be combined with --write")
     version, code = current(ROOT)
-    tags = [t for t in git(ROOT, "tag", "--merged", "HEAD").splitlines() if t.startswith("v") and VERSION.fullmatch(t[1:])]
-    if not tags: raise ValueError("Bootstrap a reviewed version tag before enabling automatic releases")
-    base = max(tags, key=lambda t: parts(t[1:]))
-    if parts(base[1:]) != parts(version): raise ValueError("Source version differs from latest reachable release tag")
-    messages = [m.strip() for m in git(ROOT, "log", f"{base}..HEAD", "--format=%s%n%b%x00").split("\0") if m.strip()]
-    messages = [m for m in messages if not m.startswith("chore(release):") and "[skip release]" not in m.splitlines()[0]]
-    prepared = bool(messages) or args.kind != "auto"
+    if args.base:
+        base = args.base
+    else:
+        tags = [t for t in git(ROOT, "tag", "--merged", "HEAD").splitlines() if t.startswith("v") and VERSION.fullmatch(t[1:])]
+        if not tags: raise ValueError("Bootstrap a reviewed version tag before enabling automatic releases")
+        base = max(tags, key=lambda t: parts(t[1:]))
+        if parts(base[1:]) != parts(version): raise ValueError("Source version differs from latest reachable release tag")
+    decision = decide(ROOT, base, args.head)
+    messages = decision["messages"]
+    # A dispatch names its level, which is a person deciding to publish; auto is the file rule.
+    prepared = args.kind != "auto" or decision["prepared"]
     kind = classify(messages) if args.kind == "auto" else args.kind
     notes = "\n".join("- " + m.splitlines()[0] for m in messages) or "Initial offline sleep mixer release."
     if prepared:
@@ -166,7 +216,18 @@ def main():
             "Physical Pixel 7 / Bluetooth / overnight validation remains pending. "
             "See docs/TESTING.md for executed checks.\n"
         )
-    result = dict(version=version, code=code, tag="v" + version, prepared=str(prepared).lower(), kind=kind, base=base)
+    # A run list that says `prepared=false` and nothing else is the same bug in another dress, so the
+    # decision names the files it read and why it stopped.
+    print(f"Release decision for {base}..{args.head}: {len(decision['files'])} product file(s), "
+          f"{len(messages)} commit(s) counted, prepared={str(prepared).lower()}")
+    for path in decision["files"]: print(f"  changed {path}")
+    if not decision["files"]:
+        print("  No file under " + ", ".join(PRODUCT_DIRS + PRODUCT_FILES) + " changed, so nothing a "
+              "user can observe in the APK changed and no release is cut.")
+    elif not messages:
+        print("  Every counted commit carries [skip release], so no release is cut.")
+    result = dict(version=version, code=code, tag="v" + version, prepared=str(prepared).lower(), kind=kind,
+                  base=base, files=",".join(decision["files"]))
     if args.github_output:
         with args.github_output.open("a") as out:
             for key, value in result.items(): out.write(f"{key}={value}\n")

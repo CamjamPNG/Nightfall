@@ -332,7 +332,10 @@ convention — `fix: stop layer fades on a stale monotonic deadline`, not
 `updated stuff`. A `sound:`/`sounds:` prefix is how a new layer gets a minor bump.
 
 `[skip release]` anywhere in the subject suppresses the version bump entirely.
-That is for repository housekeeping, not for shipping work.
+That is for repository housekeeping, not for shipping work. The tag is also not
+the only guard: a range whose files are all outside `app/`, `core/` and the
+Gradle build files cuts no release, whatever its subject says, so a `ci:` or
+`docs:` change cannot publish a build no user can observe.
 
 The workflow owns `versionName`, `versionCode`, `CHANGELOG.md`, the store
 changelog under `fastlane/`, and the F-Droid recipe version block. **Do not edit

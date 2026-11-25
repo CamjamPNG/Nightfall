@@ -112,8 +112,8 @@ two cannot disagree with each other or with the code:
 | `app/src/test` | 100 | 100 | 0 | 0 | 94 | 6 | 0 |
 | `app/src/testGithub` | 93 | 93 | 0 | 0 | 24 | 69 | 0 |
 | `core/src/test` | 127 | 126 | 1 | 0 | 0 | 127 | 0 |
-| `tools/tests` | 93 | 93 | 0 | 0 | 0 | 0 | 93 |
-| **Total** | 413 | 412 | 1 | 0 | 118 | 202 | 93 |
+| `tools/tests` | 105 | 105 | 0 | 0 | 0 | 0 | 105 |
+| **Total** | 425 | 424 | 1 | 0 | 118 | 202 | 105 |
 <!-- test-counts:end -->
 
 `python3 tools/count_tests.py --files` prints a row per file, so a count can be traced to
