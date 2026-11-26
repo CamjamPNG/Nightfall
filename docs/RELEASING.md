@@ -116,6 +116,16 @@ Ordinary maintenance also produces a patch; `[skip release]` suppresses an
 explicitly non-release commit. Manual Actions → Publish Android release → Run
 workflow can override the level with `major`, `minor`, `patch` or `hotfix`.
 
+A subject also has to describe something a user can observe. A range cut a
+release only if at least one file in it can change the APK — anything under
+`app/`, `core/` or `gradle/`, or `gradle.properties`, `gradlew`, `gradlew.bat`,
+`settings.gradle.kts` or `build.gradle.kts` — and `[skip release]` still
+suppresses a range that qualifies. A workflow, docs or `tools/` change releases
+nothing however its subject is typed, because the update prompt is an offer to
+install a build the user cannot hear any difference in; v2.7.1 was exactly that,
+published because a `[skip release]` tag did not survive the squash. The
+`prepare` job prints the product files it found, or says it found none.
+
 ## Release notes
 
 The notes on a release are generated, not typed. `tools/release_version.py` writes
