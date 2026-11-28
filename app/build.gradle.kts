@@ -21,8 +21,8 @@ android {
         applicationId = "io.github.camjampng.nightfall"
         minSdk = 26
         targetSdk = 36
-        versionCode = 48
-        versionName = "2.7.1"
+        versionCode = 49
+        versionName = "2.8"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     // The seven field recordings ship as Opus containers, 10,089,142 bytes against 77,449,472 as raw

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.8 — 2026-11-28
+
+- feat: add a Spanish interface with a parity guard (#63)
+
 ## 2.7.1 — 2026-11-25
 
 - ci: retry a failed publish once, from a workflow that runs after it (#61)

@@ -1,0 +1,1 @@
+- feat: add a Spanish interface with a parity guard (#63)
