@@ -1,9 +1,10 @@
 # Localization
 
 Every string Nightfall shows a person used to be a Kotlin literal in `app/src/main/java/dev/nightfall/`.
-The app's own chrome is now in `app/src/main/res/values/strings.xml` and `plurals.xml`: 278 keys,
-every one of them used, extracted against `main` at `1ffbee1` and counted again at this branch's head.
-The count is `grep -c '<string name=\|<plurals name='` over the two files, and §2 below is the
+The app's own chrome is now in `app/src/main/res/values/strings.xml` and `plurals.xml`: 332 keys at
+this commit — 323 `<string>` entries, two of them `translatable="false"`, and nine `<plurals>` — plus
+one `<string-array>` of five items. The count is `grep -c '<string name=\|<plurals name='` over the
+two files plus that array, and §2 below is the
 inventory as it stood when the extraction landed: the keys added afterwards — the home-screen widget's,
 the diagnostics journal's, and the endless-night switch's — are counted but only the switch is listed
 (§2.23). What still ships as English in code
@@ -12,16 +13,59 @@ is the catalogue — 106 names, 10 categories, 15 preset names in
 data rather than drawn (`Your soundscape`, `My night mix`). Both are listed in §5 as stages 5 and 6
 and both need work outside `app/`.
 
-There is still no `res/values-<language>/`, no `android:localeConfig`, and no per-app language
-selection. English is the only locale, and this document is the inventory, the judgement calls, and
-what is left of the extraction plan: the sections below are the record of the tree as it was, kept
-because the reasoning about what must not be extracted still governs the keys that now exist.
+`app/src/main/res/values-es/` now carries Spanish for every one of those keys. There is no
+`android:localeConfig` and no per-app language picker: the app follows the system language, so a phone
+set to Spanish gets Spanish and everything else gets English. This document remains the inventory, the
+judgement calls, and what is left of the extraction plan: the sections below are the record of the tree
+as it was, kept because the reasoning about what must not be extracted still governs the keys that now
+exist.
 
 The inventory was taken against `main` at `0df94ac` (v1.1, versionCode 5), and the line column is
 valid at that commit and nowhere else. Both UI files change often and this list will drift within a
 release or two. Keys and file names are the stable reference: locate a string by its key, or by
 searching its file for the quoted text, and read the line as a hint that was true once. Anyone acting
 on a stage in §5 works from the key, never from the number.
+
+## The Spanish locale, and how to keep it complete
+
+`app/src/main/res/values-es/` holds `strings.xml` and `plurals.xml` covering every translatable
+resource in `values/`, and `app/src/github/res/values-es/` covers the GitHub channel's diagnostics
+overlay, which lives in that flavour's resources so the F-Droid build cannot carry it. The locale is
+Spanish as used broadly rather than a regional variant. The product name and the PCM specification are
+absent on purpose: `values/` marks them `translatable="false"`, and the parity check refuses a
+translation of either.
+
+The translation was machine-drafted, and no native speaker has read it. That is a stated limit, not a
+placeholder: idiom, register and the audio vocabulary are unconfirmed by a person, and the privacy,
+tuning and capacity paragraphs are where a wrong word would matter most. Corrections through a pull
+request are welcome.
+
+**The parity check.** `python3 tools/check_localization.py` compares each res tree's `values/` with its
+`values-es/` and fails, listing every problem at once, when a key is missing, when a key exists in only
+one of the two, when a format argument changed or moved (the `%1$s` set and its order, `%%` included),
+when a plural's categories differ from the language's (`one`, `other`), or when an array lost an item.
+It is the other half of `:app:verifyNoHardcodedCopy`: that guard stops copy being typed into a Compose
+call, this one stops an English string landing in `values/` with no Spanish beside it. It runs in the
+`tools` CI job and from `tools/check_release.py`, and needs neither Gradle nor the Android SDK.
+`python3 -m unittest tools.tests.test_localization -v` runs its own cases, each a planted defect in a
+throwaway res tree.
+
+**A review-only pull request** touches only files under `app/src/main/res/values-es/` and
+`app/src/github/res/values-es/` — a word, a term, an accent, a sentence that reads wrong to a Spanish
+speaker. Keep the placeholders exactly as `values/` has them, in the same order; keep the honest
+phrasing (a string that says something is unverified must not become a claim in translation); do not
+translate the product name; and run the parity check before pushing. `:app:lintDebug` checks
+translations for apostrophe and ellipsis mistakes and fails the build rather than accept an
+escaped-around one, so fix the string and let it be checked.
+
+**Deliberately out of scope: the catalogue.** Sound names, category names and the built-in preset
+titles are data in `core/src/main/kotlin/dev/nightfall/core/Library.kt`, not resources, and they stay
+in English in both locales. Translating them would change what a saved mix means: the name is what a
+preset stores, and `Library.slug` turns it into the permanent id that saved state and exported JSON
+hold. So the Spanish interface still shows English sound names and preset titles. That is a real
+limitation of this change, stated in the README beside the other unverified claims rather than papered
+over; stages 5 and 6 of §5 are the work that would remove it, and they still need a reviewer per
+locale first.
 
 ## 1. What counts as a user-visible string
 
@@ -891,6 +935,12 @@ yet (no `app/src/test`, no Robolectric dependency). Risk: highest. Do not start 
 Robolectric test target exists.
 
 ## 6. Recommendation: not yet, and here is where the line is
+
+> **Partly superseded.** The extraction has since landed and one locale exists (see the section
+> above), so the "do not extract in service of a translation that does not exist" premise no longer
+> applies. What still stands is this section's argument against translating the catalogue data, and
+> its requirement of a reviewer per locale before stages 5 and 6: the translation that does exist is
+> machine-drafted and nobody has read it.
 
 **Do not extract the full app in service of a translation that does not exist.** Extraction with no
 target locale buys nothing at runtime: the app renders the same English from a resource file instead

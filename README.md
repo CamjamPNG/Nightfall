@@ -117,6 +117,13 @@ state their actual frequency difference, the stereo requirement, and that sleep-
 or healing benefits are not established. A4=432 Hz is labelled as musical tuning, not
 therapy.
 
+**The interface is also in Spanish — machine-drafted, and not yet read by a native speaker.**
+Every string has a Spanish counterpart, kept complete by a parity check in CI, but the
+translation was machine-drafted: a native speaker has not reviewed it, and corrections
+through a pull request are welcome. The sound names and preset titles stay in English in
+both locales — they are catalogue data stored in saved mixes and exports, so translating
+them would change what a saved mix means.
+
 ## Screenshots
 
 The six PNGs in `fastlane/metadata/android/en-US/images/phoneScreenshots/` are the
@@ -352,8 +359,8 @@ executes once. All of it runs on a JVM with no device, no emulator and no networ
 | `app/src/test` | 100 | 100 | 0 | 0 | 94 | 6 | 0 |
 | `app/src/testGithub` | 93 | 93 | 0 | 0 | 24 | 69 | 0 |
 | `core/src/test` | 127 | 126 | 1 | 0 | 0 | 127 | 0 |
-| `tools/tests` | 105 | 105 | 0 | 0 | 0 | 0 | 105 |
-| **Total** | 425 | 424 | 1 | 0 | 118 | 202 | 105 |
+| `tools/tests` | 120 | 120 | 0 | 0 | 0 | 0 | 120 |
+| **Total** | 440 | 439 | 1 | 0 | 118 | 202 | 120 |
 <!-- test-counts:end -->
 
 `python3 tools/count_tests.py` prints that table, `--files` adds a row per file so a count can be
@@ -387,6 +394,7 @@ traced to the file that declares it, and `--update README.md` rewrites the block
 | Diagnostics recording a real crash | Every entry kind is driven by tests, against exit history those tests supply. No phone has crashed under it, so a real crash, a real ANR and a real OEM kill have never been journaled, and nothing here can kill the app on a device to produce one |
 | An all-night run with the screen off — underruns, battery, OEM task killers | No overnight result exists for any phone |
 | The in-app update actually installing from a published release, unattended or not | `PackageInstaller` sessions and the Android 12+ prompt-free path are described from Android's documentation; the tests drive a local server speaking the same protocol. No install, no automatic restart and no post-install "What's new" has been observed on a phone. Also unverified: the waiting row and the release-log dialog rendered on a screen, the install a play-to-pause transition triggers, the commit-time deferral against Android's real installer, captive portals, proxies, and how each OEM prompts |
+| A Spanish-speaking user reading the interface | Every translatable string has a Spanish counterpart and `tools/check_localization.py` keeps it that way, key by key and placeholder by placeholder. Nothing else is measured: the translation is machine-drafted, no native speaker has read it, and whether a term is ordinary Spanish or a regional or technical one is unconfirmed — the privacy, tuning and capacity paragraphs being where a wrong word would matter most. The catalogue and preset titles are English in both locales by design |
 | An F-Droid client adding the self-hosted repository and auto-updating | No deployment has served a request |
 | Reproducible builds on F-Droid's own buildserver | Two of our machines agree; theirs has never built it |
 

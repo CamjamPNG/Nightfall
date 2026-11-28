@@ -4,6 +4,7 @@
 import argparse, hashlib, json, pathlib, re, struct, subprocess, sys, zipfile
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'tools'))
+import check_localization  # noqa: E402  the Spanish catalogue is compared with values/ from this tree
 import count_tests  # noqa: E402  the test counts are generated from this tree, so they cannot drift
 import nfop  # noqa: E402  the container is shared with the encoder, so the checks cannot drift apart
 from release_artifact import NETWORK_PERMISSIONS, apk_manifest, build_tools, declares, diagnostics_entry_points, diagnostics_symbols, fdroid_asset_name, fdroid_violation, universal_abis, updater_entry_points, updater_symbols
@@ -28,6 +29,9 @@ code=int(re.search(r'versionCode\s*=\s*(\d+)',config)[1])
 # tree rather than typed, so this regenerates both and compares, instead of holding an expected
 # number that would itself be a second place to drift.
 count_tests.require_all()
+# The other half of the hardcoded-copy guard: a string added to values/ without a Spanish translation
+# is a locale that is visibly unfinished, and nothing else in the build compares the two trees.
+check_localization.require_all()
 meta=ROOT/'fastlane/metadata/android/en-US'
 require(0<len((meta/'title.txt').read_text().strip())<=50,'Invalid store title')
 summary=(meta/'short_description.txt').read_text().strip()
