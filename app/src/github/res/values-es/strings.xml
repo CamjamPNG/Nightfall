@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The hidden diagnostics surface, in Spanish. Keyed exactly like the GitHub channel's own
+    res/values/strings.xml; the F-Droid build carries neither file.
+-->
+<resources>
+
+    <string name="settings_section_diagnostics">Diagnósticos</string>
+    <string name="settings_diagnostics_switch">Guardar un diario de diagnósticos</string>
+    <string name="settings_diagnostics_switch_note">Desactivado hasta que lo actives. Registra cómo falla la app, solo en este dispositivo.</string>
+    <string name="settings_diagnostics_off">No se registra nada mientras esté desactivado, y no se registró nada antes de que lo activaras.</string>
+    <string name="settings_diagnostics_collects">Qué se registra: las versiones de la app y de Android; cuánto tarda la app en construir su primera pantalla; cuántas veces terminó la reproducción y, en rangos aproximados, cuánto duró cada sesión; que la reproducción falló, cuando ocurrió; las comprobaciones de actualización y cómo acabaron; y los fallos, bloqueos y demás salidas que Android registró para esta app.</string>
+    <string name="settings_diagnostics_excludes">Qué no se registra nunca: el audio, las grabaciones, los nombres o el contenido de tus mezclas y preajustes, las rutas de archivos, tu ubicación, tus contactos, el número de serie del dispositivo, el identificador de publicidad o la cuenta, ni ningún texto de mensajes.</string>
+    <string name="settings_diagnostics_transport">Adónde va: a ningún sitio. Nightfall no tiene servidor ni código que suba esto. La única forma de que salga de tu teléfono es que abras el informe y lo compartas tú mismo.</string>
+    <string name="settings_diagnostics_limits">Se queda en este dispositivo, con un máximo de %1$d entradas, %2$d kilobytes y %3$d días, y las más antiguas salen primero. Desactiva el interruptor para dejar de registrar, o bórralo ahora.</string>
+    <string name="settings_diagnostics_view">Ver el informe</string>
+    <string name="settings_diagnostics_erase">Borrar el diario</string>
+    <string name="settings_diagnostics_erased">El diario está borrado. No queda nada en este dispositivo.</string>
+    <string name="settings_diagnostics_erase_failed">No se pudo eliminar el archivo del diario, así que sigue en este dispositivo. No se envió nada a ningún sitio; inténtalo de nuevo.</string>
+    <string name="settings_diagnostics_hide">Ocultar los diagnósticos</string>
+    <string name="settings_diagnostics_report_title">Informe de diagnósticos</string>
+    <string name="settings_diagnostics_report_intro">Este es el texto exacto que guarda la app, con formato para que puedas leerlo. No se ha enviado nada a ningún sitio.</string>
+    <string name="settings_diagnostics_share">Compartir el informe</string>
+    <string name="settings_diagnostics_share_subject">Informe de diagnósticos de Nightfall</string>
+    <string name="settings_diagnostics_share_chooser">Compartir el informe de diagnósticos</string>
+    <string name="settings_diagnostics_share_failed">Ninguna app aceptó el informe. No se envió nada.</string>
+</resources>

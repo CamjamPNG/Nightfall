@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Counts that vary, in Spanish. Spanish has the CLDR categories `one` and `other`, and nothing else
+    is declared here: a category values/ declares that Spanish lacks, or the reverse, fails
+    tools/check_localization.py rather than falling back silently.
+-->
+<resources>
+
+    <plurals name="unit_layers">
+        <item quantity="one">%1$d capa</item>
+        <item quantity="other">%1$d capas</item>
+    </plurals>
+
+    <plurals name="unit_seconds">
+        <item quantity="one">%1$d segundo</item>
+        <item quantity="other">%1$d segundos</item>
+    </plurals>
+
+    <plurals name="library_available">
+        <item quantity="one">%1$d disponible</item>
+        <item quantity="other">%1$d disponibles</item>
+    </plurals>
+
+    <plurals name="presets_saved">
+        <item quantity="one">%1$d guardado</item>
+        <item quantity="other">%1$d guardados</item>
+    </plurals>
+
+    <plurals name="home_layer_count">
+        <item quantity="one">%1$d capa · mantén pulsada el asa para reordenar</item>
+        <item quantity="other">%1$d capas · mantén pulsada el asa para reordenar</item>
+    </plurals>
+
+    <plurals name="home_capacity_warning">
+        <item quantity="one">Esta mezcla se acerca a la capacidad de audio del dispositivo. Reduce los efectos de música o las capas si oyes cortes. Carga de renderizado %1$d%% · %2$d corte de búfer</item>
+        <item quantity="other">Esta mezcla se acerca a la capacidad de audio del dispositivo. Reduce los efectos de música o las capas si oyes cortes. Carga de renderizado %1$d%% · %2$d cortes de búfer</item>
+    </plurals>
+
+    <!-- The layer count on the lock screen, with the timer suffix passed in as %2$s. -->
+    <plurals name="notification_artist">
+        <item quantity="one">%1$d capa%2$s</item>
+        <item quantity="other">%1$d capas%2$s</item>
+    </plurals>
+
+    <!-- Spoken, not drawn: the timer was just set to this many minutes. -->
+    <plurals name="a11y_timer_set">
+        <item quantity="one">Temporizador de sueño ajustado, %1$d minuto</item>
+        <item quantity="other">Temporizador de sueño ajustado, %1$d minutos</item>
+    </plurals>
+
+    <!-- Spoken, not drawn: this is how much of a typed phrase became a mix. -->
+    <plurals name="describe_a11y_understood">
+        <item quantity="one">Entendido: %1$d sonido listo para reproducir</item>
+        <item quantity="other">Entendido: %1$d sonidos listos para reproducir</item>
+    </plurals>
+</resources>

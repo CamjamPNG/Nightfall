@@ -16,7 +16,16 @@ been verified. Read that last one before you rely on anything.
 
 Contributions of every size are welcome: a corrected comment, a new sound, a
 filter that sounds better, a bug with a logcat excerpt, a test that catches
-something the current 97 do not.
+something the current suite does not, a Spanish word that reads wrong.
+
+The interface ships in English and Spanish. The Spanish was machine-drafted and no
+native speaker has read it, so a wording correction is a genuinely useful pull request
+and needs no Kotlin: the strings are in `app/src/main/res/values-es/`, and
+`python3 tools/check_localization.py` decides whether they still line up key for key with
+`values/`. [docs/LOCALIZATION.md](docs/LOCALIZATION.md) says where the strings live, how to
+run the parity check, and what a review-only change should touch. The sound names and
+preset titles are English in both locales on purpose — they are catalogue data that saved
+mixes and exports depend on — so do not translate those.
 
 ## Before you start
 
@@ -116,8 +125,8 @@ python3 -m unittest discover -s tools/tests -v
 python3 tools/check_release.py --apk app/build/outputs/apk/release/app-release-unsigned.apk
 ```
 
-The `tools/tests` suite is ten stdlib-only Python tests over the release tooling
-and needs neither the Android SDK nor an APK, so it is a useful sanity check when
+The `tools/tests` suite is stdlib-only Python over the release tooling, the
+test counts and the locale parity check, and needs neither the Android SDK nor an APK, so it is a useful sanity check when
 you touch anything in `tools/`.
 
 ## Running one test

@@ -1,0 +1,398 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Spanish (values-es), the app's second locale. Keyed exactly like res/values/strings.xml: the
+    parity check in tools/check_localization.py refuses a missing key, an extra key, a changed format
+    argument or a plural category that Spanish does not use. Two keys from values are absent on
+    purpose because they are translatable="false" there: the product name and the PCM specification.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Navigation and shared vocabulary. -->
+    <string name="nav_home">Inicio</string>
+    <string name="nav_library">Biblioteca</string>
+    <string name="nav_presets">Preajustes</string>
+    <string name="nav_studio">Estudio</string>
+    <string name="nav_settings">Ajustes</string>
+    <string name="common_done">Listo</string>
+    <string name="common_cancel">Cancelar</string>
+    <string name="common_save">Guardar</string>
+    <string name="common_all_night">Toda la noche</string>
+    <string name="common_off">Desactivado</string>
+    <string name="common_fading">Desvaneciendo</string>
+
+    <!-- Snackbars. The %1$s of a failure is a diagnostic from the platform, not copy. -->
+    <string name="snackbar_mix_exported">Mezcla exportada</string>
+    <string name="snackbar_export_failed">Error al exportar: %1$s</string>
+    <string name="snackbar_imported">Se importó %1$s</string>
+    <string name="snackbar_import_failed">Error al importar: %1$s</string>
+
+    <!-- Save and rename dialog. -->
+    <string name="dialog_save_title">Guarda tu mezcla</string>
+    <string name="dialog_rename_title">Cambiar el nombre del preajuste</string>
+    <string name="dialog_mix_name">Nombre de la mezcla</string>
+
+    <!-- Gentle transitions dialog. -->
+    <string name="dialog_fade_title">Transiciones suaves</string>
+    <string name="dialog_fade_body">Las capas nuevas y los cambios de preajuste entran y salen con un fundido, usando el ajuste de fundido de cada capa.</string>
+    <string name="dialog_fade_duration">Duración del fundido del temporizador</string>
+    <string name="dialog_fade_now">Desvanecer ahora</string>
+
+    <!-- Audio credits dialog. The body itself is an asset, so only the title is here. -->
+    <string name="dialog_credits_title">Créditos de audio y licencias</string>
+
+    <!-- Sleep timer dialog. -->
+    <string name="dialog_timer_title">Temporizador de sueño</string>
+    <string name="dialog_timer_body">El audio se desvanece suavemente al terminar la cuenta atrás. Pausar la reproducción pausa el temporizador.</string>
+    <string name="dialog_timer_custom">Minutos personalizados (1–1440)</string>
+    <!-- The sheet's other shape: a clock time instead of a countdown. -->
+    <string name="dialog_timer_ends_at">Termina a las</string>
+    <string name="dialog_timer_ends_at_action">Terminar el temporizador a las %1$s</string>
+    <string name="dialog_timer_other">Otra hora…</string>
+    <string name="dialog_timer_pick_title">Terminar a las</string>
+    <string name="dialog_timer_pick_back">Atrás</string>
+    <string name="dialog_timer_hour">Hora</string>
+    <string name="dialog_timer_minute">Minuto</string>
+    <string name="dialog_timer_am">a. m.</string>
+    <string name="dialog_timer_pm">p. m.</string>
+    <string name="dialog_timer_invalid">Esa hora no es válida</string>
+    <string name="dialog_timer_resume">Reanudar el temporizador</string>
+    <string name="dialog_timer_pause">Pausar el temporizador</string>
+    <string name="dialog_timer_set">Ajustar el temporizador</string>
+
+    <!-- Home tab. -->
+    <string name="home_title">Nightfall</string>
+    <string name="home_action_open_presets">Preajustes</string>
+    <string name="home_action_open_settings">Abrir los ajustes</string>
+    <string name="home_master_volume">Volumen general</string>
+    <string name="home_section_your_soundscape">Tu paisaje sonoro</string>
+    <string name="home_action_add_sound">Añadir sonido</string>
+    <string name="home_action_add_another_sound">Añadir otro sonido</string>
+    <string name="home_tagline">"SIN CONEXIÓN POR NATURALEZA  ·  GRATIS PARA SIEMPRE"</string>
+    <string name="home_status_playing">SONANDO AHORA</string>
+    <string name="home_status_ready">LISTO CUANDO QUIERAS</string>
+    <string name="home_action_pause">Pausar el paisaje sonoro</string>
+    <string name="home_action_play">Reproducir el paisaje sonoro</string>
+    <!-- The transport's own state: what the button will do, and what it is doing right now. -->
+    <string name="transport_state_playing">Reproduciendo</string>
+    <string name="transport_state_paused">En pausa</string>
+    <string name="home_a11y_sleep_timer">Temporizador de sueño</string>
+    <!-- The timer once it was chosen by the clock: a time of day, not a countdown. -->
+    <string name="home_timer_ends_at">Termina %1$s</string>
+    <string name="a11y_timer_ends_at">El temporizador termina a las %1$s</string>
+    <string name="home_action_unmute">Activar el sonido</string>
+    <string name="home_action_mute_all">Silenciar todo</string>
+    <string name="home_action_stop_all">Detener todo</string>
+    <string name="home_action_fade">Fundido</string>
+    <string name="home_action_save_mix">Guardar la mezcla</string>
+    <string name="home_action_reset">Restablecer</string>
+    <string name="home_endless_title">Noche sin fin</string>
+    <string name="home_endless_description">Las fuentes entran y salen a lo largo de la noche, así que la mezcla sigue moviéndose en lugar de asentarse en el mismo bucle.</string>
+    <string name="home_action_all_presets">Todos los preajustes →</string>
+    <string name="home_a11y_all_presets">Ver todos los preajustes</string>
+
+    <!-- Home: the first-run card. -->
+    <string name="first_run_title">Tres formas de empezar</string>
+    <string name="first_run_body">Nightfall puede planear una noche entera por ti, o puedes construirla capa a capa. Tres formas de empezar, y esta tarjeta se aparta después.</string>
+    <string name="first_run_presets_title">Elige una noche ya preparada</string>
+    <string name="first_run_presets_body">Preajustes y noches temáticas, cada una a un toque.</string>
+    <string name="first_run_describe_title">Escribe lo que quieres</string>
+    <string name="first_run_describe_body">Describe una noche con palabras y la mezcla se construye en tu dispositivo.</string>
+    <string name="first_run_library_title">Explorar todo</string>
+    <string name="first_run_library_body">Todos los sonidos del catálogo, ordenados por categoría.</string>
+    <string name="first_run_dismiss">Ahora no</string>
+    <string name="first_run_a11y_dismiss">Descartar esta tarjeta</string>
+
+    <!-- Home: the describe-a-mix phrase box. The vocabulary is English for now; every response is
+         here so a translation can follow without touching the interpreter. -->
+    <string name="describe_title">Describe una mezcla</string>
+    <string name="describe_hint">Lluvia intensa y un ventilador</string>
+    <string name="describe_a11y_field">Describe la mezcla que quieres</string>
+    <string name="describe_action_make">Crear la mezcla</string>
+    <string name="describe_understood">ESTO ES LO QUE ENTENDÍ</string>
+    <string name="describe_chip">%1$s · %2$d%%</string>
+    <string name="describe_a11y_remove">Quitar %1$s</string>
+    <string name="describe_chip_a11y">Quitar %1$s de la mezcla, %2$d por ciento</string>
+    <string name="describe_timer">Temporizador de sueño · %1$d min</string>
+    <string name="describe_a11y_remove_timer">Quitar el temporizador de sueño</string>
+    <string name="describe_action_play">Reproducir esta mezcla</string>
+    <string name="describe_action_browse">Explorar la biblioteca</string>
+    <string name="describe_empty">No encontré ningún sonido en eso. Nightfall solo construye a partir de su catálogo sin conexión, así que prueba a nombrar lo que oyes: lluvia, un ventilador, truenos lejanos.</string>
+    <string name="describe_conflict">“%1$s” y “%2$s” no pueden ser ciertos a la vez en una misma mezcla. Prueba con uno sin el otro.</string>
+    <string name="describe_unrecognized">No está en el catálogo: %1$s</string>
+    <string name="describe_substituted">No hay %1$s en el catálogo: el sonido más cercano es %2$s.</string>
+
+    <!-- Layer row, its options panel, and the accessibility contract they carry. -->
+    <string name="layer_volume">Volumen</string>
+    <string name="layer_spoken_volume">Volumen de %1$s</string>
+    <string name="layer_action_mute">Silenciar</string>
+    <string name="layer_a11y_mute">Silenciar %1$s</string>
+    <string name="layer_action_solo">Solo</string>
+    <string name="layer_a11y_solo">Aislar %1$s</string>
+    <string name="layer_a11y_enable">Activar %1$s</string>
+    <string name="layer_action_remove">Quitar %1$s</string>
+    <string name="layer_a11y_reorder">Reordenar %1$s</string>
+    <string name="layer_a11y_move_up">Subir</string>
+    <string name="layer_a11y_move_down">Bajar</string>
+    <string name="layer_a11y_options">Opciones de %1$s</string>
+    <!-- A mute or solo chip is a toggle; the glyph's filled state is invisible to a screen reader. -->
+    <string name="layer_state_muted">Silenciada</string>
+    <string name="layer_state_not_muted">No silenciada</string>
+    <string name="layer_state_solo_on">Solo activado</string>
+    <string name="layer_state_solo_off">Solo desactivado</string>
+    <string name="layer_state_expanded">Desplegado</string>
+    <string name="layer_state_collapsed_defaults">Contraído, todo por defecto</string>
+    <string name="layer_state_collapsed_adjusted">Contraído, %1$d ajustados</string>
+    <string name="layer_options">Opciones</string>
+    <string name="layer_options_adjusted">Opciones · %1$d ajustados</string>
+    <string name="layer_action_edit_in_studio">Editar la composición en Estudio</string>
+
+    <!-- The labels joined into "Options · N adjusted", and the option groups. -->
+    <string name="layer_adjust_pan">paneo</string>
+    <string name="layer_adjust_stereo_width">amplitud estéreo</string>
+    <string name="layer_adjust_high_pass">paso alto</string>
+    <string name="layer_adjust_low_pass">paso bajo</string>
+    <string name="layer_adjust_bass">graves</string>
+    <string name="layer_adjust_mid">medios</string>
+    <string name="layer_adjust_treble">agudos</string>
+    <string name="layer_adjust_brightness">brillo</string>
+    <string name="layer_adjust_tilt">inclinación</string>
+    <string name="layer_adjust_intensity">intensidad</string>
+    <string name="layer_adjust_events">eventos</string>
+    <string name="layer_adjust_modulation">modulación</string>
+    <string name="layer_adjust_fade">fundido</string>
+    <string name="layer_adjust_stop_time">tiempo de parada</string>
+    <string name="layer_adjust_storm_transition">transición de tormenta</string>
+
+    <string name="option_group_placement">Ubicación</string>
+    <string name="option_pan">Paneo</string>
+    <string name="option_pan_center">Centro</string>
+    <string name="option_pan_value">%1$d%% %2$s</string>
+    <string name="option_pan_left">izquierda</string>
+    <string name="option_pan_right">derecha</string>
+    <string name="option_spoken_pan">%1$s de paneo</string>
+    <string name="option_stereo_width">Amplitud estéreo</string>
+    <string name="option_spoken_stereo_width">%1$s de amplitud estéreo</string>
+    <string name="option_group_tone">Tono</string>
+    <string name="option_bass">Graves</string>
+    <string name="option_mid">Medios</string>
+    <string name="option_treble">Agudos</string>
+    <string name="option_brightness">Brillo</string>
+    <string name="option_spectral_tilt">Inclinación espectral</string>
+    <string name="option_group_filters">Filtros</string>
+    <string name="option_high_pass">Filtro paso alto</string>
+    <string name="option_low_pass">Filtro paso bajo</string>
+    <string name="option_group_texture">Textura</string>
+    <string name="option_beat_frequency">Frecuencia de batido</string>
+    <string name="option_intensity">Intensidad</string>
+    <string name="option_event_frequency">Frecuencia de eventos</string>
+    <string name="option_slow_modulation">Modulación lenta</string>
+    <string name="option_group_timing">Tiempos</string>
+    <string name="option_fade_over">Fundido de entrada y salida durante</string>
+    <string name="option_stop_after">Detener esta capa después de</string>
+    <string name="option_storm_to_rain">La tormenta pasa a lluvia durante</string>
+
+    <!-- The spoken name of each slider: the level, in the unit the screen shows. -->
+    <string name="option_spoken_bass">%1$s de graves</string>
+    <string name="option_spoken_mid">%1$s de medios</string>
+    <string name="option_spoken_treble">%1$s de agudos</string>
+    <string name="option_spoken_brightness">%1$s de brillo</string>
+    <string name="option_spoken_tilt">%1$s de inclinación espectral</string>
+    <string name="option_spoken_high_pass">%1$s de filtro paso alto</string>
+    <string name="option_spoken_low_pass">%1$s de filtro paso bajo</string>
+    <string name="option_spoken_beat_frequency">%1$s de frecuencia de batido</string>
+    <string name="option_spoken_intensity">%1$s de intensidad</string>
+    <string name="option_spoken_event_frequency">%1$s de frecuencia de eventos</string>
+    <string name="option_spoken_modulation">%1$s de modulación lenta</string>
+    <string name="option_spoken_fade">%1$s de duración del fundido</string>
+    <string name="option_spoken_stop_time">%1$s de tiempo de parada</string>
+    <string name="option_spoken_storm_transition">%1$s de transición de tormenta</string>
+
+    <!-- The value each slider shows. Units are SI or already universal, so only the pattern is here. -->
+    <string name="unit_decibels">%1$d dB</string>
+    <string name="unit_hertz">%1$d Hz</string>
+    <string name="unit_hertz_decimal">%1$s Hz</string>
+    <string name="unit_seconds_decimal">%1$s s</string>
+    <string name="unit_minutes">%1$d min</string>
+
+    <!-- Library. -->
+    <string name="library_in_mix">%1$d en tu mezcla</string>
+    <string name="library_title">Biblioteca de sonidos</string>
+    <string name="library_subtitle">Un poco de todo. Todas las capas que quieras.</string>
+    <string name="library_search_hint">Encuentra tu sonido</string>
+    <string name="library_a11y_search">Buscar sonidos</string>
+    <string name="library_category_all">Todos</string>
+    <string name="library_unavailable">Grabación no incluida</string>
+    <string name="library_kind_recording">Grabación de campo · sin conexión</string>
+    <string name="library_kind_music">Música generativa original</string>
+    <string name="library_add">Añadir %1$s</string>
+    <string name="library_no_match">Ningún sonido coincide con tu búsqueda.</string>
+    <string name="library_no_match_action">Mostrar todos los sonidos</string>
+    <string name="library_section_expanded">Desplegado</string>
+    <string name="library_section_collapsed">Contraído</string>
+    <!-- The preset names inside this sentence are catalogue data and stay in English for now. -->
+    <string name="library_disclaimer">La síntesis ambiental es una interpretación de un sonido, no una grabación de campo. Gray, green, black y velvet se etiquetan como preajustes configurables. Toda la música se genera en tu dispositivo.</string>
+
+    <!-- Presets. -->
+    <string name="presets_title">Encuentra tu noche</string>
+    <string name="presets_subtitle">Compuestos con cuidado. Siempre tuyos para cambiar.</string>
+    <string name="presets_action_import">Importar JSON</string>
+    <string name="presets_action_favorites">Favoritos</string>
+    <string name="presets_section_yours">Tus mezclas</string>
+    <string name="presets_section_builtin">Colección Nightfall</string>
+    <!-- Always the built-in collection's size: a compile-time constant, never one. -->
+    <string name="presets_soundscapes">%1$d paisajes sonoros</string>
+    <string name="presets_a11y_favorite">Marcar %1$s como favorito</string>
+    <string name="presets_a11y_options">Opciones de %1$s</string>
+    <string name="presets_a11y_play">Reproducir %1$s</string>
+    <string name="presets_state_favorite_on">En favoritos</string>
+    <string name="presets_state_favorite_off">No está en favoritos</string>
+    <string name="presets_action_duplicate">Duplicar</string>
+    <string name="presets_copy_suffix">Copia de %1$s</string>
+    <string name="presets_action_export">Exportar JSON</string>
+    <string name="presets_action_rename">Cambiar el nombre</string>
+    <!--
+      A themed night says what the night does, in layers and in times. It is not a claim about how
+      it feels, and the level is held all night.
+    -->
+    <string name="presets_theme_storm_that_passes">Lluvia intensa, truenos y viento aullante durante dos horas, después lluvia moderada sobre un tejado metálico con truenos retumbantes, llovizna a las cuatro, un lecho oceánico lejano y una habitación silenciosa a partir de las siete.</string>
+    <string name="presets_theme_rain_that_calms">Lluvia moderada con una ventana y hojas durante noventa minutos, después ventana, llovizna a las tres y media, y una habitación silenciosa a partir de las seis.</string>
+    <string name="presets_theme_forest_dusk">Canto de pájaros y brisa al anochecer, grillos tras una hora, ranas a las dos y media, y un bosque en calma a partir de las cinco.</string>
+    <string name="presets_theme_fire_that_burns_down">Hoguera y leña crepitante durante noventa minutos, después la chimenea y las brasas a las tres, y brasas con piano suave a partir de las seis.</string>
+    <string name="presets_action_delete">Eliminar</string>
+    <string name="presets_play">Reproducir el paisaje sonoro</string>
+
+    <!-- Studio. -->
+    <string name="studio_title">Estudio de sonido</string>
+    <string name="studio_subtitle_editing">Dando forma a %1$s</string>
+    <string name="studio_subtitle_new">Una composición tranquila, hecha por ti.</string>
+    <string name="studio_music_intro">Original. En evolución. Sin fin.</string>
+    <string name="studio_music_body">Los acordes con semilla y las melodías suaves se desarrollan juntos. Guarda en tu mezclador para escuchar tu composición.</string>
+    <string name="studio_music_type">Tipo de música</string>
+    <string name="studio_section_foundation">Base musical</string>
+    <!-- A picker's button announces the field it belongs to and the value it holds. -->
+    <string name="studio_a11y_choice">%1$s: %2$s</string>
+    <string name="studio_tuning">A4 = %1$d Hz</string>
+    <string name="studio_tuning_note">La afinación cambia el tono musical. Ninguna de las dos afinaciones está demostrada para mejorar el sueño ni para producir beneficios clínicos.</string>
+    <string name="studio_key">Tonalidad</string>
+    <string name="studio_scale">Escala</string>
+    <string name="studio_scale_major">Mayor</string>
+    <string name="studio_scale_minor">Menor</string>
+    <string name="studio_tempo">Tempo</string>
+    <string name="studio_tempo_value">%1$d BPM</string>
+    <string name="studio_note_density">Densidad de notas</string>
+    <string name="studio_harmonic_complexity">Complejidad armónica</string>
+    <string name="studio_instrument_texture">Textura del instrumento</string>
+    <string name="studio_section_space">Espacio y carácter</string>
+    <string name="studio_bass">Graves</string>
+    <string name="studio_treble">Agudos</string>
+    <string name="studio_reverb">Reverberación</string>
+    <string name="studio_stereo_delay">Retardo estéreo</string>
+    <string name="studio_randomization">Aleatorización melódica</string>
+    <string name="studio_melody">Melodía</string>
+    <string name="studio_melody_note">Deja que unas notas suaves vaguen sobre los acordes.</string>
+    <string name="studio_percussion">Percusión a bajo volumen</string>
+    <string name="studio_percussion_note">Un pulso contenido para composiciones lo-fi.</string>
+    <string name="studio_seed">Semilla de la composición</string>
+    <string name="studio_seed_note">La misma semilla y los mismos ajustes reproducen las mismas notas.</string>
+    <string name="studio_new_variation">Nueva variación</string>
+    <string name="studio_saved_updated">Composición actualizada</string>
+    <string name="studio_saved_added">Composición añadida a tu mezclador</string>
+    <string name="studio_action_update_layer">Actualizar la capa del mezclador</string>
+    <string name="studio_action_add_layer">Añadir la composición al mezclador</string>
+    <string name="studio_layer_name">Estudio · %1$s</string>
+    <string name="studio_saved_as_preset">Composición guardada como preajuste</string>
+    <string name="studio_action_save_preset">Guardar la composición como preajuste</string>
+    <string name="studio_note">Ajusta los medios, los filtros y el tiempo de fundido independiente en las Opciones de la capa, en Inicio. Guarda toda la mezcla como preajuste cuando quieras.</string>
+
+    <!-- The instrument textures offered in Studio. Notes: they are content, not chrome. -->
+    <string-array name="studio_instrument_textures">
+        <item>Pad suave</item>
+        <item>Piano de fieltro</item>
+        <item>Analógico cálido</item>
+        <item>Campanas y cuencos</item>
+        <item>Cuerdas suaves</item>
+    </string-array>
+
+    <!-- Settings. -->
+    <string name="settings_title">Ponte cómodo</string>
+    <string name="settings_subtitle">Tranquila por diseño. Privada por defecto.</string>
+    <string name="settings_section_appearance">Apariencia</string>
+    <string name="settings_light_theme">Tema claro</string>
+    <string name="settings_light_theme_note">El azul marino de medianoche es el predeterminado.</string>
+    <string name="settings_reduced_motion">Movimiento reducido</string>
+    <string name="settings_reduced_motion_note">Mantén la forma de onda quieta.</string>
+    <string name="settings_section_sound">Comportamiento del sonido</string>
+    <string name="settings_thunder_ducking">Atenuación durante los truenos</string>
+    <string name="settings_thunder_ducking_note">Baja suavemente la música durante los truenos.</string>
+    <string name="settings_dynamic_weather">Clima dinámico</string>
+    <string name="settings_dynamic_weather_note">Deja que la intensidad del clima evolucione despacio.</string>
+    <string name="settings_slow_variation">Variación lenta</string>
+    <string name="settings_slow_variation_note">Cambios sutiles de textura en sesiones largas.</string>
+    <string name="settings_low_distraction">Modo de baja distracción</string>
+    <string name="settings_low_distraction_note">Suaviza los truenos y otros eventos repentinos.</string>
+    <string name="settings_pause_on_disconnect">Pausar al desconectar</string>
+    <string name="settings_pause_on_disconnect_note">Pausa cuando se desconecta el audio Bluetooth o por cable. Desactívalo para permitir que el sistema redirija el audio.</string>
+    <string name="settings_timer_fade">Fundido del temporizador de sueño</string>
+    <string name="settings_section_device">En este dispositivo</string>
+    <string name="settings_device_readout">Salida: %1$s\nCarga de renderizado de audio: %2$d%% del tiempo de búfer\nCortes de búfer de AudioTrack: %3$d\n%4$s</string>
+    <string name="settings_capacity_note">No hay ningún límite de capas por software. Si el renderizado se acerca al 65 % del presupuesto de búfer o los cortes de búfer se acumulan, Nightfall te avisa. Las capas de música usan más procesamiento que el ruido. La duración real de la batería y la reproducción toda la noche dependen de Android y de las políticas de energía del dispositivo.</string>
+    <string name="settings_section_updates">Actualizaciones</string>
+    <string name="settings_section_data">Tus datos y tu audio</string>
+    <string name="settings_privacy_note">Todo lo que produce sonido se ejecuta en tu dispositivo. Sin cuenta, publicidad, servicio de analítica, rastreo ni compras, y la app no sube nada: la única forma de que tus datos salgan del teléfono es que los exportes o los compartas tú mismo. Las mezclas y los ajustes se guardan localmente. Mantén un volumen cómodo: los porcentajes describen la ganancia de la capa, no el volumen acústico.</string>
+    <string name="settings_action_export">Exportar la mezcla actual como JSON</string>
+    <string name="settings_action_credits">Créditos de audio y licencias de código abierto</string>
+    <string name="settings_a11y_show_diagnostics">Mostrar los diagnósticos</string>
+    <string name="settings_about">%1$s\nGratis para siempre. Un pequeño espacio para una noche más tranquila.</string>
+    <string name="settings_app_title">Nightfall</string>
+    <string name="settings_app_title_version">Nightfall %1$s</string>
+
+    <!-- The output route, as Settings and the now-playing card name it. -->
+    <string name="output_bluetooth">Bluetooth</string>
+    <string name="output_bluetooth_named">Bluetooth · %1$s</string>
+    <string name="output_wired">Auriculares con cable</string>
+    <string name="output_speaker">Altavoz integrado</string>
+    <string name="output_system">Salida de audio del sistema</string>
+
+    <!-- What a layer is, said next to its name. -->
+    <string name="kind_field_recording">Grabación de campo</string>
+    <string name="kind_generative_music">Música generativa</string>
+    <string name="kind_binaural">Tonos binaurales</string>
+    <string name="kind_noise">Textura de ruido</string>
+    <string name="kind_clock">Reloj que hace tic tac</string>
+    <string name="kind_hum">Zumbido</string>
+    <string name="kind_other">Textura de %1$s</string>
+
+    <!-- The media notification and its channel. The four timer suffixes and the tagline are quoted
+         so their spacing survives: aapt trims leading whitespace in an unquoted value. -->
+    <string name="notification_channel_playback">Reproducción de Nightfall</string>
+    <string name="notification_preparing">Preparando tu paisaje sonoro</string>
+    <string name="notification_timer_fading">" · Desvaneciendo"</string>
+    <string name="notification_timer_remaining">" · quedan %1$s"</string>
+    <string name="notification_timer_all_night">" · Toda la noche"</string>
+    <string name="notification_timer_ends_at">" · Termina %1$s"</string>
+
+    <!-- Runtime and playback errors. Each %1$s is a platform diagnostic. -->
+    <string name="error_restore_failed">No se pudo restaurar la mezcla guardada: %1$s</string>
+    <string name="error_save_failed">Error al guardar: %1$s</string>
+    <string name="error_playback_start_failed">No se pudo iniciar la reproducción: %1$s</string>
+    <string name="error_audio_stopped">El audio se detuvo: %1$s</string>
+    <string name="error_background_start_failed">No se pudo iniciar la reproducción en segundo plano: %1$s</string>
+    <string name="error_audio_focus_unavailable">El foco de audio no está disponible. Inténtalo de nuevo cuando termine el otro audio.</string>
+    <string name="error_recording_undecodable">Una de las grabaciones incluidas no se puede decodificar en este dispositivo (%1$s).</string>
+    <string name="error_opus_unsupported">Este teléfono no puede decodificar audio Opus, así que las grabaciones de campo incluidas no pueden reproducirse. Todas las demás capas siguen funcionando. Cada versión publicada permanece en GitHub Releases, así que todavía puedes descargar e instalar una versión anterior.</string>
+
+    <!-- Home-screen widget. -->
+    <string name="widget_description">Un botón de reproducir y pausar para tu paisaje sonoro.</string>
+    <string name="widget_state_playing">Reproduciendo</string>
+    <string name="widget_state_paused">En pausa</string>
+    <string name="widget_state_stopped">Detenido</string>
+    <string name="widget_state_spoken">%1$s. %2$s.</string>
+    <string name="widget_configure_title">Widget de Nightfall</string>
+    <string name="widget_configure_prompt">¿Qué debe hacer un toque?</string>
+    <string name="widget_configure_toggle">Reproducir o pausar aquí</string>
+    <string name="widget_configure_toggle_note">Inicia o pausa tu paisaje sonoro sin abrir la app.</string>
+    <string name="widget_action_open">Abrir Nightfall</string>
+    <string name="widget_configure_open_note">Abre la app y no toca la reproducción.</string>
+    <string name="widget_configure_note">Puedes cambiarlo más adelante desde las opciones del widget del lanzador.</string>
+
+</resources>
